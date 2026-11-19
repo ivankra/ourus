@@ -13,7 +13,13 @@ import type { MdBlockAt, MdInline } from './types.ts';
 /** Writes a block on entering and on leaving it (`r.up` gives the blocks around it). Returning false on entering skips its children. */
 export type MdBlockRenderer = (r: MdHtmlRenderer, block: MdBlockAt, entering: boolean) => void | boolean;
 /** Writes an inline on entering and on leaving it (`text` is its leaf's inline text). */
-export type MdInlineRenderer = (r: MdHtmlRenderer, node: MdInline, entering: boolean, text: string, parent: MdInline | null) => void | boolean;
+export type MdInlineRenderer = (
+  r: MdHtmlRenderer,
+  node: MdInline,
+  entering: boolean,
+  text: string,
+  parent: MdInline | null,
+) => void | boolean;
 
 export interface MdRenderRules {
   readonly blocks?: Readonly<Record<string, MdBlockRenderer>>;
@@ -143,7 +149,16 @@ export class MdHtmlRenderer {
           this.#path.push(child as MdBlockAt);
         } else {
           const inline = child as MdInline;
-          stack.push({ block: null, inline, parent: f.inline, children: inline.children ?? NO_CHILDREN, inlines: true, leaf: f.leaf, text: f.text, index: -1 });
+          stack.push({
+            block: null,
+            inline,
+            parent: f.inline,
+            children: inline.children ?? NO_CHILDREN,
+            inlines: true,
+            leaf: f.leaf,
+            text: f.text,
+            index: -1,
+          });
         }
         continue;
       }
@@ -163,8 +178,27 @@ export class MdHtmlRenderer {
 
   private blockFrame(block: MdBlockAt): MdFrame {
     const t = this.tree.inlineText(block);
-    if (t) return { block, inline: null, parent: null, children: this.tree.inlines(block), inlines: true, leaf: block, text: t.text, index: -1 };
-    return { block, inline: null, parent: null, children: block.children(), inlines: false, leaf: null, text: '', index: -1 };
+    if (t)
+      return {
+        block,
+        inline: null,
+        parent: null,
+        children: this.tree.inlines(block),
+        inlines: true,
+        leaf: block,
+        text: t.text,
+        index: -1,
+      };
+    return {
+      block,
+      inline: null,
+      parent: null,
+      children: block.children(),
+      inlines: false,
+      leaf: null,
+      text: '',
+      index: -1,
+    };
   }
 
   private visit(f: MdFrame, entering: boolean): void | boolean {

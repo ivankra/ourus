@@ -75,7 +75,13 @@ export function hiddenContent(doc: OurusDoc, node: OurusNode): HiddenNode[] {
   for (let c = stack.pop(); c; c = stack.pop()) {
     const shown = c.textLastLine <= node.textLastLine;
     const text = doc.textOf(c);
-    out.push({ id: c.id, parent: c.parent!.id, kind: c.kind, text: shown ? null : (text?.text ?? ''), carried: text?.blockIdLines ?? [] });
+    out.push({
+      id: c.id,
+      parent: c.parent!.id,
+      kind: c.kind,
+      text: shown ? null : (text?.text ?? ''),
+      carried: text?.blockIdLines ?? [],
+    });
     for (let k = c.children.length - 1; k >= 0; k--) stack.push(c.children[k]!);
   }
   return out;
@@ -86,8 +92,17 @@ function sameHidden(a: readonly HiddenNode[], b: readonly HiddenNode[]): boolean
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     const [x, y] = [a[i]!, b[i]!];
-    if (x.id !== y.id || x.parent !== y.parent || x.kind !== y.kind || x.text !== y.text || x.carried.length !== y.carried.length) return false;
-    for (let k = 0; k < x.carried.length; k++) if (x.carried[k]!.blankLines !== y.carried[k]!.blankLines || x.carried[k]!.line !== y.carried[k]!.line) return false;
+    if (
+      x.id !== y.id ||
+      x.parent !== y.parent ||
+      x.kind !== y.kind ||
+      x.text !== y.text ||
+      x.carried.length !== y.carried.length
+    )
+      return false;
+    for (let k = 0; k < x.carried.length; k++)
+      if (x.carried[k]!.blankLines !== y.carried[k]!.blankLines || x.carried[k]!.line !== y.carried[k]!.line)
+        return false;
   }
   return true;
 }
@@ -106,7 +121,11 @@ function movedWithin(old: OurusNode, now: OurusNode): boolean {
     return out;
   };
   const [a, b] = [places(old), places(now)];
-  const order = (m: Map<number, number>, other: Map<number, number>): string => [...m].filter(([id]) => other.has(id)).map(([id, parent]) => `${id}<${parent}`).join();
+  const order = (m: Map<number, number>, other: Map<number, number>): string =>
+    [...m]
+      .filter(([id]) => other.has(id))
+      .map(([id, parent]) => `${id}<${parent}`)
+      .join();
   return order(a, b) !== order(b, a);
 }
 
@@ -126,7 +145,12 @@ function ancestry(from: OurusDoc, id: number): number[] {
  * - the zoom stays where its root is there and no node of its subtree left it; where its root went, it
  *   goes to the nearest ancestor left (none at the top level); where a node left, it ends.
  */
-export function carryView(from: OurusDoc, view: ViewState, doc: OurusDoc, changes: readonly { from: number; to: number }[]): ViewState {
+export function carryView(
+  from: OurusDoc,
+  view: ViewState,
+  doc: OurusDoc,
+  changes: readonly { from: number; to: number }[],
+): ViewState {
   if (!view.folded.size && view.zoom === null) return NO_VIEW;
   const suppressed = new Set(view.zoom === null ? [] : ancestry(from, view.zoom));
   const folded = new Set<number>();
@@ -143,16 +167,22 @@ export function carryView(from: OurusDoc, view: ViewState, doc: OurusDoc, change
     const next = old && below < from.lineCount ? from.nodeAtLine(below) : null;
     const reach = old && from.mdTree.starts[(next ? Math.max(next.textLastLine, below) : below) + 2];
     const reached = !range || changes.some((c) => c.from <= (reach ?? from.text.length) && c.to >= start!);
-    if (!suppressed.has(id) && reached && (!old || !sameHidden(hiddenContent(from, old), hiddenContent(doc, now)))) continue;
+    if (!suppressed.has(id) && reached && (!old || !sameHidden(hiddenContent(from, old), hiddenContent(doc, now))))
+      continue;
     // (no text changed there, but the nodes it hides moved: identical children reordered; a node read
     // anew from the same text, a placeholder dropped, is no move: Fold20)
-    if (!suppressed.has(id) && !reached && old && old.persistentNode !== now.persistentNode && movedWithin(old, now)) continue;
+    if (!suppressed.has(id) && !reached && old && old.persistentNode !== now.persistentNode && movedWithin(old, now))
+      continue;
     folded.add(id);
   }
   let zoom: number | null = null;
   if (view.zoom !== null) {
     const root = doc.node(view.zoom);
-    if (!root) zoom = ancestry(from, view.zoom).slice(1).find((id) => doc.node(id)) ?? null;
+    if (!root)
+      zoom =
+        ancestry(from, view.zoom)
+          .slice(1)
+          .find((id) => doc.node(id)) ?? null;
     else {
       const inside = root.subtreeIds();
       const left = [...from.node(view.zoom)!.subtreeIds()].some((id) => doc.node(id) && !inside.has(id));

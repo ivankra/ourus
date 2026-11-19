@@ -4,7 +4,10 @@ import { clipboardHtml } from './clipboard.ts';
 
 test('a clipboard with structure has its HTML; plain lines and frontmatter have none', () => {
   assert.equal(clipboardHtml('- x\n- y\n', 'gfm'), '<ul>\n<li>x</li>\n<li>y</li>\n</ul>');
-  assert.equal(clipboardHtml('1. x\n   1. x1\n2. y\n', 'gfm'), '<ol>\n<li>x\n<ol>\n<li>x1</li>\n</ol>\n</li>\n<li>y</li>\n</ol>');
+  assert.equal(
+    clipboardHtml('1. x\n   1. x1\n2. y\n', 'gfm'),
+    '<ol>\n<li>x\n<ol>\n<li>x1</li>\n</ol>\n</li>\n<li>y</li>\n</ol>',
+  );
   // lines copied from inside a list lose the indentation they share, as structured paste reads them
   assert.equal(clipboardHtml('  - x\n  - y\n', 'gfm'), '<ul>\n<li>x</li>\n<li>y</li>\n</ul>');
   assert.equal(clipboardHtml('x\ny\n', 'gfm'), null);

@@ -18,10 +18,19 @@ for (const line of lines) {
   const l = line.trim();
   if (l.startsWith(fence + ' example')) {
     state = 1;
-    extensions = l.slice(fence.length + ' example'.length).split(/\s+/).filter(Boolean);
+    extensions = l
+      .slice(fence.length + ' example'.length)
+      .split(/\s+/)
+      .filter(Boolean);
   } else if (l === fence && state) {
     state = 0;
-    out.push({ example: out.length + 1, section, extensions, markdown: markdown.join('').replaceAll('→', '\t'), html: html.join('').replaceAll('→', '\t') });
+    out.push({
+      example: out.length + 1,
+      section,
+      extensions,
+      markdown: markdown.join('').replaceAll('→', '\t'),
+      html: html.join('').replaceAll('→', '\t'),
+    });
     markdown = [];
     html = [];
   } else if (l === '.' && state === 1) state = 2;

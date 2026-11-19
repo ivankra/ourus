@@ -36,11 +36,29 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { executeCommand, leavesZoom, type OurusCommand, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
+import {
+  executeCommand,
+  leavesZoom,
+  type OurusCommand,
+  OurusDeferred,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+} from '../src/commands/index.ts';
 import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import type { ChangeSpec } from '../src/text/index.ts';
-import { parseWithMarks, drawDoc, readDrawing, readSpecFile, specConfig, specFiles, resultStatus, allNodes, staleBaseline } from './lib/index.ts';
+import {
+  parseWithMarks,
+  drawDoc,
+  readDrawing,
+  readSpecFile,
+  specConfig,
+  specFiles,
+  resultStatus,
+  allNodes,
+  staleBaseline,
+} from './lib/index.ts';
 
 const COMMANDS: readonly OurusCommand[] = [
   { type: 'enter' },
@@ -59,7 +77,15 @@ const COMMANDS: readonly OurusCommand[] = [
 ];
 
 /** The editing commands that take `nodes`: given one outside the zoom, each refused before it runs. */
-const WITH_NODES = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'duplicateSubtree', 'deleteSubtree', 'cut'] as const;
+const WITH_NODES = [
+  'indent',
+  'outdent',
+  'moveSubtreeUp',
+  'moveSubtreeDown',
+  'duplicateSubtree',
+  'deleteSubtree',
+  'cut',
+] as const;
 
 const examples = Number(process.env.VIEW_EXAMPLES ?? 3);
 /** The start buffers played, the first so many (`VIEW_BUFFERS`); all by default. */
@@ -110,13 +136,19 @@ function outsideChange(view: OurusView, next: OurusDoc): string | null {
   const doc = view.doc;
   const root = view.zoomRoot!;
   const now = next.node(root.id)!;
-  if (doc.text.slice(0, doc.markdownStart(root)) !== next.text.slice(0, next.markdownStart(now))) return 'the text before the root';
-  if (doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!) !== next.text.slice(next.mdTree.ends[next.coverEnd(now)]!)) return 'the text after the cover';
+  if (doc.text.slice(0, doc.markdownStart(root)) !== next.text.slice(0, next.markdownStart(now)))
+    return 'the text before the root';
+  if (doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!) !== next.text.slice(next.mdTree.ends[next.coverEnd(now)]!))
+    return 'the text after the cover';
   return outsideShape(doc, root) === outsideShape(next, now) ? null : 'the outline outside';
 }
 
 /** The default of a key at a caret where every host's is a plain edit: the change and the caret after. */
-function hostDefault(doc: OurusDoc, type: OurusCommand['type'], pos: number): { change: ChangeSpec; caret: number } | null {
+function hostDefault(
+  doc: OurusDoc,
+  type: OurusCommand['type'],
+  pos: number,
+): { change: ChangeSpec; caret: number } | null {
   switch (type) {
     case 'insertText':
       return { change: { from: pos, to: pos, insert: 'x' }, caret: pos + 1 };
@@ -158,16 +190,19 @@ function play(viewed: OurusView, view: string): number {
       if (result instanceof OurusFailed) fail('write-failed', where);
       if (result instanceof OurusDeferred && viewed.zoom !== null) {
         const host = hostDefault(doc, command.type, pos);
-        if (host && leavesZoom(viewed, doc.update({ changes: [host.change], caret: host.caret }))) fail(`deferred ${command.type}`, where);
+        if (host && leavesZoom(viewed, doc.update({ changes: [host.change], caret: host.caret })))
+          fail(`deferred ${command.type}`, where);
       }
       if (!(result instanceof OurusSuccess)) continue;
       const nextView = result.view;
       const next = nextView.doc;
-      if (nextView.visibleSelection(result.view.selection) !== result.view.selection) fail('hidden', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.view.selection))}`);
+      if (nextView.visibleSelection(result.view.selection) !== result.view.selection)
+        fail('hidden', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.view.selection))}`);
       if ([...nextView.folded].some((id) => !next.node(id) || !next.foldRange(next.node(id)!))) fail('folded', where);
       if (viewed.zoom !== null && result.changes.length && next.node(viewed.zoom)) {
         const changed = outsideChange(viewed, next);
-        if (changed) fail('escape', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.view.selection))}: ${changed}`);
+        if (changed)
+          fail('escape', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.view.selection))}: ${changed}`);
       }
     }
   }
@@ -186,14 +221,22 @@ function confined(viewed: OurusView, view: string): number {
     for (const type of WITH_NODES) {
       runs++;
       const result = executeCommand(viewed.withSelection(selection), { type, nodes: [n.id] });
-      if (!(result instanceof OurusRejected) || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${resultStatus(result)}`);
+      if (!(result instanceof OurusRejected) || result.reason !== 'outside-zoom')
+        fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${resultStatus(result)}`);
     }
-    for (const command of [{ type: 'zoomIn', nodes: [n.id] }, ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : [])] as OurusCommand[]) {
+    for (const command of [
+      { type: 'zoomIn', nodes: [n.id] },
+      ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : []),
+    ] as OurusCommand[]) {
       runs++;
       const result = executeCommand(viewed.withSelection(selection), command);
       // (an ancestor of the root: its fold suppressed while zoomed, left alone)
       const folds = inside(root, n) ? viewed.folded.has(n.id) : true;
-      const ok = result instanceof OurusSuccess && result.view.doc.text === doc.text && !result.changes.length && (command.type === 'zoomIn' ? result.view.zoom === n.id : result.view.folded.has(n.id) === folds);
+      const ok =
+        result instanceof OurusSuccess &&
+        result.view.doc.text === doc.text &&
+        !result.changes.length &&
+        (command.type === 'zoomIn' ? result.view.zoom === n.id : result.view.folded.has(n.id) === folds);
       if (!ok) fail('confined', () => `${view}, ${command.type} at ${n.kind} ${n.id}: ${resultStatus(result)}`);
     }
   }
@@ -216,11 +259,17 @@ function playStart(start: Start): Played {
   groups = new Map();
   let runs = 0;
   const doc = parseWithMarks(start.text, start.placeholders, start.config);
-  const foldable = allNodes(doc).filter((n) => doc.foldRange(n)).map((n) => n.id);
+  const foldable = allNodes(doc)
+    .filter((n) => doc.foldRange(n))
+    .map((n) => n.id);
   for (const n of allNodes(doc)) {
     if (doc.foldRange(n)) runs += play(OurusView.of(doc).withFolded([n.id]), `${start.name}, ${n.kind} ${n.id} folded`);
     runs += play(OurusView.of(doc).withZoom(n.id), `${start.name}, zoomed into ${n.kind} ${n.id}`);
-    if (foldable.length) runs += play(OurusView.of(doc).withFolded(foldable).withZoom(n.id), `${start.name}, zoomed into ${n.kind} ${n.id}, every node folded`);
+    if (foldable.length)
+      runs += play(
+        OurusView.of(doc).withFolded(foldable).withZoom(n.id),
+        `${start.name}, zoomed into ${n.kind} ${n.id}, every node folded`,
+      );
   }
   return { runs, groups: [...groups] };
 }
@@ -304,13 +353,19 @@ function report(seen: readonly string[], buffers: number, runs: number): void {
     if (before !== null && group.runs > before) rose.push(`${key} ${before} → ${group.runs}`);
     if (key === 'write-failed' || key === 'exception') rose.push(`${key}: always a failure`);
   }
-  if (process.env.VIEW_UPDATE) writeFileSync(baselineFile, JSON.stringify({ corpus, groups: Object.fromEntries([...groups].map(([k, g]) => [k, g.runs])) }, null, 2) + '\n');
+  if (process.env.VIEW_UPDATE)
+    writeFileSync(
+      baselineFile,
+      JSON.stringify({ corpus, groups: Object.fromEntries([...groups].map(([k, g]) => [k, g.runs])) }, null, 2) + '\n',
+    );
   if (rose.length) {
     console.log(`\nmore than the baseline: ${rose.join('; ')}`);
     process.exitCode = 1;
   }
   // (fewer than it, or another corpus, on the run it was counted on: a baseline left behind)
-  const stale = process.env.VIEW_UPDATE ? [] : staleBaseline(baseline, corpus, groups, limit === Infinity, 'VIEW_UPDATE');
+  const stale = process.env.VIEW_UPDATE
+    ? []
+    : staleBaseline(baseline, corpus, groups, limit === Infinity, 'VIEW_UPDATE');
   for (const line of stale) console.log(`\n${line}`);
   if (stale.length) process.exitCode = 1;
 }

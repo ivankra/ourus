@@ -26,18 +26,30 @@ const ORDER = ['agree', 'caret', 'whitespace', 'disagree', 'error'];
 const SYMBOL: Record<string, string> = { agree: '✓', caret: 'C', whitespace: 'S', disagree: '✗', error: 'E' };
 
 /** A case's ID: its name, or in a run recorded before cases were keyed by their ID alone (`file › headings › ID`), its last part. */
-const caseOf = (name: string): string => (name.includes(' › ') ? name.slice(name.lastIndexOf(' › ') + ' › '.length) : name);
+const caseOf = (name: string): string =>
+  name.includes(' › ') ? name.slice(name.lastIndexOf(' › ') + ' › '.length) : name;
 
 /** A verdict as the table draws it: in parentheses where the example was adapted for the app. */
-const cell = (e: Judged): string => (e.adapted?.length && e.verdict !== 'agree' ? `(${SYMBOL[e.verdict] ?? e.verdict})` : (SYMBOL[e.verdict] ?? e.verdict));
+const cell = (e: Judged): string =>
+  e.adapted?.length && e.verdict !== 'agree' ? `(${SYMBOL[e.verdict] ?? e.verdict})` : (SYMBOL[e.verdict] ?? e.verdict);
 
 /** Setups of one app count once: both Logseqs, both RemNotes, the Obsidians but true-outliner. */
-const family = (app: string): string => (app.startsWith('logseq') ? 'logseq' : app.startsWith('remnote') ? 'remnote' : app.startsWith('obsidian') && app !== 'obsidian-true-outliner' ? 'obsidian' : app);
+const family = (app: string): string =>
+  app.startsWith('logseq')
+    ? 'logseq'
+    : app.startsWith('remnote')
+      ? 'remnote'
+      : app.startsWith('obsidian') && app !== 'obsidian-true-outliner'
+        ? 'obsidian'
+        : app;
 
 /** The commit `ref` names in the results' repository, short, with its subject; null where it names none. */
 function describe(dir: string, ref: string): string | null {
   try {
-    return execFileSync('git', ['-C', dir, 'log', '-1', '--format=%h %s', ref], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return execFileSync('git', ['-C', dir, 'log', '-1', '--format=%h %s', ref], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
   } catch {
     return null;
   }
@@ -45,7 +57,13 @@ function describe(dir: string, ref: string): string | null {
 
 function committed(dir: string, ref: string, app: string): Judgment | null {
   try {
-    return JSON.parse(execFileSync('git', ['-C', dir, 'show', `${ref}:results/${app}/sxs.json`], { encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore'] }));
+    return JSON.parse(
+      execFileSync('git', ['-C', dir, 'show', `${ref}:results/${app}/sxs.json`], {
+        encoding: 'utf8',
+        maxBuffer: 1 << 28,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }),
+    );
   } catch {
     return null;
   }
@@ -58,7 +76,14 @@ function committed(dir: string, ref: string, app: string): Judgment | null {
  * same state at a step ourus doesn't). `selected` keeps only the cases it says (all, by default).
  * Returns the exit code: 1 where a ref or an app's judgment can't be read.
  */
-export function compareJudgments(cacheDir: string, apps: readonly string[], ref: string, selected: (name: string) => boolean, say: (line: string) => void, verbose = false): number {
+export function compareJudgments(
+  cacheDir: string,
+  apps: readonly string[],
+  ref: string,
+  selected: (name: string) => boolean,
+  say: (line: string) => void,
+  verbose = false,
+): number {
   const dir = cacheDir;
   const commit = describe(dir, ref);
   if (!commit) {
@@ -117,7 +142,17 @@ export function compareJudgments(cacheDir: string, apps: readonly string[], ref:
     const goneHere = [...before.keys()].filter((name) => !after.has(name));
     for (const name of goneHere) gone.set(name, [...(gone.get(name) ?? []), app]);
     const delta = agreedNow - agreedThen;
-    rows.push([app, `${both}`, `${agreedThen}`, `${agreedNow}`, delta > 0 ? `+${delta}` : `${delta}`, `${worseHere}`, `${betterHere}`, `${newHere}`, `${goneHere.length}`]);
+    rows.push([
+      app,
+      `${both}`,
+      `${agreedThen}`,
+      `${agreedNow}`,
+      delta > 0 ? `+${delta}` : `${delta}`,
+      `${worseHere}`,
+      `${betterHere}`,
+      `${newHere}`,
+      `${goneHere.length}`,
+    ]);
   }
   const widths = rows[0]!.map((_, k) => Math.max(...rows.map((r) => r[k]!.length)));
   for (const r of rows) say(r.map((c, k) => (k === 0 ? c.padEnd(widths[k]!) : c.padStart(widths[k]!))).join('  '));
@@ -137,7 +172,13 @@ export function compareJudgments(cacheDir: string, apps: readonly string[], ref:
   const cells = [...fresh.values()].flat();
   const counts = new Map<string, number>();
   for (const c of cells) counts.set(c.e.verdict, (counts.get(c.e.verdict) ?? 0) + 1);
-  say(`\nnew cells, cases an app has now and didn't then (${fresh.size} cases, ${cells.length} cells: ${ORDER.filter((v) => counts.has(v)).map((v) => `${counts.get(v)} ${v}`).join(', ') || 'none'}), where a camp is against ourus (all with -v):`);
+  say(
+    `\nnew cells, cases an app has now and didn't then (${fresh.size} cases, ${cells.length} cells: ${
+      ORDER.filter((v) => counts.has(v))
+        .map((v) => `${counts.get(v)} ${v}`)
+        .join(', ') || 'none'
+    }), where a camp is against ourus (all with -v):`,
+  );
   for (const [name, judged] of fresh) {
     // apps grouped by the state they reach at each step ourus doesn't, within a model
     const camps: string[] = [];
@@ -157,7 +198,9 @@ export function compareJudgments(cacheDir: string, apps: readonly string[], ref:
     }
     const against = judged.filter((j) => j.e.verdict !== 'agree');
     if (!camps.length && !verbose) continue;
-    say(`  ${name}: ${judged.length - against.length} of ${judged.length} agree${against.length ? `; ${against.map((j) => `${j.app} ${cell(j.e)}`).join(', ')}` : ''}`);
+    say(
+      `  ${name}: ${judged.length - against.length} of ${judged.length} agree${against.length ? `; ${against.map((j) => `${j.app} ${cell(j.e)}`).join(', ')}` : ''}`,
+    );
     for (const camp of camps) say(`      ${camp}`);
   }
   if (gone.size) {

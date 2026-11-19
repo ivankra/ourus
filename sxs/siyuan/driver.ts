@@ -80,7 +80,8 @@ function markdownOf(outline: readonly Block[]): string {
     const numbered = /^(\d{1,9})\. /.exec(b.text);
     const before = runs[b.depth];
     const n = numbered ? Number(numbered[1]) : 0;
-    const delim = !numbered || !before || n === before.n + 1 ? (before?.delim ?? '.') : before.delim === '.' ? ')' : '.';
+    const delim =
+      !numbered || !before || n === before.n + 1 ? (before?.delim ?? '.') : before.delim === '.' ? ')' : '.';
     runs.length = b.depth;
     runs[b.depth] = numbered ? { n, delim } : null;
     const marker = numbered ? `${numbered[1]}${delim}` : '-';
@@ -128,7 +129,8 @@ function holds(o: Outline): string | undefined {
     // a no-break space: held as a space
     if (b.text.includes('\u00a0')) return 'no-break space, which SiYuan holds as a space';
     // a thematic break of another spelling: held as `---` (SubtreeEdit10)
-    if (b.free && /^ {0,3}([*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text)) return 'a thematic break other than ---, which SiYuan holds as ---';
+    if (b.free && /^ {0,3}([*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text))
+      return 'a thematic break other than ---, which SiYuan holds as ---';
     // `- →x` and `-     code`: a tab or an indented line becomes structure, or is trimmed
     if (/^[ \t]/.test(b.text)) return "block's text starting with whitespace";
     // and a later line's, trimmed (Regression32, Indent33)
@@ -140,15 +142,26 @@ function holds(o: Outline): string | undefined {
     // `**b**`: held as bold, read back without its markers (Copy1)
     if (/(\*\*|__)(?=\S)[^]*?\S\1/.test(b.text)) return 'strong emphasis, which SiYuan holds as formatting';
     // `# Title #`: held as `# Title`
-    if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first)) return "heading's closing #s";
+    if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first))
+      return "heading's closing #s";
     // `- ---` is a thematic break, not an item holding one
     if (!b.free && /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(first)) return 'thematic break as an item';
     // `--` too: written after the item's `- `, its marker and text read as one (`- --`, Regression251)
-    if (!b.free && !/^\d/.test(first) && /^-(?:[ \t]*-)+[ \t]*$/.test(first)) return "item's text of hyphens, which after its `- ` reads as a thematic break";
+    if (!b.free && !/^\d/.test(first) && /^-(?:[ \t]*-)+[ \t]*$/.test(first))
+      return "item's text of hyphens, which after its `- ` reads as a thematic break";
     // a table SiYuan writes otherwise: a column with a cell of three characters or more is padded to
     // it, its delimiter longer (measured: `| a | b |` stays, `| a   | b |` above `| one | 2 |`)
     const rows = b.text.split('\n').filter((l) => /^\s*\|.*\|\s*$/.test(l));
-    if (rows.length && rows.some((r) => r.split('|').slice(1, -1).some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)))) return 'table SiYuan writes otherwise (its columns padded to their widest cell)';
+    if (
+      rows.length &&
+      rows.some((r) =>
+        r
+          .split('|')
+          .slice(1, -1)
+          .some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)),
+      )
+    )
+      return 'table SiYuan writes otherwise (its columns padded to their widest cell)';
     // `# first` / `abc`: a heading is one line, the next a paragraph after it
     if (/^#{1,6}(?:[ \t]|$)/.test(first) && b.text.includes('\n')) return 'heading with more lines';
     // a task's marker other than a space or an x: SiYuan holds `[?]`, `[-]` as done (Regression125)
@@ -159,13 +172,27 @@ function holds(o: Outline): string | undefined {
       const runs = new Set([...m[2]!.matchAll(/`+/g)].map((r) => r[0].length));
       let fewest = 1;
       while (runs.has(fewest)) fewest++;
-      if (m[1]!.length > fewest) return 'code span of more backticks than its code needs, which SiYuan writes with fewer';
+      if (m[1]!.length > fewest)
+        return 'code span of more backticks than its code needs, which SiYuan writes with fewer';
     }
     // an unclosed fence: SiYuan closes it (DuplicateSubtree9)
     const fence = /^ {0,3}(`{3,}|~{3,})/.exec(first)?.[1];
-    if (fence && !b.text.split('\n').slice(1).some((l) => new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(l))) return 'unclosed fence, which SiYuan closes';
+    if (
+      fence &&
+      !b.text
+        .split('\n')
+        .slice(1)
+        .some((l) => new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(l))
+    )
+      return 'unclosed fence, which SiYuan closes';
     // `p` / `- g`: a later line of a block's text that starts with a list marker, held otherwise (Paste70)
-    if (b.text.split('\n').slice(1).some((l) => /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/.test(l))) return 'later line starting with a list marker';
+    if (
+      b.text
+        .split('\n')
+        .slice(1)
+        .some((l) => /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/.test(l))
+    )
+      return 'later line starting with a list marker';
   }
   if (!o.sel) return undefined;
   const text = o.blocks[o.sel.block]!.text;
@@ -238,12 +265,16 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   // whatever the code: so a code block's fences are read as Markdown's, longer than any such line,
   // Fence36, Regression6)
   const md = (el: Element): string => {
-    const t = (p.lute.BlockDOM2StdMd(el.outerHTML) as string).replace(/\n$/, '').replace(/\u200D(?=(?:[\u2063\u2064\u200D]*`){3})/g, '');
+    const t = (p.lute.BlockDOM2StdMd(el.outerHTML) as string)
+      .replace(/\n$/, '')
+      .replace(/\u200D(?=(?:[\u2063\u2064\u200D]*`){3})/g, '');
     if ((el as HTMLElement).dataset?.type !== 'NodeCodeBlock') return t;
     const lines = t.split('\n');
     const open = /^`{3,}/.exec(lines[0]!)?.[0];
     if (!open || lines.length < 2 || lines.at(-1) !== open) return t;
-    const runs = lines.slice(1, -1).map((l) => /^[ \t]*(`+)[ \t]*$/.exec(l.replace(/[\u2063\u2064]/g, ''))?.[1]!.length ?? 0);
+    const runs = lines
+      .slice(1, -1)
+      .map((l) => /^[ \t]*(`+)[ \t]*$/.exec(l.replace(/[\u2063\u2064]/g, ''))?.[1]!.length ?? 0);
     const fence = '`'.repeat(Math.max(open.length, ...runs.map((n) => n + 1)));
     return fence === open ? t : [fence + lines[0]!.slice(open.length), ...lines.slice(1, -1), fence].join('\n');
   };
@@ -253,24 +284,33 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   type Group = { els: HTMLElement[]; depth: number; prefix: string; holder: HTMLElement; free: boolean };
   const groups: Group[] = [];
   const items = (list: Element, depth: number): void => {
-    [...list.children].filter((c) => data(c).type === 'NodeListItem').forEach((li, k) => {
-      const kids = [...li.children].filter((c) => data(c).nodeId) as HTMLElement[];
-      const task = (li as HTMLElement).dataset.task;
-      // an ordered list's item: its number, as the canonical text has it (`1. `)
-      const number = data(list).subtype === 'o' ? `${parseInt(data(li).marker ?? '', 10) || k + 1}. ` : '';
-      // its first block is its text; its other blocks (code after its text, a second paragraph) are
-      // its children, in order with its nested lists, as the projection has an item's blocks. An empty
-      // paragraph too, where it is: SiYuan leaves one where an item's blocks went into the item above
-      // (Backspace at an empty item's start, Enter on an empty child), a block until it is deleted, and
-      // typing there fills it, the read's structure the same
-      const first = kids[0] && data(kids[0]).type !== 'NodeList' ? kids[0] : undefined;
-      const text = first ? [first] : [];
-      groups.push({ els: text, depth, prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '), holder: li as HTMLElement, free: false });
-      for (const kid of kids) {
-        if (data(kid).type === 'NodeList') items(kid, depth + 1);
-        else if (!text.includes(kid)) groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid, free: true });
-      }
-    });
+    [...list.children]
+      .filter((c) => data(c).type === 'NodeListItem')
+      .forEach((li, k) => {
+        const kids = [...li.children].filter((c) => data(c).nodeId) as HTMLElement[];
+        const task = (li as HTMLElement).dataset.task;
+        // an ordered list's item: its number, as the canonical text has it (`1. `)
+        const number = data(list).subtype === 'o' ? `${parseInt(data(li).marker ?? '', 10) || k + 1}. ` : '';
+        // its first block is its text; its other blocks (code after its text, a second paragraph) are
+        // its children, in order with its nested lists, as the projection has an item's blocks. An empty
+        // paragraph too, where it is: SiYuan leaves one where an item's blocks went into the item above
+        // (Backspace at an empty item's start, Enter on an empty child), a block until it is deleted, and
+        // typing there fills it, the read's structure the same
+        const first = kids[0] && data(kids[0]).type !== 'NodeList' ? kids[0] : undefined;
+        const text = first ? [first] : [];
+        groups.push({
+          els: text,
+          depth,
+          prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '),
+          holder: li as HTMLElement,
+          free: false,
+        });
+        for (const kid of kids) {
+          if (data(kid).type === 'NodeList') items(kid, depth + 1);
+          else if (!text.includes(kid))
+            groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid, free: true });
+        }
+      });
   };
   // blocks outside every list, free; owned as ourus owns them (a heading its section; a list no
   // block's) by `ownBlocks`, out of the page
@@ -281,7 +321,8 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   // a position (node, offset) inside `el`, copied into a clone of it with a marker there
   const path = (root: Node, n: Node): number[] => {
     const out: number[] = [];
-    for (let at = n; at !== root; at = at.parentNode!) out.unshift([...at.parentNode!.childNodes].indexOf(at as ChildNode));
+    for (let at = n; at !== root; at = at.parentNode!)
+      out.unshift([...at.parentNode!.childNodes].indexOf(at as ChildNode));
     return out;
   };
   const mark = (clone: Node, at: number[], offset: number, s: string): void => {
@@ -291,11 +332,20 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
     else n.insertBefore(document.createTextNode(s), n.childNodes[offset] ?? null);
   };
   /** `el`'s Markdown with markers at the given positions (in `el`): the text without them, and where each was (-1: not there). */
-  const withMarks = (el: HTMLElement, marks: { node: Node; offset: number; s: string }[]): { text: string; at: Record<string, number> } => {
+  const withMarks = (
+    el: HTMLElement,
+    marks: { node: Node; offset: number; s: string }[],
+  ): { text: string; at: Record<string, number> } => {
     if (!marks.length) return { text: md(el), at: { [S1]: -1, [S2]: -1 } };
     const clone = el.cloneNode(true) as HTMLElement;
     // the later position first, so that the earlier one's path and offset still hold
-    const ordered = [...marks].sort((x, y) => (x.node === y.node ? y.offset - x.offset : x.node.compareDocumentPosition(y.node) & Node.DOCUMENT_POSITION_FOLLOWING ? 1 : -1));
+    const ordered = [...marks].sort((x, y) =>
+      x.node === y.node
+        ? y.offset - x.offset
+        : x.node.compareDocumentPosition(y.node) & Node.DOCUMENT_POSITION_FOLLOWING
+          ? 1
+          : -1,
+    );
     for (const m of ordered) mark(clone, path(el, m.node), m.offset, m.s);
     const t = md(clone);
     const i1 = t.indexOf(S1);
@@ -316,35 +366,48 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
         const lines = plain.split('\n');
         const line = lines[row] ?? '';
         let at = 0;
-        for (let j = 0, pipes = 0; j < line.length && pipes < column; j++) if (line[j] === '|' && ++pipes === column) at = j + 1;
+        for (let j = 0, pipes = 0; j < line.length && pipes < column; j++)
+          if (line[j] === '|' && ++pipes === column) at = j + 1;
         const rest = line.slice(at);
-        return lines.slice(0, row).reduce((n, l) => n + l.length + 1, 0) + at + (rest.length - rest.trimStart().length) + inCell;
+        return (
+          lines.slice(0, row).reduce((n, l) => n + l.length + 1, 0) +
+          at +
+          (rest.length - rest.trimStart().length) +
+          inCell
+        );
       };
       return { text: plain, at: { [S1]: cellAt(t.replaceAll(S2, ''), S1), [S2]: cellAt(t.replaceAll(S1, ''), S2) } };
     }
     return {
       text,
-      at: { [S1]: i1 < 0 ? -1 : i1 - (i2 >= 0 && i2 < i1 ? 1 : 0), [S2]: i2 < 0 ? -1 : i2 - (i1 >= 0 && i1 < i2 ? 1 : 0) },
+      at: {
+        [S1]: i1 < 0 ? -1 : i1 - (i2 >= 0 && i2 < i1 ? 1 : 0),
+        [S2]: i2 < 0 ? -1 : i2 - (i1 >= 0 && i1 < i2 ? 1 : 0),
+      },
     };
   };
   // the caret, if it is in the document
   const s = getSelection();
-  const inDoc = (n: Node | null): boolean => !!n && wys.contains(n) && !!document.activeElement && wys.contains(document.activeElement);
+  const inDoc = (n: Node | null): boolean =>
+    !!n && wys.contains(n) && !!document.activeElement && wys.contains(document.activeElement);
   const caretIn = s && s.rangeCount && inDoc(s.anchorNode) && inDoc(s.focusNode) ? s : null;
   const blocks: Block[] = [];
   let anchor: [number, number] | null = null;
   let head: [number, number] | null = null;
   // a free block's escape at its start (`\- x`: SiYuan keeps a paragraph's backslash), off, as the
   // projection has a block's text: the block needs none there (a number's, `1\.`, isn't at the start)
-  const lead = (g: Group, el: HTMLElement): number => (g.free && el === g.els[0] && /^\\[!-/:-@[-`{-~]/.test(md(el)) ? 1 : 0);
+  const lead = (g: Group, el: HTMLElement): number =>
+    g.free && el === g.els[0] && /^\\[!-/:-@[-`{-~]/.test(md(el)) ? 1 : 0;
   const less = (at: number, l: number): number => (l && at > 0 ? at - 1 : at);
   groups.forEach((g, k) => {
     const parts: string[] = [];
     let base = g.prefix.length;
     for (const el of g.els) {
       const marks: { node: Node; offset: number; s: string }[] = [];
-      if (caretIn && el.contains(caretIn.anchorNode)) marks.push({ node: caretIn.anchorNode!, offset: caretIn.anchorOffset, s: S1 });
-      if (caretIn && el.contains(caretIn.focusNode)) marks.push({ node: caretIn.focusNode!, offset: caretIn.focusOffset, s: S2 });
+      if (caretIn && el.contains(caretIn.anchorNode))
+        marks.push({ node: caretIn.anchorNode!, offset: caretIn.anchorOffset, s: S1 });
+      if (caretIn && el.contains(caretIn.focusNode))
+        marks.push({ node: caretIn.focusNode!, offset: caretIn.focusOffset, s: S2 });
       const l = lead(g, el);
       const { text: marked, at } = withMarks(el, marks);
       const text = marked.slice(l);
@@ -360,8 +423,16 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   const sel: Raw['sel'] = a0 && h0 && a0[0] === h0[0] ? { block: a0[0], anchor: a0[1], head: h0[1] } : null;
   // blocks selected whole: their own element marked, or one holding them (a select all, Ctrl-A again,
   // marks the list, `NodeList`, not its items)
-  const selected = groups.map((g, k) => (g.holder.closest('.protyle-wysiwyg--select') || g.els.some((e) => e.closest('.protyle-wysiwyg--select')) ? k : -1)).filter((k) => k >= 0);
-  const folded = groups.map((g, k) => (g.holder.getAttribute('fold') === '1' || g.els.some((e) => e.getAttribute('fold') === '1') ? k : -1)).filter((k) => k >= 0);
+  const selected = groups
+    .map((g, k) =>
+      g.holder.closest('.protyle-wysiwyg--select') || g.els.some((e) => e.closest('.protyle-wysiwyg--select')) ? k : -1,
+    )
+    .filter((k) => k >= 0);
+  const folded = groups
+    .map((g, k) =>
+      g.holder.getAttribute('fold') === '1' || g.els.some((e) => e.getAttribute('fold') === '1') ? k : -1,
+    )
+    .filter((k) => k >= 0);
   if (!want) return { blocks, sel, selected, folded };
 
   // placing: the DOM position whose Markdown offset is the one wanted, in the block's own elements
@@ -375,7 +446,8 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
       const walker = document.createTreeWalker(ce, NodeFilter.SHOW_TEXT);
       // not before the escape of three backticks: it joins the character before it, a user's caret
       // goes past them both
-      for (let t = walker.nextNode() as Text | null; t; t = walker.nextNode() as Text | null) for (let i = 0; i <= t.data.length; i++) if (t.data[i] !== '‍') candidates.push({ node: t, offset: i });
+      for (let t = walker.nextNode() as Text | null; t; t = walker.nextNode() as Text | null)
+        for (let i = 0; i <= t.data.length; i++) if (t.data[i] !== '‍') candidates.push({ node: t, offset: i });
       if (!candidates.length) candidates.push({ node: ce, offset: 0 });
       const l = lead(g, el);
       for (const c of candidates) {
@@ -388,7 +460,14 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   };
   const a = find(want.anchor);
   const h = want.head === want.anchor ? a : find(want.head);
-  if (!a || !h) return { blocks, sel, selected, folded, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
+  if (!a || !h)
+    return {
+      blocks,
+      sel,
+      selected,
+      folded,
+      placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"`,
+    };
   a.el.focus();
   getSelection()!.setBaseAndExtent(a.node, a.offset, h.node, h.offset);
   return { blocks, sel, selected, folded, placed: 'placed' };
@@ -400,7 +479,9 @@ async function notebookId(origin: string): Promise<string> {
   const known = notebooks.get(origin);
   if (known) return known;
   const { notebooks: all } = await api<{ notebooks: { id: string; name: string }[] }>(origin, 'notebook/lsNotebooks');
-  const id = all.find((n) => n.name === 'ourus sxs')?.id ?? (await api<{ notebook: { id: string } }>(origin, 'notebook/createNotebook', { name: 'ourus sxs' })).notebook.id;
+  const id =
+    all.find((n) => n.name === 'ourus sxs')?.id ??
+    (await api<{ notebook: { id: string } }>(origin, 'notebook/createNotebook', { name: 'ourus sxs' })).notebook.id;
   notebooks.set(origin, id);
   return id;
 }
@@ -419,7 +500,9 @@ const swept = new Set<string>();
 /** SiYuan's UI from kernel `k`, loaded in `page` and ready, the requests it owes counted (the busy signal). */
 async function loadUI(page: Page, k: Kernel): Promise<void> {
   await page.goto(`${k.origin}/stage/build/desktop/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForFunction(() => (window as any).siyuan?.isReady && (window as any).__ourusSxs, null, { timeout: 60000 });
+  await page.waitForFunction(() => (window as any).siyuan?.isReady && (window as any).__ourusSxs, null, {
+    timeout: 60000,
+  });
   await page.evaluate(() => {
     const w = window as any;
     if (w.__sxsFetching) return;
@@ -455,7 +538,8 @@ type Aim = { mode: 'after' | 'child' | 'before' | 'above' | 'below'; block: numb
 function aim(blocks: readonly Block[], drop: Drop): Aim | string {
   // the blocks in flight, each with its subtree
   const flying = blocks.map(() => false);
-  for (const r of drop.rows) for (let i = r; i === r || (i < blocks.length && blocks[i]!.depth > blocks[r]!.depth); i++) flying[i] = true;
+  for (const r of drop.rows)
+    for (let i = r; i === r || (i < blocks.length && blocks[i]!.depth > blocks[r]!.depth); i++) flying[i] = true;
   const end = (i: number): number => {
     let j = i + 1;
     while (j < blocks.length && blocks[j]!.depth > blocks[i]!.depth) j++;
@@ -470,15 +554,21 @@ function aim(blocks: readonly Block[], drop: Drop): Aim | string {
     for (let i = after + 1; i < end(after); i++) if (!flying[i]) last = i;
     if (blocks[last]!.free) return { mode: 'below', block: last };
     let outer = last;
-    for (let i = last - 1, d = blocks[last]!.depth; i > after; i--) if (blocks[i]!.depth < d) (d = blocks[i]!.depth), !blocks[i]!.free && (outer = i);
+    for (let i = last - 1, d = blocks[last]!.depth; i > after; i--)
+      if (blocks[i]!.depth < d) (d = blocks[i]!.depth), !blocks[i]!.free && (outer = i);
     return { mode: 'after', block: outer };
   }
   if (parent !== 'root' && blocks[parent]!.free) return { mode: 'below', block: parent };
   // first under the parent: its first child, or the document's first block
   const first = parent === 'root' ? 0 : parent + 1;
-  if (parent !== 'root' && (first >= end(parent))) return { mode: 'child', block: parent };
-  if (flying[first]) return 'a place before the first item of a list, which is the one dragged: SiYuan drops before an item only before the first of its list';
-  return blocks[first]!.free ? (parent === 'root' ? { mode: 'above', block: first } : 'a place before the free block an item starts with') : { mode: 'before', block: first };
+  if (parent !== 'root' && first >= end(parent)) return { mode: 'child', block: parent };
+  if (flying[first])
+    return 'a place before the first item of a list, which is the one dragged: SiYuan drops before an item only before the first of its list';
+  return blocks[first]!.free
+    ? parent === 'root'
+      ? { mode: 'above', block: first }
+      : 'a place before the free block an item starts with'
+    : { mode: 'before', block: first };
 }
 
 /**
@@ -498,7 +588,8 @@ function selectInPage(selected: number[]): void {
       kids.forEach((kid, k) => (data(kid).type === 'NodeList' ? items(kid) : k > 0 && holders.push(kid)));
     }
   };
-  for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[]) (data(c).type === 'NodeList' ? items(c) : holders.push(c));
+  for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[])
+    data(c).type === 'NodeList' ? items(c) : holders.push(c);
   getSelection()?.removeAllRanges();
   wys.focus();
   for (const k of selected) holders[k]?.classList.add('protyle-wysiwyg--select');
@@ -528,28 +619,44 @@ async function siyuanDrop(page: Page, drop: Drop, settle: () => Promise<void>): 
           kids.forEach((kid, k) => (data(kid).type === 'NodeList' ? items(kid) : k > 0 && holders.push(kid)));
         }
       };
-      for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[]) (data(c).type === 'NodeList' ? items(c) : holders.push(c));
+      for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[])
+        data(c).type === 'NodeList' ? items(c) : holders.push(c);
       const isItem = (el: HTMLElement): boolean => data(el).type === 'NodeListItem';
       // an item's text: its first block
-      const textOf = (el: HTMLElement): DOMRect => (isItem(el) ? el.querySelector(':scope > [data-node-id]')! : el).getBoundingClientRect();
+      const textOf = (el: HTMLElement): DOMRect =>
+        (isItem(el) ? el.querySelector(':scope > [data-node-id]')! : el).getBoundingClientRect();
       const pressed = holders[press]!;
       const free = !isItem(pressed);
       const el = holders[to.block]!;
       const item = isItem(el);
-      if (item !== ['after', 'child', 'before'].includes(to.mode)) return `no ${to.mode} place on ${item ? 'an item' : 'a free block'}`;
-      if (!item && el.parentElement !== wys) return 'a place beside a block in an item, which SiYuan reads as at the item';
+      if (item !== ['after', 'child', 'before'].includes(to.mode))
+        return `no ${to.mode} place on ${item ? 'an item' : 'a free block'}`;
+      if (!item && el.parentElement !== wys)
+        return 'a place beside a block in an item, which SiYuan reads as at the item';
       // a free block's drag over an item: beside its text, in it, or beside its whole list
-      if (free && item && to.mode !== 'child') return "a free block's place beside an item: SiYuan's drag of one puts it in the item or beside the item's whole list";
+      if (free && item && to.mode !== 'child')
+        return "a free block's place beside an item: SiYuan's drag of one puts it in the item or beside the item's whole list";
       const text = textOf(el);
       const left = el.getBoundingClientRect().left;
       // (an item's after its text's left edge, its child's past it; anything else mid-text: a block's
       // drag within 32 pixels of an edge is a column beside it)
-      const x = to.mode === 'after' ? left + (text.left - left) / 2 : !free && (to.mode === 'child' || to.mode === 'before') ? text.left + 10 : text.left + text.width / 2;
+      const x =
+        to.mode === 'after'
+          ? left + (text.left - left) / 2
+          : !free && (to.mode === 'child' || to.mode === 'before')
+            ? text.left + 10
+            : text.left + text.width / 2;
       const y = text.top + text.height * (to.mode === 'before' || to.mode === 'above' ? 0.25 : 0.75);
       const r = (free ? pressed : pressed.querySelector(':scope > .protyle-action')!).getBoundingClientRect();
       const t = textOf(pressed);
       // a free block's press: its gutter icon, found once the pointer is over the block (its id)
-      return { id: free ? pressed.dataset.nodeId! : null, from: free ? { x: t.left + 20, y: t.top + Math.min(t.height / 2, 12) } : { x: r.left + r.width / 2, y: r.top + r.height / 2 }, to: { x, y } };
+      return {
+        id: free ? pressed.dataset.nodeId! : null,
+        from: free
+          ? { x: t.left + 20, y: t.top + Math.min(t.height / 2, 12) }
+          : { x: r.left + r.width / 2, y: r.top + r.height / 2 },
+        to: { x, y },
+      };
     },
     { press: drop.press ?? drop.rows[0]!, to },
   );
@@ -566,7 +673,10 @@ async function siyuanDrop(page: Page, drop: Drop, settle: () => Promise<void>): 
     return b?.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : null;
   }, at.id);
   // (while blocks are selected, one outside them shows none: a user's press goes elsewhere first)
-  if (!icon && ((await driver.read(page)) as Outline).selected?.length) throw new Unsupported('no gutter icon for a block outside the selection: SiYuan shows none while blocks are selected');
+  if (!icon && ((await driver.read(page)) as Outline).selected?.length)
+    throw new Unsupported(
+      'no gutter icon for a block outside the selection: SiYuan shows none while blocks are selected',
+    );
   if (!icon) throw new Error('no gutter icon for the pressed block');
   await page.mouse.move(icon.x, icon.y, { steps: 4 });
   await gesture(page, icon, at.to, settle, { here: true });
@@ -595,7 +705,19 @@ export const driver: Driver = {
     // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
     headings: 'block',
     // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
-    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
+    decorations: [
+      'bullet',
+      'number',
+      'checkbox',
+      'heading',
+      'setext',
+      'quote',
+      'callout',
+      'fence',
+      'math',
+      'rule',
+      'footnote',
+    ],
     // indent and outdent over roots at two depths
     mixedDepths: 'refuse',
     // Shift-Up takes the sibling above with its subtree
@@ -652,7 +774,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // a code or math block is a block of its own, its fences no text: a caret on one has no place
   // (`holds`); a join into code, or of code lines that make a fence, is SiYuan's to show
@@ -670,14 +797,25 @@ export const driver: Driver = {
     // the window's kernel, running, its UI loaded
     const k = await kernelFor(page);
     await loadUI(page, k);
-    const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, busy }), this.idle!.busy!);
+    const idle = () =>
+      page.evaluate(
+        (busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, busy }),
+        this.idle!.busy!,
+      );
     await idle();
     // ready once a key does what it should: Tab indents
-    await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+    await this.load(page, {
+      blocks: [
+        { depth: 0, text: 'a' },
+        { depth: 0, text: 'b' },
+      ],
+      sel: { block: 1, anchor: 1, head: 1 },
+    });
     await idle();
     await page.keyboard.press('Tab');
     await idle();
-    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1) throw new Error("SiYuan's keys didn't come up: Tab doesn't indent");
+    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1)
+      throw new Error("SiYuan's keys didn't come up: Tab doesn't indent");
     return page.evaluate(() => (window as any).siyuan.config.system.kernelVersion as string);
   },
 
@@ -696,13 +834,27 @@ export const driver: Driver = {
     // its own Escape while its block is still there: removed under it, its edit's transaction fails,
     // and SiYuan's "Abnormal state" dialog takes every Tab after (a quarter of the Tab steps of a full
     // run, one worker's, were lost so)
-    if (await page.evaluate(() => [...document.querySelectorAll('.protyle-util')].some((e) => !e.classList.contains('fn__none') && (e as HTMLElement).getBoundingClientRect().height > 0))) {
+    if (
+      await page.evaluate(() =>
+        [...document.querySelectorAll('.protyle-util')].some(
+          (e) => !e.classList.contains('fn__none') && (e as HTMLElement).getBoundingClientRect().height > 0,
+        ),
+      )
+    ) {
       await page.keyboard.press('Escape');
-      await page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }), this.idle!.busy!);
+      await page.evaluate(
+        (busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }),
+        this.idle!.busy!,
+      );
     }
     // SiYuan's "Abnormal state" (a transaction that failed): the UI isn't to be trusted after it, so
     // loaded anew, rather than every later test in the window playing against it
-    const abnormal = (): Promise<boolean> => page.evaluate(() => [...document.querySelectorAll('.b3-dialog--open')].some((d) => /Transaction failed|Abnormal state/.test(d.textContent ?? '')));
+    const abnormal = (): Promise<boolean> =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('.b3-dialog--open')].some((d) =>
+          /Transaction failed|Abnormal state/.test(d.textContent ?? ''),
+        ),
+      );
     if (await abnormal()) {
       console.log(`SiYuan's UI was in an abnormal state (a transaction failed): loading it anew`);
       await loadUI(page, kernel);
@@ -713,13 +865,19 @@ export const driver: Driver = {
     // (its close button an `<svg>`, which has no `click()`: a click dispatched)
     const dialogs = await page.evaluate(() => {
       const open = [...document.querySelectorAll('.b3-dialog--open')];
-      for (const d of open) (d.querySelector('.b3-dialog__close') ?? d).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      for (const d of open)
+        (d.querySelector('.b3-dialog__close') ?? d).dispatchEvent(new MouseEvent('click', { bubbles: true }));
       for (const d of document.querySelectorAll('.b3-dialog--open')) d.remove();
       return open.map((d) => (d.textContent ?? '').trim().slice(0, 60));
     });
-    if (dialogs.length) console.log(`closed a dialog an earlier test left open: ${dialogs.map((t) => JSON.stringify(t)).join(', ')}`);
+    if (dialogs.length)
+      console.log(`closed a dialog an earlier test left open: ${dialogs.map((t) => JSON.stringify(t)).join(', ')}`);
     const nb = await notebookId(origin);
-    const id = await api<string>(origin, 'filetree/createDocWithMd', { notebook: nb, path: `/ourus-sxs-${run}-${String(++docs).padStart(5, '0')}`, markdown: markdownOf(o.blocks) });
+    const id = await api<string>(origin, 'filetree/createDocWithMd', {
+      notebook: nb,
+      path: `/ourus-sxs-${run}-${String(++docs).padStart(5, '0')}`,
+      markdown: markdownOf(o.blocks),
+    });
     await page.evaluate((id) => (window as any).__ourusSxs.open(id), id);
     await page.waitForFunction((id) => {
       const p = (window as any).__ourusSxs.editor()?.protyle;
@@ -731,15 +889,27 @@ export const driver: Driver = {
     const old = state.current ? [state.current] : [];
     if (!swept.has(origin)) {
       swept.add(origin);
-      const files = (await api<{ files: { id: string; name: string }[] }>(origin, 'filetree/listDocsByPath', { notebook: nb, path: '/' })).files;
+      const files = (
+        await api<{ files: { id: string; name: string }[] }>(origin, 'filetree/listDocsByPath', {
+          notebook: nb,
+          path: '/',
+        })
+      ).files;
       old.push(...files.filter((f) => !f.name.startsWith(`ourus-sxs-${run}-`)).map((f) => f.id));
     }
     for (const d of old) await api(origin, 'filetree/removeDocByID', { id: d }).catch(() => {});
     state.current = id;
-    const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }), this.idle!.busy!);
+    const idle = () =>
+      page.evaluate(
+        (busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }),
+        this.idle!.busy!,
+      );
     await idle();
     // (the old document's removal may raise it too: then the test isn't this window's to play)
-    if (await abnormal()) throw new Error("SiYuan's UI went into an abnormal state as the last test's document went (a transaction failed)");
+    if (await abnormal())
+      throw new Error(
+        "SiYuan's UI went into an abnormal state as the last test's document went (a transaction failed)",
+      );
     // its folds, each by SiYuan's own Ctrl+Up at the block's end (the last first: a fold inside another
     // before it)
     for (const i of [...(o.view?.folded ?? [])].sort((a, b) => b - a)) {
@@ -761,7 +931,11 @@ export const driver: Driver = {
     }
     // a caret with no place in what SiYuan made of the start is left to the runner's load check, which says what it made
     const text = o.blocks[o.sel.block]!.text;
-    await page.evaluate(inPage, { ...o.sel, anchor: quotedOffset(text, o.sel.anchor), head: quotedOffset(text, o.sel.head) });
+    await page.evaluate(inPage, {
+      ...o.sel,
+      anchor: quotedOffset(text, o.sel.anchor),
+      head: quotedOffset(text, o.sel.head),
+    });
     await idle();
   },
 
@@ -776,10 +950,14 @@ export const driver: Driver = {
     const blocks = ownBlocks(r.blocks, listOwner(driver.behaves?.listParent));
     // the topmost of the selected, in the outline's nesting; blocks selected, the range SiYuan keeps in
     // one of them is no caret (it draws none)
-    const under = (i: number): boolean => r.selected.some((j) => j < i && blocks.slice(j + 1, i + 1).every((b) => b.depth > blocks[j]!.depth));
+    const under = (i: number): boolean =>
+      r.selected.some((j) => j < i && blocks.slice(j + 1, i + 1).every((b) => b.depth > blocks[j]!.depth));
     const selected = r.selected.filter((i) => !under(i));
     // (a quote's later lines lazy, as the projection has them: SiYuan's Markdown quotes each); its folds,
     // no zoom here
-    return { ...lazyQuotes({ blocks, sel: selected.length ? null : r.sel, ...(selected.length && { selected }) }), ...(viewed(page).on && { view: { folded: r.folded, zoom: null } }) };
+    return {
+      ...lazyQuotes({ blocks, sel: selected.length ? null : r.sel, ...(selected.length && { selected }) }),
+      ...(viewed(page).on && { view: { folded: r.folded, zoom: null } }),
+    };
   },
 };

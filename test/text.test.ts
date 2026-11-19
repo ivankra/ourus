@@ -3,24 +3,50 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import fc from 'fast-check';
-import { applyChanges, ChangeIndex, ChangeSet, charAfter, charBefore, charStart, composeChanges, diffLines, invertChanges, lineEndingBefore, mapPos, MarkError, MarkSet, nextLineStart, normalizeChanges, type ChangeSpec } from '../src/text/index.ts';
+import {
+  applyChanges,
+  ChangeIndex,
+  ChangeSet,
+  charAfter,
+  charBefore,
+  charStart,
+  composeChanges,
+  diffLines,
+  invertChanges,
+  lineEndingBefore,
+  mapPos,
+  MarkError,
+  MarkSet,
+  nextLineStart,
+  normalizeChanges,
+  type ChangeSpec,
+} from '../src/text/index.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 
 /** Sorted, non-overlapping changes over a text of length `len`. */
 const arbChanges = (len: number) =>
   fc.array(fc.tuple(fc.nat(len), fc.nat(len), fc.string({ maxLength: 4 })), { maxLength: 4 }).map((cs) => {
-    const sorted = cs.map(([a, b, s]) => ({ from: Math.min(a, b), to: Math.max(a, b), insert: s })).sort((x, y) => x.from - y.from);
+    const sorted = cs
+      .map(([a, b, s]) => ({ from: Math.min(a, b), to: Math.max(a, b), insert: s }))
+      .sort((x, y) => x.from - y.from);
     const out: ChangeSpec[] = [];
     let end = 0;
-    for (const c of sorted) if (c.from >= end) { out.push(c); end = Math.max(c.to, c.from + 1); }
+    for (const c of sorted)
+      if (c.from >= end) {
+        out.push(c);
+        end = Math.max(c.to, c.from + 1);
+      }
     return out;
   });
 
 const arbEdit = fc.string({ maxLength: 20 }).chain((t) => fc.tuple(fc.constant(t), arbChanges(t.length)));
 
 test('inverse changes restore the text', () => {
-  fc.assert(fc.property(arbEdit, ([t, cs]) => assert.equal(applyChanges(applyChanges(t, cs), invertChanges(t, cs)), t)), { numRuns: RUNS });
+  fc.assert(
+    fc.property(arbEdit, ([t, cs]) => assert.equal(applyChanges(applyChanges(t, cs), invertChanges(t, cs)), t)),
+    { numRuns: RUNS },
+  );
 });
 
 test('composed changes equal applying both in turn', () => {
@@ -70,19 +96,39 @@ test('a change set applies, inverts and maps as its changes do', () => {
 test('composing is exact: one change set, replacing only what either replaced', () => {
   // b's insertion in or at the ends of what a wrote joins it; a change in text a left alone stays apart
   const a = ChangeSet.of([{ from: 1, to: 1, insert: 'xy' }], 4);
-  assert.deepEqual(a.compose(ChangeSet.of([{ from: 2, to: 2, insert: 'z' }], 6)).changes, [{ from: 1, to: 1, insert: 'xzy' }]);
-  assert.deepEqual(a.compose(ChangeSet.of([{ from: 3, to: 3, insert: 'z' }], 6)).changes, [{ from: 1, to: 1, insert: 'xyz' }]);
-  assert.deepEqual(a.compose(ChangeSet.of([{ from: 1, to: 1, insert: 'z' }], 6)).changes, [{ from: 1, to: 1, insert: 'zxy' }]);
+  assert.deepEqual(a.compose(ChangeSet.of([{ from: 2, to: 2, insert: 'z' }], 6)).changes, [
+    { from: 1, to: 1, insert: 'xzy' },
+  ]);
+  assert.deepEqual(a.compose(ChangeSet.of([{ from: 3, to: 3, insert: 'z' }], 6)).changes, [
+    { from: 1, to: 1, insert: 'xyz' },
+  ]);
+  assert.deepEqual(a.compose(ChangeSet.of([{ from: 1, to: 1, insert: 'z' }], 6)).changes, [
+    { from: 1, to: 1, insert: 'zxy' },
+  ]);
   // a replacement touching what a wrote stays apart (a renumbered marker after an inserted line)
-  assert.deepEqual(a.compose(ChangeSet.of([{ from: 3, to: 4, insert: 'Q' }], 6)).changes, [{ from: 1, to: 1, insert: 'xy' }, { from: 1, to: 2, insert: 'Q' }]);
-  assert.deepEqual(a.compose(ChangeSet.of([{ from: 4, to: 5, insert: '' }], 6)).changes, [{ from: 1, to: 1, insert: 'xy' }, { from: 2, to: 3, insert: '' }]);
+  assert.deepEqual(a.compose(ChangeSet.of([{ from: 3, to: 4, insert: 'Q' }], 6)).changes, [
+    { from: 1, to: 1, insert: 'xy' },
+    { from: 1, to: 2, insert: 'Q' },
+  ]);
+  assert.deepEqual(a.compose(ChangeSet.of([{ from: 4, to: 5, insert: '' }], 6)).changes, [
+    { from: 1, to: 1, insert: 'xy' },
+    { from: 2, to: 3, insert: '' },
+  ]);
   // one overlapping a's insertion and the text after it replaces both, nothing more
-  assert.deepEqual(a.compose(ChangeSet.of([{ from: 2, to: 4, insert: 'Q' }], 6)).changes, [{ from: 1, to: 2, insert: 'xQ' }]);
+  assert.deepEqual(a.compose(ChangeSet.of([{ from: 2, to: 4, insert: 'Q' }], 6)).changes, [
+    { from: 1, to: 2, insert: 'xQ' },
+  ]);
   // b's deletion over the end of a's insertion and the text after it is one change
-  assert.deepEqual(ChangeSet.of([{ from: 0, to: 0, insert: 'ab' }], 4).compose(ChangeSet.of([{ from: 1, to: 3, insert: '' }], 6)).changes, [{ from: 0, to: 1, insert: 'a' }]);
+  assert.deepEqual(
+    ChangeSet.of([{ from: 0, to: 0, insert: 'ab' }], 4).compose(ChangeSet.of([{ from: 1, to: 3, insert: '' }], 6))
+      .changes,
+    [{ from: 0, to: 1, insert: 'a' }],
+  );
   // a's deletion under b's insertion
   const d = ChangeSet.of([{ from: 1, to: 3, insert: '' }], 4);
-  assert.deepEqual(d.compose(ChangeSet.of([{ from: 1, to: 1, insert: 'k' }], 2)).changes, [{ from: 1, to: 3, insert: 'k' }]);
+  assert.deepEqual(d.compose(ChangeSet.of([{ from: 1, to: 1, insert: 'k' }], 2)).changes, [
+    { from: 1, to: 3, insert: 'k' },
+  ]);
   assert.throws(() => a.compose(ChangeSet.empty(4)), RangeError);
 });
 
@@ -95,8 +141,11 @@ test('composed change sets stay within what either changed', () => {
         const both = first.compose(ChangeSet.of(b, first.newLength));
         assert.equal(both.apply(t), applyChanges(applyChanges(t, a), b));
         // every original character outside a's changes and b's (mapped back) is kept
-        const replaced = (p: number): boolean => a.some((c) => c.from <= p && p < c.to) || b.some((c) => c.from < c.to && c.from <= first.mapPos(p, 1) && first.mapPos(p, -1) < c.to);
-        for (const c of both.changes) for (let p = c.from; p < c.to; p++) assert.ok(replaced(p), `${p} kept in ${JSON.stringify(both.changes)}`);
+        const replaced = (p: number): boolean =>
+          a.some((c) => c.from <= p && p < c.to) ||
+          b.some((c) => c.from < c.to && c.from <= first.mapPos(p, 1) && first.mapPos(p, -1) < c.to);
+        for (const c of both.changes)
+          for (let p = c.from; p < c.to; p++) assert.ok(replaced(p), `${p} kept in ${JSON.stringify(both.changes)}`);
       },
     ),
     { numRuns: RUNS },
@@ -117,11 +166,11 @@ test('a set sorts its lists, drops duplicates, and refuses an offset off its tex
   assert.deepEqual(MarkSet.of('ab', { placeholders: [2] }).placeholders, [2], 'a point at the end');
 });
 
-test('a set refuses a mark on a character it can\'t be on: the list that gave it is corrupt', () => {
+test("a set refuses a mark on a character it can't be on: the list that gave it is corrupt", () => {
   // a placeholder: at a line's end or on a blank
   assert.deepEqual(MarkSet.of('a b\n\t c\n', { placeholders: [1, 3, 4, 5, 7, 8] }).placeholders, [1, 3, 4, 5, 7, 8]);
   assert.throws(() => MarkSet.of('ab', { placeholders: [1] }), MarkError, 'inside a word');
-  assert.throws(() => MarkSet.of('a\nb', { placeholders: [2] }), MarkError, 'at a line\'s start, on its text');
+  assert.throws(() => MarkSet.of('a\nb', { placeholders: [2] }), MarkError, "at a line's start, on its text");
   assert.throws(() => MarkSet.of('> a', { placeholders: [2] }), MarkError, 'past a `>`');
   assert.throws(() => MarkSet.of('a\\b', { placeholders: [2] }), MarkError, 'between an escape and its character');
   // an auto mark: an escape's backslash, a line break, a closing backtick or tilde
@@ -132,10 +181,16 @@ test('a set refuses a mark on a character it can\'t be on: the list that gave it
   assert.throws(() => MarkSet.of('a b').with({ placeholders: [2] }), MarkError);
 });
 
-test('a placeholder\'s role is where it is: at a line\'s end an empty node, elsewhere a held space', () => {
+test("a placeholder's role is where it is: at a line's end an empty node, elsewhere a held space", () => {
   const marks = MarkSet.of('- \n  x\r\n', { placeholders: [2, 4, 8] });
-  assert.deepEqual(marks.placeholders.filter((pos) => marks.hasEmptyNodeAt(pos)), [2, 8]);
-  assert.deepEqual(marks.placeholders.filter((pos) => marks.hasHeldSpaceAt(pos)), [4]);
+  assert.deepEqual(
+    marks.placeholders.filter((pos) => marks.hasEmptyNodeAt(pos)),
+    [2, 8],
+  );
+  assert.deepEqual(
+    marks.placeholders.filter((pos) => marks.hasHeldSpaceAt(pos)),
+    [4],
+  );
   assert.equal(marks.hasEmptyNodeAt(2), true);
   assert.equal(marks.hasHeldSpaceAt(2), false);
   assert.equal(marks.hasHeldSpaceAt(4), true);
@@ -144,35 +199,56 @@ test('a placeholder\'s role is where it is: at a line\'s end an empty node, else
 });
 
 test('the binary searches find what a scan finds', () => {
-  fc.assert(fc.property(fc.uniqueArray(fc.nat(30)), fc.nat(31), fc.nat(31), (offsets, a, b) => {
-    const sorted = [...offsets].sort((x, y) => x - y);
-    const [from, to] = a <= b ? [a, b] : [b, a];
-    assert.equal(MarkSet.has(sorted, a), sorted.includes(a));
-    assert.deepEqual([...MarkSet.within(sorted, from, to)], sorted.filter((pos) => pos >= from && pos < to));
-  }));
+  fc.assert(
+    fc.property(fc.uniqueArray(fc.nat(30)), fc.nat(31), fc.nat(31), (offsets, a, b) => {
+      const sorted = [...offsets].sort((x, y) => x - y);
+      const [from, to] = a <= b ? [a, b] : [b, a];
+      assert.equal(MarkSet.has(sorted, a), sorted.includes(a));
+      assert.deepEqual(
+        [...MarkSet.within(sorted, from, to)],
+        sorted.filter((pos) => pos >= from && pos < to),
+      );
+    }),
+  );
 });
 
 test('a placeholder moves as mapPos moves it (past an insertion at it), and goes where text on both sides of it does', () => {
-  fc.assert(fc.property(fc.integer({ min: 0, max: 20 }), fc.integer({ min: 0, max: 20 }), fc.integer({ min: 0, max: 5 }), fc.string({ maxLength: 4 }), (pos, from, len, insert) => {
-    // (blanks: wherever it moves, it is still before one, or at the end)
-    const text = ' '.repeat(26);
-    const change = { from, to: from + len, insert };
-    const mapped = MarkSet.of(text, { placeholders: [pos] }).map([change]);
-    assert.deepEqual(mapped.placeholders, from < pos && pos < from + len ? [] : [mapPos([change], pos, 1)]);
-    assert.equal(mapped.text, applyChanges(text, [change]));
-  }));
+  fc.assert(
+    fc.property(
+      fc.integer({ min: 0, max: 20 }),
+      fc.integer({ min: 0, max: 20 }),
+      fc.integer({ min: 0, max: 5 }),
+      fc.string({ maxLength: 4 }),
+      (pos, from, len, insert) => {
+        // (blanks: wherever it moves, it is still before one, or at the end)
+        const text = ' '.repeat(26);
+        const change = { from, to: from + len, insert };
+        const mapped = MarkSet.of(text, { placeholders: [pos] }).map([change]);
+        assert.deepEqual(mapped.placeholders, from < pos && pos < from + len ? [] : [mapPos([change], pos, 1)]);
+        assert.equal(mapped.text, applyChanges(text, [change]));
+      },
+    ),
+  );
   // the space it held taken out: no place any more, wherever it lands
   assert.deepEqual(MarkSet.of('a b', { placeholders: [1] }).map([{ from: 1, to: 2, insert: '' }]).placeholders, []);
   assert.deepEqual(MarkSet.of('a\n b', { placeholders: [2] }).map([{ from: 2, to: 3, insert: '' }]).placeholders, []);
 });
 
 test('an auto mark is its character: it moves with it, and goes with it', () => {
-  fc.assert(fc.property(fc.integer({ min: 0, max: 20 }), fc.integer({ min: 0, max: 20 }), fc.integer({ min: 0, max: 5 }), fc.string({ maxLength: 4 }), (pos, from, len, insert) => {
-    const text = '\\'.repeat(26);
-    const change = { from, to: from + len, insert };
-    const mapped = MarkSet.of(text, { auto: [pos] }).map([change]);
-    assert.deepEqual(mapped.auto, from <= pos && pos < from + len ? [] : [mapPos([change], pos, 1)]);
-  }));
+  fc.assert(
+    fc.property(
+      fc.integer({ min: 0, max: 20 }),
+      fc.integer({ min: 0, max: 20 }),
+      fc.integer({ min: 0, max: 5 }),
+      fc.string({ maxLength: 4 }),
+      (pos, from, len, insert) => {
+        const text = '\\'.repeat(26);
+        const change = { from, to: from + len, insert };
+        const mapped = MarkSet.of(text, { auto: [pos] }).map([change]);
+        assert.deepEqual(mapped.auto, from <= pos && pos < from + len ? [] : [mapPos([change], pos, 1)]);
+      },
+    ),
+  );
   // typed right before it: it moves on; right after it: it stays
   const marks = MarkSet.of('a\\', { auto: [1] });
   assert.deepEqual(marks.map([{ from: 1, to: 1, insert: 'x' }]).auto, [2]);
@@ -188,7 +264,7 @@ test('a set maps through a change set as through its changes', () => {
   assert.equal(marks.map(ChangeSet.empty(5)), marks);
 });
 
-test('slices that tile a text concat back to it, each mark once; splice moves the marks around and carries the insertion\'s', () => {
+test("slices that tile a text concat back to it, each mark once; splice moves the marks around and carries the insertion's", () => {
   const marks = MarkSet.of(' b \\\n', { placeholders: [0, 2, 5], auto: [3, 4] });
   for (let k = 0; k <= 5; k++) {
     const back = marks.slice(0, k).concat(marks.slice(k, 5, true));
@@ -206,7 +282,7 @@ test('slices that tile a text concat back to it, each mark once; splice moves th
   assert.deepEqual(spliced.placeholders, [1, 2, 4, 7]);
   assert.deepEqual(spliced.auto, [5, 6]);
   assert.equal(marks.splice(2, 4).text, ' b\n');
-  assert.deepEqual(marks.splice(2, 4).auto, [2], 'the deleted character\'s mark goes');
+  assert.deepEqual(marks.splice(2, 4).auto, [2], "the deleted character's mark goes");
 });
 
 test('with replaces the lists given, and is the same set where they are the same', () => {
@@ -219,32 +295,56 @@ test('with replaces the lists given, and is the same set where they are the same
 });
 
 test('a change is a range of whole offsets, start to end; one that changes nothing is dropped before the overlap check', () => {
-  for (const c of [{ from: 2, to: 1, insert: 'X' }, { from: Number.NaN, to: 1, insert: 'X' }, { from: 1.5, to: 2, insert: '' }, { from: -1, to: 0, insert: '' }]) {
+  for (const c of [
+    { from: 2, to: 1, insert: 'X' },
+    { from: Number.NaN, to: 1, insert: 'X' },
+    { from: 1.5, to: 2, insert: '' },
+    { from: -1, to: 0, insert: '' },
+  ]) {
     assert.throws(() => applyChanges('abcd', [c]), RangeError);
   }
-  assert.equal(applyChanges('abcd', [{ from: 1, to: 4, insert: 'X' }, { from: 2, to: 2, insert: '' }]), 'aX');
+  assert.equal(
+    applyChanges('abcd', [
+      { from: 1, to: 4, insert: 'X' },
+      { from: 2, to: 2, insert: '' },
+    ]),
+    'aX',
+  );
 });
 
 test('an index of changes maps every position as `mapPos` does, and finds the change covering a range as a scan does', () => {
-  const arbChanges = fc.array(fc.record({ from: fc.nat(20), len: fc.nat(3), insert: fc.constantFrom('', 'x', 'yz') }), { maxLength: 6 }).map((cs) => {
-    // non-overlapping: each from past the last change's end
-    const out: ChangeSpec[] = [];
-    let at = 0;
-    for (const c of cs) {
-      const from = at + c.from % 5;
-      out.push({ from, to: from + c.len, insert: c.insert });
-      at = from + c.len;
-    }
-    return out;
-  });
+  const arbChanges = fc
+    .array(fc.record({ from: fc.nat(20), len: fc.nat(3), insert: fc.constantFrom('', 'x', 'yz') }), { maxLength: 6 })
+    .map((cs) => {
+      // non-overlapping: each from past the last change's end
+      const out: ChangeSpec[] = [];
+      let at = 0;
+      for (const c of cs) {
+        const from = at + (c.from % 5);
+        out.push({ from, to: from + c.len, insert: c.insert });
+        at = from + c.len;
+      }
+      return out;
+    });
   fc.assert(
     fc.property(arbChanges, (changes) => {
       const index = new ChangeIndex(changes);
       for (let pos = 0; pos <= 40; pos++) {
-        for (const assoc of [-1, 1] as const) assert.equal(index.mapPos(pos, assoc), mapPos(changes, pos, assoc), `${JSON.stringify(changes)} ${pos} ${assoc}`);
+        for (const assoc of [-1, 1] as const)
+          assert.equal(
+            index.mapPos(pos, assoc),
+            mapPos(changes, pos, assoc),
+            `${JSON.stringify(changes)} ${pos} ${assoc}`,
+          );
         for (let to = pos; to <= pos + 3; to++) {
-          assert.equal(index.covering(pos, to), changes.find((c) => c.from < c.to && c.from <= pos && c.to >= to), `${JSON.stringify(changes)} ${pos}–${to}`);
-          const removes = changes.some((c) => c.from < c.to && (pos === to ? c.from < pos && pos < c.to : c.from < to && c.to > pos));
+          assert.equal(
+            index.covering(pos, to),
+            changes.find((c) => c.from < c.to && c.from <= pos && c.to >= to),
+            `${JSON.stringify(changes)} ${pos}–${to}`,
+          );
+          const removes = changes.some(
+            (c) => c.from < c.to && (pos === to ? c.from < pos && pos < c.to : c.from < to && c.to > pos),
+          );
           assert.equal(index.removes(pos, to), removes, `removes ${JSON.stringify(changes)} ${pos}–${to}`);
         }
       }
@@ -290,17 +390,32 @@ test('a character is a grapheme or a line ending, a CRLF whole: the one before, 
   const text = 'a👩\u200d💻e\u0301\r\n\rb';
   // a 0, 👩‍💻 1–6, é 6–8, CRLF 8–10, CR 10–11, b 11
   const starts = [0, 1, 6, 8, 10, 11, 12];
-  assert.deepEqual(starts.slice(1).map((p) => charBefore(text, p)), starts.slice(0, -1));
-  assert.deepEqual(starts.slice(0, -1).map((p) => charAfter(text, p)), starts.slice(1));
-  assert.deepEqual([0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12].map((p) => charStart(text, p)), [0, 1, 1, 1, 1, 6, 6, 8, 8, 10, 11, 12]);
+  assert.deepEqual(
+    starts.slice(1).map((p) => charBefore(text, p)),
+    starts.slice(0, -1),
+  );
+  assert.deepEqual(
+    starts.slice(0, -1).map((p) => charAfter(text, p)),
+    starts.slice(1),
+  );
+  assert.deepEqual(
+    [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12].map((p) => charStart(text, p)),
+    [0, 1, 1, 1, 1, 6, 6, 8, 8, 10, 11, 12],
+  );
   assert.equal(charBefore(text, 0), 0);
   assert.equal(charAfter(text, text.length), text.length);
 });
 
-test('the line ending before a position, and the next line\'s start, a CRLF whole and a lone CR one', () => {
-  assert.deepEqual([1, 3, 4, 5].map((p) => lineEndingBefore('a\r\nb\rc\n', p)), ['', '\r\n', '', '\r']);
+test("the line ending before a position, and the next line's start, a CRLF whole and a lone CR one", () => {
+  assert.deepEqual(
+    [1, 3, 4, 5].map((p) => lineEndingBefore('a\r\nb\rc\n', p)),
+    ['', '\r\n', '', '\r'],
+  );
   assert.equal(lineEndingBefore('a\nb', 2), '\n');
-  assert.deepEqual([0, 1, 3, 5, 6].map((p) => nextLineStart('a\r\nb\rc', p)), [3, 3, 5, 6, 6]);
+  assert.deepEqual(
+    [0, 1, 3, 5, 6].map((p) => nextLineStart('a\r\nb\rc', p)),
+    [3, 3, 5, 6, 6],
+  );
 });
 
 test('no JavaScript whitespace on document text: `trim()` and `\\s` take a no-break space and other Unicode spaces, which Markdown reads as text; `trimMd` and the blank test instead (B250)', () => {
@@ -312,16 +427,21 @@ test('no JavaScript whitespace on document text: `trim()` and `\\s` take a no-br
     ['src/parser/obsidian.ts', 'return s.trim()', "a math block's TeX, as Obsidian reads it"],
     ['src/parser/obsidian.ts', 'inner.slice(0, bar)).trim()', "a wikilink's target, as Obsidian reads it"],
     ['src/parser/obsidian.ts', 'inner.slice(bar + 1).trim()', "a wikilink's alias, as Obsidian reads it"],
-    ['src/parser/obsidian.ts', 'text.slice(at + 2, close).trim()', "inline display math, as Obsidian reads it"],
+    ['src/parser/obsidian.ts', 'text.slice(at + 2, close).trim()', 'inline display math, as Obsidian reads it'],
     ['src/parser/blocks.ts', 'ATTRIBUTE', "HTML's whitespace in an HTML block's start, as commonmark.js reads it"],
     ['src/parser/blocks.ts', 'OPENTAG', "HTML's whitespace"],
     ['src/parser/blocks.ts', 'CLOSETAG', "HTML's whitespace"],
     ['src/parser/blocks.ts', 'script|pre|textarea|style', "HTML's whitespace"],
     ['src/parser/blocks.ts', 'address|article|aside', "HTML's whitespace"],
     ['src/commands/clipboard.ts', 'SOURCE_MARK', 'a mark in HTML'],
-    ['src/commands/paste-plain.ts', 'line.trim()', 'plain lines pasted as blocks lose their Unicode spaces too, as the block apps paste them (PastePlain14, 15)'],
+    [
+      'src/commands/paste-plain.ts',
+      'line.trim()',
+      'plain lines pasted as blocks lose their Unicode spaces too, as the block apps paste them (PastePlain14, 15)',
+    ],
   ];
-  const skip = (path: string): boolean => /src\/parser\/(?:html|html-parser|tools\/)/.test(path) || path.endsWith('.d.ts');
+  const skip = (path: string): boolean =>
+    /src\/parser\/(?:html|html-parser|tools\/)/.test(path) || path.endsWith('.d.ts');
   const files: string[] = [];
   const walk = (dir: string): void => {
     for (const name of readdirSync(dir)) {
@@ -334,12 +454,14 @@ test('no JavaScript whitespace on document text: `trim()` and `\\s` take a no-br
   assert.ok(files.length > 50, `${files.length} files read`);
   const found: string[] = [];
   for (const file of files) {
-    readFileSync(file, 'utf8').split('\n').forEach((line, k) => {
-      const code = line.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, '');
-      if (!/\.trim(?:Start|End)?\(|\\s/.test(code)) return;
-      if (allowed.some(([f, piece]) => file === f && line.includes(piece))) return;
-      found.push(`${file}:${k + 1}: ${line.trim()}`);
-    });
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .forEach((line, k) => {
+        const code = line.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, '');
+        if (!/\.trim(?:Start|End)?\(|\\s/.test(code)) return;
+        if (allowed.some(([f, piece]) => file === f && line.includes(piece))) return;
+        found.push(`${file}:${k + 1}: ${line.trim()}`);
+      });
   }
   assert.deepEqual(found, []);
 });

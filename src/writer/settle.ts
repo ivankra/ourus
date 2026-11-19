@@ -20,7 +20,11 @@ export type Settled = { readonly doc: OurusDoc; readonly changes: readonly Chang
  * each (`settlePlaceholders` in `commands/`). None where none is off those lines. `kept`: the
  * placeholders that stay, off them or not.
  */
-export function settleSteps(doc: OurusDoc, selection: OurusSelection, kept?: (pos: number) => boolean): readonly Settled[] {
+export function settleSteps(
+  doc: OurusDoc,
+  selection: OurusSelection,
+  kept?: (pos: number) => boolean,
+): readonly Settled[] {
   const from = doc.lineAt(Math.min(selection.anchor, selection.head)).from;
   const to = doc.lineAt(Math.max(selection.anchor, selection.head)).to;
   const caret = selection.head;
@@ -30,8 +34,18 @@ export function settleSteps(doc: OurusDoc, selection: OurusSelection, kept?: (po
   if (all) return [all];
   // (each alone, those that can't be written dropped, the rest settled: two steps, each the one before's)
   const writable = abandoned.filter((pos) => settled(doc, caret, [pos]));
-  const without = doc.update({ marks: doc.marks.with({ placeholders: doc.marks.placeholders.filter((pos) => !abandoned.includes(pos) || writable.includes(pos)) }) });
-  const rest = writable.length ? settled(without, caret, without.marks.placeholders.filter((pos) => writable.includes(pos))) : null;
+  const without = doc.update({
+    marks: doc.marks.with({
+      placeholders: doc.marks.placeholders.filter((pos) => !abandoned.includes(pos) || writable.includes(pos)),
+    }),
+  });
+  const rest = writable.length
+    ? settled(
+        without,
+        caret,
+        without.marks.placeholders.filter((pos) => writable.includes(pos)),
+      )
+    : null;
   return [{ doc: without, changes: [] }, ...(rest ? [rest] : [])];
 }
 
@@ -52,7 +66,12 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
       continue;
     }
     // an empty first line it holds, above the text (`◌⏎text`): the line goes, as the last one does
-    if (!text.empty && text.text[0] === '\n' && text.marks.placeholders.includes(0) && text.frame[0]?.part !== 'below') {
+    if (
+      !text.empty &&
+      text.text[0] === '\n' &&
+      text.marks.placeholders.includes(0) &&
+      text.frame[0]?.part !== 'below'
+    ) {
       draft.setText(node, text.slice(1).withBlockIdLines(text.blockIdLines));
       continue;
     }
@@ -60,20 +79,34 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
       // written again, which settles the held space as `heldSpace` says (the draft's: kept, the text's
       // padding, its children moved with it; or out); an empty item as `done()` holds it
       // (its placeholder out: settled, the draft holds it only where Markdown needs it)
-      draft.setText(node, node.kind === 'item' ? text.withMarks({ placeholders: text.marks.placeholders.filter((p) => !text.marks.hasEmptyNodeAt(p)) }) : text);
+      draft.setText(
+        node,
+        node.kind === 'item'
+          ? text.withMarks({ placeholders: text.marks.placeholders.filter((p) => !text.marks.hasEmptyNodeAt(p)) })
+          : text,
+      );
     } else if (text.empty) {
       // (with the blank lines that set it off between two items: their list as tight as it was, TO18)
       // (the list after it its own, in a section: Enter7b)
       const [above, below] = [node.preceding, node.children[0] ?? node.next];
-      const apart = (n: OurusNode | null): boolean => n?.kind === 'item' && !!n.next && n.next.kind === 'item' && n.lastDescendant.gap > 0;
-      if (above?.kind === 'item' && below?.kind === 'item' && !apart(above.prev) && !apart(below)) draft.gap(above.lastDescendant, 0);
+      const apart = (n: OurusNode | null): boolean =>
+        n?.kind === 'item' && !!n.next && n.next.kind === 'item' && n.lastDescendant.gap > 0;
+      if (above?.kind === 'item' && below?.kind === 'item' && !apart(above.prev) && !apart(below))
+        draft.gap(above.lastDescendant, 0);
       // (a separator: where nothing set the blocks around it apart, no blank line before it nor after it,
       // its line is one now, the node above's gap; not in a list or a quote, where a blank line is
       // structure, a list loosened, a quote split)
-      else if (above && above.kind !== 'root' && (above !== node.parent || doc.textOf(above)) && separates(doc, node, above)) draft.gap(above, 1);
+      else if (
+        above &&
+        above.kind !== 'root' &&
+        (above !== node.parent || doc.textOf(above)) &&
+        separates(doc, node, above)
+      )
+        draft.gap(above, 1);
       // (else the node above takes its blank lines, as Backspace taking it out would: the author's stay;
       // but a parent with no text, a quote's, has no blank lines after it to take them)
-      else if (above && above.kind !== 'root' && (above !== node.parent || doc.textOf(above))) draft.inheritGap(above, node);
+      else if (above && above.kind !== 'root' && (above !== node.parent || doc.textOf(above)))
+        draft.inheritGap(above, node);
       draft.dissolve(node);
       gone.add(node.id);
     }

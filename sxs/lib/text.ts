@@ -5,7 +5,15 @@
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusAtom, OurusDoc } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { drawState, drawText, drawnSelection, endingText, allNodes, nodePlainText, readDrawing } from '../../test/lib/index.ts';
+import {
+  drawState,
+  drawText,
+  drawnSelection,
+  endingText,
+  allNodes,
+  nodePlainText,
+  readDrawing,
+} from '../../test/lib/index.ts';
 import type { Verdict } from './block.ts';
 import { drawView, sameView, splitView, type RowView } from './view.ts';
 
@@ -35,7 +43,8 @@ export function foldOnAtomItem(d: TextDoc, flavor: OurusConfig['flavor'] = 'gfm'
   const doc = OurusDoc.parse(d.text, { config: { flavor } });
   for (const row of d.view.folded) {
     const node = doc.nodeAtLine(row);
-    if (node?.kind === 'item' && node.startLine === row && doc.textOf(node) instanceof OurusAtom) return 'a fold on an item whose text is code or a table, which its fold command at the row doesn\'t make';
+    if (node?.kind === 'item' && node.startLine === row && doc.textOf(node) instanceof OurusAtom)
+      return "a fold on an item whose text is code or a table, which its fold command at the row doesn't make";
   }
   return undefined;
 }
@@ -52,7 +61,9 @@ const loose = (text: string): string => text.replace(/[ \t]+$/gm, '');
 /** A document's nodes as ourus verifies them: kind, depth, what the head is, and the text (an atom's as written, other nodes' lines trimmed). */
 const nodes = (text: string, flavor: OurusConfig['flavor']): string => {
   const doc = OurusDoc.parse(text, { config: { flavor } });
-  return JSON.stringify(allNodes(doc).map((n) => [n.kind, n.depth, n.head?.type, n.head?.attrs.level, nodePlainText(doc, n)]));
+  return JSON.stringify(
+    allNodes(doc).map((n) => [n.kind, n.depth, n.head?.type, n.head?.attrs.level, nodePlainText(doc, n)]),
+  );
 };
 
 /**
@@ -65,9 +76,16 @@ export function compareTexts(want: TextDoc, got: TextDoc, flavor: OurusConfig['f
   if (want.text !== got.text) {
     if (loose(want.text) === loose(got.text)) return 'whitespace';
     const bare = (t: string): string => t.replace(/[ \t]+/g, '');
-    return bare(want.text) === bare(got.text) && nodes(want.text, flavor) === nodes(got.text, flavor) ? 'whitespace' : 'disagree';
+    return bare(want.text) === bare(got.text) && nodes(want.text, flavor) === nodes(got.text, flavor)
+      ? 'whitespace'
+      : 'disagree';
   }
-  if (want.sel && JSON.stringify(want.sel) !== JSON.stringify(got.sel) && !sameSubtrees(want.text, want.sel, got.sel, flavor)) return 'caret';
+  if (
+    want.sel &&
+    JSON.stringify(want.sel) !== JSON.stringify(got.sel) &&
+    !sameSubtrees(want.text, want.sel, got.sel, flavor)
+  )
+    return 'caret';
   return 'agree';
 }
 
@@ -79,9 +97,14 @@ export function compareTexts(want: TextDoc, got: TextDoc, flavor: OurusConfig['f
 function sameSubtrees(text: string, a: TextDoc['sel'], b: TextDoc['sel'], flavor: OurusConfig['flavor']): boolean {
   if (!a || !b) return false;
   const view = OurusView.of(OurusDoc.parse(text, { config: { flavor } }));
-  const ids = (sel: NonNullable<TextDoc['sel']>): string | undefined => view.selectedSubtrees(sel)?.map((n) => n.id).join();
+  const ids = (sel: NonNullable<TextDoc['sel']>): string | undefined =>
+    view
+      .selectedSubtrees(sel)
+      ?.map((n) => n.id)
+      .join();
   const roots = ids(a);
   return roots !== undefined && roots === ids(b);
 }
 
-export const sameText = (a: TextDoc, b: TextDoc): boolean => a.text === b.text && JSON.stringify(a.sel) === JSON.stringify(b.sel) && sameView(a.view, b.view);
+export const sameText = (a: TextDoc, b: TextDoc): boolean =>
+  a.text === b.text && JSON.stringify(a.sel) === JSON.stringify(b.sel) && sameView(a.view, b.view);

@@ -6,7 +6,15 @@ import { CODE } from './code.ts';
 import { atLine } from '../text/index.ts';
 import { CommandContext } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
-import { fenceDrawn, goneWithTextlessParents, operandsOf, operandsRefused, selectionInText, textEnd, textStart } from './util.ts';
+import {
+  fenceDrawn,
+  goneWithTextlessParents,
+  operandsOf,
+  operandsRefused,
+  selectionInText,
+  textEnd,
+  textStart,
+} from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusSuccess, OurusRejected } from './types.ts';
 
@@ -30,8 +38,15 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     return true;
   });
   if (expectMarkdown !== undefined) {
-    const copied = copyOrCutCommand(new CommandContext(view.withSelection(ctx.selection), nodes.map((n) => n.id)), 'copy');
-    if (!(copied instanceof OurusSuccess) || copied.clipboard?.['text/plain'] !== expectMarkdown) return new OurusRejected('content-changed', 'the nodes are no longer the Markdown dragged out');
+    const copied = copyOrCutCommand(
+      new CommandContext(
+        view.withSelection(ctx.selection),
+        nodes.map((n) => n.id),
+      ),
+      'copy',
+    );
+    if (!(copied instanceof OurusSuccess) || copied.clipboard?.['text/plain'] !== expectMarkdown)
+      return new OurusRejected('content-changed', 'the nodes are no longer the Markdown dragged out');
   }
   const gone = goneWithTextlessParents(doc, nodes);
   const draft = ctx.draft().remove(gone);
@@ -39,7 +54,8 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
   // it keeps the blank lines that set them off from it, a list from a table after it, say; a gap of its
   // own as large, it keeps its own. Items after it join the list there: DeleteSubtree13)
   // (what went, on purpose: their block ids with them)
-  const removed = (outcome: OurusResult | null): OurusResult | null => (outcome instanceof OurusSuccess ? new OurusSuccess({ ...outcome, removedNodes: gone.map((n) => n.id) }) : outcome);
+  const removed = (outcome: OurusResult | null): OurusResult | null =>
+    outcome instanceof OurusSuccess ? new OurusSuccess({ ...outcome, removedNodes: gone.map((n) => n.id) }) : outcome;
   const end = gone[gone.length - 1]!;
   const before = gone[0]!.preceding;
   // (at a caret right under code, where the end of the text above is a line of code: an empty node held
@@ -57,7 +73,8 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
   while (above && above.kind !== 'root' && (!doc.textOf(above) || bare(above))) above = above.preceding;
   const aboveText = above && above.kind !== 'root' ? doc.textOf(above) : null;
   // (or a cut of whole nodes, a subtree selection's, which a paste puts back where the caret is)
-  const underCode = aboveText instanceof OurusAtom && CODE.has(aboveText.type) && ((!ctx.nodes && ctx.collapsed) || cut);
+  const underCode =
+    aboveText instanceof OurusAtom && CODE.has(aboveText.type) && ((!ctx.nodes && ctx.collapsed) || cut);
   if (underCode) {
     const first = gone[0]!;
     const item = first.kind === 'item';
@@ -68,16 +85,30 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     draft.inheritGap(made, end.lastDescendant).setCaret(made, 0, -1);
     return removed(ctx.apply(draft));
   }
-  const endsList = end.kind === 'item' && (!end.next || end.next.kind !== 'item' || doc.listOf(end.next)?.block !== doc.listOf(end)?.block);
+  const endsList =
+    end.kind === 'item' &&
+    (!end.next || end.next.kind !== 'item' || doc.listOf(end.next)?.block !== doc.listOf(end)?.block);
   // (before it in its parent: a parent above it, a quote it was first in, has no blank lines of its own to set it off)
-  if ((!end.next || endsList) && end.afterSubtree && end.afterSubtree.kind !== 'item' && before && before.kind !== 'root' && gone[0]!.index > 0 && !gone[0]!.isWithin(before) && !gone.some((g) => before.isWithin(g))) {
+  if (
+    (!end.next || endsList) &&
+    end.afterSubtree &&
+    end.afterSubtree.kind !== 'item' &&
+    before &&
+    before.kind !== 'root' &&
+    gone[0]!.index > 0 &&
+    !gone[0]!.isWithin(before) &&
+    !gone.some((g) => before.isWithin(g))
+  ) {
     const blanks = end.lastDescendant.gap;
     if (blanks >= before.gap) draft.inheritGap(before, end.lastDescendant);
   }
   if (ctx.nodes) {
     // (each one's lines, not the span from the first to the last: a node between them stays; last in
     // the document, past the final line break too, nothing after it to keep a caret in)
-    const ranges = gone.map((g) => ({ from: doc.rangeOf(g).from, to: g.afterSubtree ? doc.rangeOf(g).to : doc.text.length }));
+    const ranges = gone.map((g) => ({
+      from: doc.rangeOf(g).from,
+      to: g.afterSubtree ? doc.rangeOf(g).to : doc.text.length,
+    }));
     // (their blank lines theirs: a caret there is in what goes)
     const theirs = (pos: number): boolean => {
       const at = view.locate(pos);
@@ -101,7 +132,8 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     // (before a fenced block's opening delimiter, where the host shows it as text: at its payload's start
     // the next paste, a cut's put back, would go into the code; where it draws it the fence is no place
     // for a caret)
-    const open = text instanceof OurusAtom && !fenceDrawn(ctx, text) ? text.frame.find((p) => p.part === 'open') : undefined;
+    const open =
+      text instanceof OurusAtom && !fenceDrawn(ctx, text) ? text.frame.find((p) => p.part === 'open') : undefined;
     draft.setCaret(at, open ? open.from : textStart(text), 1);
     // (nothing left: at the note's start, past a byte-order mark)
   } else draft.setCaretAt(doc.mdTree.documentStart);

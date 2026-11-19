@@ -19,7 +19,8 @@ export function markdownStart(doc: OurusDoc, node: OurusNode): number {
   if (node.kind === 'item') return tree.markerFrom(new MdBlockAt(node.block, node.startLine));
   // a quote's `>` and a footnote definition's `[^1]:` are its own prefix piece, and so is the `>` of a
   // quote that is the node's text (`quotes: text`, `atom`)
-  const own = node.kind === 'quote' || node.block.type === 'footnote_definition' ? node.block : node.persistentNode.textQuote;
+  const own =
+    node.kind === 'quote' || node.block.type === 'footnote_definition' ? node.block : node.persistentNode.textQuote;
   const piece = own ? line.prefix.find((p) => p.container.block === own) : undefined;
   return piece ? skipSpaces(doc.text, piece.from, piece.to, 1) : line.contentFrom;
 }
@@ -62,7 +63,8 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   // marker before it: an item's piece starts at the indentation before its marker) and ending in or
   // after its last line
   const first = tree.line(lo);
-  const opens = (p: MdPrefixPiece): number => (p.kind === 'marker' ? tree.markerFrom(p.container) : skipSpaces(text, p.from, p.to, 1));
+  const opens = (p: MdPrefixPiece): number =>
+    p.kind === 'marker' ? tree.markerFrom(p.container) : skipSpaces(text, p.from, p.to, 1);
   // (but a quote that is a node's lines as written, `quotes: atom`: its `>`s are that text's)
   const own = doc.config.quotes === 'atom' ? doc.nodeAtLine(lo)?.persistentNode.textQuote : null;
   // (and not the item whose text the copy starts in where it goes on past that text, into the item's
@@ -70,8 +72,22 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   // the caret puts them back under it)
   const start = doc.nodeAtLine(lo);
   const startItem = start?.kind === 'item' && hi > start.textLastLine ? start.persistentNode.block : null;
-  const holding = new Set(first.prefix.filter((p) => (p.container.line < lo || opens(p) < from) && p.container.lastLine >= hi && p.container.block !== own && p.container.block !== startItem).map((p) => p.container.block));
-  const held = (line: MdLine): number => line.prefix.reduce<number>((start, piece) => (holding.has(piece.container.block) ? Math.max(start, piece.to) : start), line.from);
+  const holding = new Set(
+    first.prefix
+      .filter(
+        (p) =>
+          (p.container.line < lo || opens(p) < from) &&
+          p.container.lastLine >= hi &&
+          p.container.block !== own &&
+          p.container.block !== startItem,
+      )
+      .map((p) => p.container.block),
+  );
+  const held = (line: MdLine): number =>
+    line.prefix.reduce<number>(
+      (start, piece) => (holding.has(piece.container.block) ? Math.max(start, piece.to) : start),
+      line.from,
+    );
   // indentation the first line loses past what holds the copy (an item indented past its parent's
   // text, copied from its marker), the lines after it lose too: they keep their columns to it
   const column = (line: MdLine, at: number): number => advanceColumns(text, line.from, at, 0);
@@ -92,13 +108,17 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
       // (a tab partly within the lead leaves spaces for the rest of its width)
       const base = column(line, start);
       let col = base;
-      while (start < line.to && col < base + lead && (text[start] === ' ' || text[start] === '\t')) col = advanceColumns(text, start, ++start, col);
-      piece = ' '.repeat(Math.max(0, col - base - lead)) + text.slice(start, i === end.index ? Math.min(to, line.to) : line.to);
+      while (start < line.to && col < base + lead && (text[start] === ' ' || text[start] === '\t'))
+        col = advanceColumns(text, start, ++start, col);
+      piece =
+        ' '.repeat(Math.max(0, col - base - lead)) +
+        text.slice(start, i === end.index ? Math.min(to, line.to) : line.to);
     }
     // (a tab a container's prefix took part of, `>→`: the rest of its width, in spaces, which the tab
     // at column 0 would span differently)
     const partial = line.prefix.find((p) => holding.has(p.container.block) && p.to === start && p.partialTab);
-    if (partial && text[start] === '\t' && piece.startsWith('\t') && (i !== lo || from <= start)) piece = ' '.repeat(advanceColumns(text, line.from, start + 1, 0) - partial.toColumn) + piece.slice(1);
+    if (partial && text[start] === '\t' && piece.startsWith('\t') && (i !== lo || from <= start))
+      piece = ' '.repeat(advanceColumns(text, line.from, start + 1, 0) - partial.toColumn) + piece.slice(1);
     // (a line the copy takes whole, blank there, is empty; part of one, spaces between words, is as it
     // is; and a code block's line, its spaces the payload's)
     const whole = (i !== lo || from <= held(line)) && (i !== end.index || to >= line.to);

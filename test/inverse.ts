@@ -34,11 +34,32 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { executeCommand, type InsertionPoint, OurusFailed, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
+import {
+  executeCommand,
+  type InsertionPoint,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+} from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { textStart } from '../src/commands/util.ts';
-import { drawDoc, allNodes, readDrawing, playActions, type PlayedState, readSpecFile, specConfig, specFiles, specTestFlavors, generatedStarts, resultStatus, readBaseline, staleBaseline, writeBaseline } from './lib/index.ts';
+import {
+  drawDoc,
+  allNodes,
+  readDrawing,
+  playActions,
+  type PlayedState,
+  readSpecFile,
+  specConfig,
+  specFiles,
+  specTestFlavors,
+  generatedStarts,
+  resultStatus,
+  readBaseline,
+  staleBaseline,
+  writeBaseline,
+} from './lib/index.ts';
 import { KNOWN } from './drops.ts';
 
 const here = resolve(import.meta.dirname, '..');
@@ -74,16 +95,25 @@ for (const file of isMainThread ? specFiles().filter((f) => f !== 'obsidian-true
 // but a new one (or more of one) does
 if (isMainThread) for (const g of generatedStarts(Number(process.env.INVERSE_GENERATED ?? 150))) starts.push(g);
 // the corpus's identity, whatever order its files are read in (a renamed file changes nothing)
-const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON.stringify([s.text, s.config])).sort())).digest('hex').slice(0, 16);
+const corpus = createHash('sha256')
+  .update(JSON.stringify(starts.map((s) => JSON.stringify([s.text, s.config])).sort()))
+  .digest('hex')
+  .slice(0, 16);
 
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
-const outline = (doc: OurusDoc): string => JSON.stringify(allNodes(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
+const outline = (doc: OurusDoc): string =>
+  JSON.stringify(allNodes(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
 function classify(start: OurusDoc, end: PlayedState, from: number): string {
   const [a, b] = [start.text, end.view.doc.text];
   if (a === b) return end.view.selection.head === from && end.view.selection.anchor === from ? 'same' : 'caret';
   if (outline(start) !== outline(end.view.doc)) return 'tree';
-  const solid = (s: string): string => s.split('\n').filter((l) => !isBlank(l)).join('\n');
-  if (solid(a) === solid(b)) return a.split('\n').filter(isBlank).length < b.split('\n').filter(isBlank).length ? 'blank+' : 'blank-';
+  const solid = (s: string): string =>
+    s
+      .split('\n')
+      .filter((l) => !isBlank(l))
+      .join('\n');
+  if (solid(a) === solid(b))
+    return a.split('\n').filter(isBlank).length < b.split('\n').filter(isBlank).length ? 'blank+' : 'blank-';
   if (a.replace(/[ \t]/g, '') === b.replace(/[ \t]/g, '')) return 'space';
   return 'text';
 }
@@ -118,7 +148,12 @@ function playShare(share: readonly number[]): Found {
       const key = `${text.slice(0, text.indexOf(':'))} (generated)`;
       const group = generated.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
       group.runs++;
-      if (!group.buffers.has(starts[index]!.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: starts[index]!.text, text: JSON.stringify(starts[index]!.text) + '\n         ' + text.slice(text.indexOf(':') + 2) });
+      if (!group.buffers.has(starts[index]!.text) && group.examples.length < examples)
+        group.examples.push({
+          at: index,
+          buffer: starts[index]!.text,
+          text: JSON.stringify(starts[index]!.text) + '\n         ' + text.slice(text.indexOf(':') + 2),
+        });
       group.buffers.add(starts[index]!.text);
       generated.set(key, group);
       return;
@@ -153,13 +188,25 @@ function playShare(share: readonly number[]): Found {
           fail(index, `${second} after ${first} failed to write: ${s.name} ${draw(at)} → ${draw(mid)}`);
           continue;
         }
-        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : (last ? resultStatus(last) : '-');
+        const shape =
+          last instanceof OurusSuccess
+            ? classify(doc, end, pos)
+            : last instanceof OurusRejected
+              ? `rejected ${last.reason}`
+              : last
+                ? resultStatus(last)
+                : '-';
         if (shape === 'same') continue;
         const key = `${first}, ${second}: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${s.name}\t${draw(at)}\t${draw(mid)}\t${draw(end)}`);
         const group = groups.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
         group.runs++;
-        if (!group.buffers.has(s.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: s.text, text: `${s.name}\n           ${draw(at)}\n         → ${draw(mid)}\n         → ${draw(end)}` });
+        if (!group.buffers.has(s.text) && group.examples.length < examples)
+          group.examples.push({
+            at: index,
+            buffer: s.text,
+            text: `${s.name}\n           ${draw(at)}\n         → ${draw(mid)}\n         → ${draw(end)}`,
+          });
         group.buffers.add(s.text);
         groups.set(key, group);
       }
@@ -176,7 +223,10 @@ function playShare(share: readonly number[]): Found {
       if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
       const nodes = picked.dropMap.nodes;
       const root = doc.node(nodes[0]!)!;
-      const back: InsertionPoint = { parent: root.parent!.kind === 'root' ? 'root' : root.parent!.id, after: root.prev?.id ?? null };
+      const back: InsertionPoint = {
+        parent: root.parent!.kind === 'root' ? 'root' : root.parent!.id,
+        after: root.prev?.id ?? null,
+      };
       for (const point of picked.dropMap.seams.flatMap((seam) => seam.points)) {
         if (point.current) continue;
         found.runs++;
@@ -205,13 +255,23 @@ function playShare(share: readonly number[]): Found {
           fail(index, `moveSubtree back failed to write: ${where} → ${draw(mid)}`);
           continue;
         }
-        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : resultStatus(last);
+        const shape =
+          last instanceof OurusSuccess
+            ? classify(doc, end, pos)
+            : last instanceof OurusRejected
+              ? `rejected ${last.reason}`
+              : resultStatus(last);
         if (shape === 'same') continue;
         const key = `moveSubtree, back: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${where}\t${draw(mid)}\t${draw(end)}`);
         const group = groups.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
         group.runs++;
-        if (!group.buffers.has(s.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: s.text, text: `${where}\n         → ${draw(mid)}\n         → ${draw(end)}` });
+        if (!group.buffers.has(s.text) && group.examples.length < examples)
+          group.examples.push({
+            at: index,
+            buffer: s.text,
+            text: `${where}\n         → ${draw(mid)}\n         → ${draw(end)}`,
+          });
         group.buffers.add(s.text);
         groups.set(key, group);
       }
@@ -245,7 +305,10 @@ const parts: Found[] =
         ),
       );
 const runs = parts.reduce((n, p) => n + p.runs, 0);
-const failures = parts.flatMap((p) => p.failures).sort((x, y) => x.at - y.at).map((f) => f.text);
+const failures = parts
+  .flatMap((p) => p.failures)
+  .sort((x, y) => x.at - y.at)
+  .map((f) => f.text);
 const groups = new Map<string, { runs: number; buffers: Set<string>; examples: string[] }>();
 for (const [key] of new Map(parts.flatMap((p) => [...p.groups]))) {
   const of = parts.map((p) => p.groups.get(key)).filter((g) => g !== undefined);
@@ -257,7 +320,11 @@ for (const [key] of new Map(parts.flatMap((p) => [...p.groups]))) {
     shown.add(e.buffer);
     picked.push(e.text);
   }
-  groups.set(key, { runs: of.reduce((n, g) => n + g.runs, 0), buffers: new Set(of.flatMap((g) => g.buffers)), examples: picked });
+  groups.set(key, {
+    runs: of.reduce((n, g) => n + g.runs, 0),
+    buffers: new Set(of.flatMap((g) => g.buffers)),
+    examples: picked,
+  });
 }
 
 console.log(`${runs} runs on ${starts.length} buffers`);
@@ -267,18 +334,33 @@ const baselineFile = join(here, 'test/inverse.baseline.json');
 const baseline = readBaseline(baselineFile);
 const sameCorpus = baseline?.corpus === corpus;
 const rose: string[] = [];
-for (const [key, group] of [...groups].sort((x, y) => y[1].buffers.size - x[1].buffers.size || (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))) {
+for (const [key, group] of [...groups].sort(
+  (x, y) => y[1].buffers.size - x[1].buffers.size || (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0),
+)) {
   const before = baseline ? (baseline.groups[key] ?? 0) : null;
   if (sameCorpus && before !== null && group.runs > before) rose.push(key);
-  console.log(`${String(group.runs).padStart(6)} runs, ${String(group.buffers.size).padStart(4)} buffers  ${key}${before === null ? '' : ` (baseline ${before})`}`);
+  console.log(
+    `${String(group.runs).padStart(6)} runs, ${String(group.buffers.size).padStart(4)} buffers  ${key}${before === null ? '' : ` (baseline ${before})`}`,
+  );
   for (const example of group.examples) console.log(`         ${example}`);
 }
 for (const failure of failures) console.log(`FAIL ${failure}`);
 for (const line of parts.flatMap((p) => p.known)) console.log(`known ${line}`);
-if (dumping) writeFileSync(process.env.INVERSE_DUMP!, parts.flatMap((p) => p.dumped).sort().join('\n') + '\n');
+if (dumping)
+  writeFileSync(
+    process.env.INVERSE_DUMP!,
+    parts
+      .flatMap((p) => p.dumped)
+      .sort()
+      .join('\n') + '\n',
+  );
 if (rose.length) console.log(`\nmore round trips than the baseline don't come back: ${rose.join('; ')}`);
-if (baseline && !sameCorpus && !counted) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them');
-const stale = process.env.INVERSE_UPDATE === '1' ? [] : staleBaseline(baseline, corpus, groups, counted, 'INVERSE_UPDATE');
+if (baseline && !sameCorpus && !counted)
+  console.log(
+    '\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them',
+  );
+const stale =
+  process.env.INVERSE_UPDATE === '1' ? [] : staleBaseline(baseline, corpus, groups, counted, 'INVERSE_UPDATE');
 for (const line of stale) console.log(`\n${line}`);
 if (process.env.INVERSE_UPDATE === '1') {
   writeBaseline(baselineFile, corpus, groups);

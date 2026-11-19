@@ -39,7 +39,8 @@ function written(flavor: MdFlavor, lines: string[], place: MdParagraphPlace = {}
     const gained = spelled.gained.filter((e) => e.line === k).map((e, j) => ({ at: e.at + j, insert: '!' }));
     const markup = spelled.markup.filter((e) => e.line === k).map((e) => ({ at: e.at, insert: '\\' }));
     let out = l;
-    for (const { at, insert } of [...gained, ...markup].sort((a, b) => b.at - a.at)) out = out.slice(0, at) + insert + out.slice(at);
+    for (const { at, insert } of [...gained, ...markup].sort((a, b) => b.at - a.at))
+      out = out.slice(0, at) + insert + out.slice(at);
     return out;
   });
 }
@@ -47,10 +48,10 @@ function written(flavor: MdFlavor, lines: string[], place: MdParagraphPlace = {}
 test('lines that stay a paragraph need nothing', () => {
   const { gfm } = MdFlavor;
   assert.deepEqual(written(gfm, ['hello', 'world']), ['hello', 'world']);
-  assert.deepEqual(written(gfm, ['a', '2. b']), ['a', '2. b'], 'a list from 2 can\'t interrupt a paragraph');
+  assert.deepEqual(written(gfm, ['a', '2. b']), ['a', '2. b'], "a list from 2 can't interrupt a paragraph");
 });
 
-test('a markup escape where one keeps the line, at its first character, a number\'s delimiter, a label\'s colon', () => {
+test("a markup escape where one keeps the line, at its first character, a number's delimiter, a label's colon", () => {
   const { gfm } = MdFlavor;
   assert.deepEqual(written(gfm, ['- not a list']), ['\\- not a list']);
   assert.deepEqual(written(gfm, ['2. x']), ['2\\. x']);
@@ -61,7 +62,7 @@ test('a markup escape where one keeps the line, at its first character, a number
   assert.deepEqual(written(gfm, ['- b'], { context: 'continuation', above: 'a' }), ['\\- b']);
 });
 
-test('a table\'s delimiter row is escaped, not the header it would make', () => {
+test("a table's delimiter row is escaped, not the header it would make", () => {
   assert.deepEqual(written(MdFlavor.gfm, ['| a |', '|---|']), ['| a |', '|\\---|']);
   assert.deepEqual(written(MdFlavor.commonmark, ['| a |', '|---|']), ['| a |', '|---|'], 'no tables in CommonMark');
 });
@@ -70,7 +71,11 @@ test('where no markup escape keeps a line, the text gains a backslash', () => {
   const { gfm, obsidian } = MdFlavor;
   assert.deepEqual(written(gfm, ['<div>']), ['!\\<div>']);
   assert.deepEqual(written(gfm, ['```']), ['!\\```']);
-  assert.deepEqual(written(obsidian, ['[!tip] x'], { context: 'quoteStart' }), ['!\\[!tip] x'], 'a quote\'s first line in Obsidian, a callout');
+  assert.deepEqual(
+    written(obsidian, ['[!tip] x'], { context: 'quoteStart' }),
+    ['!\\[!tip] x'],
+    "a quote's first line in Obsidian, a callout",
+  );
   assert.deepEqual(written(gfm, ['[!tip] x'], { context: 'quoteStart' }), ['[!tip] x'], 'in GFM, text');
 });
 
@@ -84,14 +89,22 @@ test('markup escapes are judged as written: needed, at a position, an inline esc
   const { gfm } = MdFlavor;
   assert.deepEqual(gfm.markupEscapes(['\\- not a list']), [{ line: 0, at: 0 }]);
   assert.deepEqual(gfm.markupEscapes(['revise 2\\. draft']), [], 'mid-line, at no position: text');
-  assert.deepEqual(gfm.markupEscapes(['a', '2\\. b']), [], 'a list from 2 can\'t interrupt a paragraph: not needed, text');
+  assert.deepEqual(
+    gfm.markupEscapes(['a', '2\\. b']),
+    [],
+    "a list from 2 can't interrupt a paragraph: not needed, text",
+  );
   assert.deepEqual(gfm.markupEscapes(['`a', '\\- b`']), [], 'in a code span: literal');
-  assert.deepEqual(gfm.markupEscapes(['2\\. a', '3\\. b']), [{ line: 0, at: 1 }], 'each line judged with the others as written: the second needs nothing under a paragraph');
+  assert.deepEqual(
+    gfm.markupEscapes(['2\\. a', '3\\. b']),
+    [{ line: 0, at: 1 }],
+    'each line judged with the others as written: the second needs nothing under a paragraph',
+  );
 });
 
-test('a text\'s backslashes that are markup where it goes are absorbed, then placed as markup', () => {
+test("a text's backslashes that are markup where it goes are absorbed, then placed as markup", () => {
   const spelled = MdFlavor.gfm.escapeParagraph(['2\\. a', '3\\. b'])!;
   assert.deepEqual(spelled.absorbed, [{ line: 0, at: 1 }]);
-  assert.deepEqual(spelled.lines, ['2. a', '3\\. b'], 'the second line\'s backslash is its text');
+  assert.deepEqual(spelled.lines, ['2. a', '3\\. b'], "the second line's backslash is its text");
   assert.deepEqual(spelled.markup, [{ line: 0, at: 1 }]);
 });

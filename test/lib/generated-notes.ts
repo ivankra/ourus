@@ -40,7 +40,14 @@ const BLOCKS: readonly string[] = [
 ];
 
 const FLAVORS = ['obsidian', 'gfm', 'commonmark'] as const;
-const OPTIONS: readonly Record<string, unknown>[] = [{}, {}, { quotes: 'container' }, { quotes: 'atom' }, { listParent: 'container' }, { indentUnit: 'tab' }];
+const OPTIONS: readonly Record<string, unknown>[] = [
+  {},
+  {},
+  { quotes: 'container' },
+  { quotes: 'atom' },
+  { listParent: 'container' },
+  { indentUnit: 'tab' },
+];
 
 /** `count` start buffers from `seed`: two to five blocks each, joined by a blank line (mostly) or none. */
 export function generatedStarts(count: number, seed = 1): GeneratedStart[] {

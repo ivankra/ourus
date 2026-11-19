@@ -242,7 +242,6 @@ export class OurusDeferred {
 
 export type { OurusClipboard };
 
-
 /** What a pickup returns: the nodes in flight, their lines, and every seam they can be dropped at. */
 export interface DropMap {
   /** The run's roots, after the cover rule and its normalization. */

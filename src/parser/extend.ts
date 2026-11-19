@@ -5,8 +5,29 @@
 //   const mine = defineFlavor('mine', [...gfmExtensions, myExtension]);
 
 export * from './index.ts';
-export { commonmark, commonMarkExtension, defineFlavor, type MdExtension, type MdLeafBuilder, type MdMutableBlock, type MdPlacedStart } from './flavor.ts';
-export { autolink, footnotes, gfm, gfmCore, gfmExtensions, strikethrough, strikethroughExtension, table, tableExtension, tagfilter, tasklist, tasklistExtension } from './gfm.ts';
+export {
+  commonmark,
+  commonMarkExtension,
+  defineFlavor,
+  type MdExtension,
+  type MdLeafBuilder,
+  type MdMutableBlock,
+  type MdPlacedStart,
+} from './flavor.ts';
+export {
+  autolink,
+  footnotes,
+  gfm,
+  gfmCore,
+  gfmExtensions,
+  strikethrough,
+  strikethroughExtension,
+  table,
+  tableExtension,
+  tagfilter,
+  tasklist,
+  tasklistExtension,
+} from './gfm.ts';
 export {
   blockIds,
   callouts,
@@ -25,8 +46,24 @@ export {
 export { MdHtmlRenderer, type MdBlockRenderer, type MdInlineRenderer, type MdRenderRules } from './html.ts';
 export { scanReference, type MdReference } from './refs.ts';
 export { MdInlineTextBuilder, paragraphText } from './inline-text.ts';
-export type { MdBlockSpec, MdBlockStart, MdFrame, MdLeafRole, MdLineRecord, MdMachine, MdPiece, MdState } from './machine.ts';
-export type { MdBracketRule, MdDelimiterRule, MdInlineParser, MdInlineRule, MdTextMatch, MdTextRule } from './inlines.ts';
+export type {
+  MdBlockSpec,
+  MdBlockStart,
+  MdFrame,
+  MdLeafRole,
+  MdLineRecord,
+  MdMachine,
+  MdPiece,
+  MdState,
+} from './machine.ts';
+export type {
+  MdBracketRule,
+  MdDelimiterRule,
+  MdInlineParser,
+  MdInlineRule,
+  MdTextMatch,
+  MdTextRule,
+} from './inlines.ts';
 // (the inline node a rule makes and gives the parser, `add` and `closeBracket`: the parser's `Node`)
 export { Node as MdInlineNode } from './inlines.ts';
 export { inlinePreorder } from './walk.ts';

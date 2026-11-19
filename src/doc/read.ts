@@ -79,7 +79,11 @@ export function readText(tree: MdTree, marks: MarkSet, node: OurusNode): ReadTex
     // the marker's line: a checkbox (`- [x]⏎  a`), else its content (blanks, a tab's rest) isn't text
     const marker = tree.line(node.startLine);
     const content = tree.text.slice(marker.contentFrom, marker.to);
-    if (trimMd(content)) lines.push({ content, line: { from: marker.contentFrom, to: marker.to, omitted: [], tabs: [], length: content.length } });
+    if (trimMd(content))
+      lines.push({
+        content,
+        line: { from: marker.contentFrom, to: marker.to, omitted: [], tabs: [], length: content.length },
+      });
     else {
       const omitted = Array.from({ length: marker.to - marker.contentFrom }, (_, k) => marker.contentFrom + k);
       lines.push({ content: '', line: { from: marker.contentFrom, to: marker.to, omitted, tabs: [], length: 0 } });
@@ -91,7 +95,8 @@ export function readText(tree: MdTree, marks: MarkSet, node: OurusNode): ReadTex
       lines.push({ content: '', line: { from: blank.contentFrom, to: blank.to, omitted, tabs: [], length: 0 } });
     }
   }
-  for (let i = first; i <= last; i++) lines.push(contentOf(tree, tree.line(i), node, i === first && !atomText, marks, quote));
+  for (let i = first; i <= last; i++)
+    lines.push(contentOf(tree, tree.line(i), node, i === first && !atomText, marks, quote));
   // the marks on the text's lines, in the string's offsets: an empty node's at its line's end, a held
   // space's on its space, an auto mark on its character
   const placeholders: number[] = [];
@@ -100,16 +105,26 @@ export function readText(tree: MdTree, marks: MarkSet, node: OurusNode): ReadTex
   for (const { content, line } of lines) {
     for (const pos of MarkSet.within(marks.placeholders, line.from, line.to + 1)) {
       if (pos === line.to && marks.hasEmptyNodeAt(pos)) placeholders.push(offset + content.length);
-      else if (pos >= line.from && !line.omitted.includes(pos) && marks.hasHeldSpaceAt(pos)) placeholders.push(offset + stringOffset(line, pos));
+      else if (pos >= line.from && !line.omitted.includes(pos) && marks.hasHeldSpaceAt(pos))
+        placeholders.push(offset + stringOffset(line, pos));
     }
-    for (const pos of MarkSet.within(marks.auto, line.from, line.to)) if (!line.omitted.includes(pos)) auto.push(offset + stringOffset(line, pos));
+    for (const pos of MarkSet.within(marks.auto, line.from, line.to))
+      if (!line.omitted.includes(pos)) auto.push(offset + stringOffset(line, pos));
     offset += content.length + 1;
   }
   const string = MarkSet.of(lines.map((l) => l.content).join('\n'), { placeholders, auto });
   const block = p.kind === 'item' ? p.head : p.block;
-  const kind = !atomText ? null : block!.type === 'code_block' ? (block!.attrs.fenced ? 'fenced_code' : 'indented_code') : block!.type;
+  const kind = !atomText
+    ? null
+    : block!.type === 'code_block'
+      ? block!.attrs.fenced
+        ? 'fenced_code'
+        : 'indented_code'
+      : block!.type;
   const carried = blockIdLinesOf(tree, last, p.blockIdCount);
-  const text = kind ? new OurusAtom(kind, item, string, carried) : new OurusProse(type, item, string, flavor.has('blockIds') ? 'caret' : null, carried);
+  const text = kind
+    ? new OurusAtom(kind, item, string, carried)
+    : new OurusProse(type, item, string, flavor.has('blockIds') ? 'caret' : null, carried);
   return { text, lines: lines.map((l) => ({ ...l.line, length: l.content.length })) };
 }
 
@@ -146,12 +161,22 @@ export function stringOffset(line: TextLine, pos: number): number {
  * is text). A footnote definition's label is its own, and so is the `>` of a quote that is the
  * node's text (`quote`), its padding past the `> ` left out on the first line.
  */
-function contentOf(tree: MdTree, line: MdLine, node: OurusNode, first: boolean, marks: MarkSet, quote: MdBlock | null): { content: string; line: TextLine } {
+function contentOf(
+  tree: MdTree,
+  line: MdLine,
+  node: OurusNode,
+  first: boolean,
+  marks: MarkSet,
+  quote: MdBlock | null,
+): { content: string; line: TextLine } {
   const text = tree.text;
   let from = line.contentFrom;
   // a footnote definition's label and indentation are its own prefix piece, which its text keeps
   // (an item's too, whose text the definition is)
-  if ((node.kind === 'atom' ? node.block : node.kind === 'item' ? node.persistentNode.head : null)?.type === 'footnote_definition') {
+  if (
+    (node.kind === 'atom' ? node.block : node.kind === 'item' ? node.persistentNode.head : null)?.type ===
+    'footnote_definition'
+  ) {
     const piece = line.prefix.find((p) => p.kind === 'footnote');
     if (piece) from = piece.from;
   }
@@ -225,4 +250,3 @@ export function documentOffset(line: TextLine, k: number, assoc: -1 | 1 = 1): nu
   for (const o of line.omitted) if (o < pos || (o === pos && assoc === 1)) pos++;
   return pos;
 }
-

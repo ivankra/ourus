@@ -144,14 +144,17 @@ function splitsIndent(d: TextDoc): string | undefined {
   // (a text the tabs don't give back is loaded as written: `retabs`)
   if (back.text !== d.text) return undefined;
   // a caret inside a tab's spaces lands at its start: loaded and read back, it moved
-  if (d.sel && JSON.stringify(back.sel) !== JSON.stringify(d.sel)) return 'caret inside the spaces of a tab of indentation';
+  if (d.sel && JSON.stringify(back.sel) !== JSON.stringify(d.sel))
+    return 'caret inside the spaces of a tab of indentation';
   return undefined;
 }
 
 /** Why Live Preview won't keep a caret where a document has it: the frontmatter is shown as properties. */
 function inFrontmatter(d: TextDoc): string | undefined {
   const frontmatter = /^---\n[\s\S]*?\n---(?:\n|$)/.exec(d.text)?.[0].length ?? 0;
-  return ends(d).some((e) => e.offset < frontmatter) ? 'caret in the frontmatter (Live Preview shows it as properties)' : undefined;
+  return ends(d).some((e) => e.offset < frontmatter)
+    ? 'caret in the frontmatter (Live Preview shows it as properties)'
+    : undefined;
 }
 
 /**
@@ -169,7 +172,8 @@ function inTable(d: TextDoc): string | undefined {
     while (from > 0 && lines[from - 1]!.trim()) from--;
     let to = at;
     while (to < lines.length - 1 && lines[to + 1]!.trim()) to++;
-    if (lines[at]!.includes('|') && lines.slice(from, to + 1).some((l) => l.includes('|') && delimiter.test(l))) return 'caret in a table (Live Preview edits it in a table of its own)';
+    if (lines[at]!.includes('|') && lines.slice(from, to + 1).some((l) => l.includes('|') && delimiter.test(l)))
+      return 'caret in a table (Live Preview edits it in a table of its own)';
   }
   return undefined;
 }
@@ -199,8 +203,10 @@ function atInlineCode(d: TextDoc): string | undefined {
     if (code.has(d.text.slice(0, offset).split('\n').length - 1)) continue;
     const before = line.slice(0, col);
     const after = line.slice(col);
-    if (before.endsWith('`') && after === '') return "caret right after a backtick at a line's end (Live Preview moves it before the run)";
-    if (after.startsWith('`') && !before.endsWith('`') && before.includes('`')) return "caret before a code span's closing backticks (Live Preview moves it past them)";
+    if (before.endsWith('`') && after === '')
+      return "caret right after a backtick at a line's end (Live Preview moves it before the run)";
+    if (after.startsWith('`') && !before.endsWith('`') && before.includes('`'))
+      return "caret before a code span's closing backticks (Live Preview moves it past them)";
   }
   return undefined;
 }
@@ -229,7 +235,8 @@ export const keepsCaretOnText =
     const whole = !!doc.sel && doc.sel.anchor !== doc.sel.head;
     for (const { line, col } of ends(doc)) {
       const it = item(line, spaces);
-      if (it && col < (checkbox ? it.text : it.marker) && !(whole && col === 0)) return `caret before an item's text (${plugin} keeps it on the text)`;
+      if (it && col < (checkbox ? it.text : it.marker) && !(whole && col === 0))
+        return `caret before an item's text (${plugin} keeps it on the text)`;
     }
     return undefined;
   };
@@ -253,7 +260,8 @@ async function headedInstance(say: (line: string) => void): Promise<{ dir: strin
 }
 
 /** The vault a window of an instance has open, if it has one (the starter window has none). */
-const vaultOf = (page: Page): Promise<string | undefined> => page.evaluate(() => (window as any).app?.vault?.adapter?.basePath as string | undefined).catch(() => undefined);
+const vaultOf = (page: Page): Promise<string | undefined> =>
+  page.evaluate(() => (window as any).app?.vault?.adapter?.basePath as string | undefined).catch(() => undefined);
 
 /**
  * Opens `vault` in an instance (from its starter window, else any other: its vault-open message) and
@@ -275,7 +283,9 @@ async function openVault(context: BrowserContext, vault: string, version: string
         ({ path, version }) => {
           const ipc = (window as any).require('electron').ipcRenderer;
           const trust = (): boolean => {
-            const id = Object.entries(ipc.sendSync('vault-list') as Record<string, { path: string }>).find(([, v]) => v.path === path)?.[0];
+            const id = Object.entries(ipc.sendSync('vault-list') as Record<string, { path: string }>).find(
+              ([, v]) => v.path === path,
+            )?.[0];
             if (id) localStorage.setItem(`enable-plugin-${id}`, 'true');
             return !!id;
           };
@@ -291,7 +301,8 @@ async function openVault(context: BrowserContext, vault: string, version: string
     if (opened === true) break;
   }
   if (opened !== true) throw new Error(`Obsidian didn't open ${vault}: ${String(opened)}`);
-  for (const t0 = Date.now(); Date.now() - t0 < 30000; await sleep(100)) for (const p of context.pages()) if ((await vaultOf(p)) === vault) return p;
+  for (const t0 = Date.now(); Date.now() - t0 < 30000; await sleep(100))
+    for (const p of context.pages()) if ((await vaultOf(p)) === vault) return p;
   throw new Error(`Obsidian opened no window for ${vault}`);
 }
 
@@ -370,7 +381,12 @@ export function obsidianDriver(profile: Profile): Driver {
       pastePlain: 'Control+Shift+v',
       undo: 'Control+z',
       redo: 'Control+Shift+z',
-      ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+      ...Object.fromEntries(
+        Object.entries(MOTIONS).flatMap(([m, k]) => [
+          [`cursor${m}`, k],
+          [`select${m}`, `Shift+${k}`],
+        ]),
+      ),
       ...profile.keys,
     },
     // bare Obsidian (measured): the caret stays with the text on Enter at an item's start, Backspace
@@ -396,7 +412,12 @@ export function obsidianDriver(profile: Profile): Driver {
       const d = doc as TextDoc;
       // CodeMirror keeps line breaks as LF
       if (d.text.includes('\r')) return 'CR line endings';
-      return splitsIndent(d) ?? foldOnAtomItem(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ?? profile.holds?.(d);
+      return (
+        splitsIndent(d) ??
+        foldOnAtomItem(d) ??
+        (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ??
+        profile.holds?.(d)
+      );
     },
 
     async launch({ headed, fresh, say, gone }) {
@@ -411,7 +432,14 @@ export function obsidianDriver(profile: Profile): Driver {
       // one run of the setup at a time is the runner's (its lock); each of its workers a window of the
       // pool's instances, or the run's own instance on its display
       let lease: Lease | null = null;
-      let inst: { n: number | string; dir: string; port: number; warm?: boolean; targetId?: string; meta?: Record<string, unknown> };
+      let inst: {
+        n: number | string;
+        dir: string;
+        port: number;
+        warm?: boolean;
+        targetId?: string;
+        meta?: Record<string, unknown>;
+      };
       let stopHeaded: (() => void) | undefined;
       if (headed && process.env.DISPLAY) {
         const h = await headedInstance(say);
@@ -419,7 +447,12 @@ export function obsidianDriver(profile: Profile): Driver {
         stopHeaded = h.stop;
       } else {
         // (an instance of these versions: the pool may run instances of others, an older release's)
-        const got = await Lease.obsidian({ setup: profile.longId, key, fresh, appVersion: v.app, installerVersion: v.installer }, `run.ts ${profile.longId}`, say, gone);
+        const got = await Lease.obsidian(
+          { setup: profile.longId, key, fresh, appVersion: v.app, installerVersion: v.installer },
+          `run.ts ${profile.longId}`,
+          say,
+          gone,
+        );
         if (!got) return null;
         lease = got.lease;
         inst = got.grant;
@@ -447,11 +480,15 @@ export function obsidianDriver(profile: Profile): Driver {
           return { page, reused: true, meta: inst.meta, clipboard, release };
         }
         // the setup's window an earlier run left open (one the pool couldn't close), closed first
-        for (const p of context.pages()) if ((await vaultOf(p)) === vault) await p.evaluate(() => window.close()).catch(() => {});
+        for (const p of context.pages())
+          if ((await vaultOf(p)) === vault) await p.evaluate(() => window.close()).catch(() => {});
         // the vault, written anew for each window
         rmSync(vault, { recursive: true, force: true });
         mkdirSync(join(vault, '.obsidian'), { recursive: true });
-        writeFileSync(join(vault, '.obsidian', 'app.json'), JSON.stringify({ useTab: true, livePreview: profile.mode === 'live-preview', ...profile.appConfig }, null, 2));
+        writeFileSync(
+          join(vault, '.obsidian', 'app.json'),
+          JSON.stringify({ useTab: true, livePreview: profile.mode === 'live-preview', ...profile.appConfig }, null, 2),
+        );
         writeFileSync(join(vault, '.obsidian', 'hotkeys.json'), JSON.stringify(hotkeys, null, 2));
         for (const [id, data] of Object.entries(profile.pluginData ?? {})) {
           mkdirSync(join(vault, '.obsidian', 'plugins', id), { recursive: true });
@@ -467,7 +504,11 @@ export function obsidianDriver(profile: Profile): Driver {
         pageState(page).log = join(inst.dir, 'obsidian.log');
         say(`opened ${vault} in Obsidian ${inst.n}`);
         if (!lease) {
-          return { page, reused: false, release: async () => (await page.evaluate(() => window.close()).catch(() => {}), await release(false)) };
+          return {
+            page,
+            reused: false,
+            release: async () => (await page.evaluate(() => window.close()).catch(() => {}), await release(false)),
+          };
         }
         return { page, reused: false, clipboard, release };
       } catch (e) {
@@ -480,12 +521,18 @@ export function obsidianDriver(profile: Profile): Driver {
       // the window was loaded before the runner could add its init script
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.waitForFunction(() => (window as any).app?.workspace?.layoutReady, null, { timeout: 60000 });
-      const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+      const settled = await page.evaluate(() =>
+        (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+      );
       if (settled.timedOut) throw new Error(`Obsidian didn't settle after loading: ${settled.pending}`);
       // every plugin the vault enables, loaded: its id and version
       const plugins: { id: string; version?: string; loaded: boolean }[] = await page.evaluate(() => {
         const p = (window as any).app.plugins;
-        return [...p.enabledPlugins].map((id: string) => ({ id, version: p.manifests[id]?.version, loaded: !!p.plugins[id]?._loaded }));
+        return [...p.enabledPlugins].map((id: string) => ({
+          id,
+          version: p.manifests[id]?.version,
+          loaded: !!p.plugins[id]?._loaded,
+        }));
       });
       const missing = plugins.filter((p) => !p.loaded).map((p) => p.id);
       if (missing.length) throw new Error(`Obsidian didn't load ${missing.join(', ')}: see ${pageState(page).log}`);
@@ -495,14 +542,21 @@ export function obsidianDriver(profile: Profile): Driver {
       await page.keyboard.press('Tab');
       await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
       const got = (await this.read(page)) as TextDoc;
-      if (got.text !== '- a\n  - b') throw new Error(`Obsidian's keys didn't come up: Tab made ${JSON.stringify(got.text)}`);
+      if (got.text !== '- a\n  - b')
+        throw new Error(`Obsidian's keys didn't come up: Tab made ${JSON.stringify(got.text)}`);
       // the editor in the setup's editing mode: Source mode is the editing view's `source`
       const source = await page.evaluate(() => (window as any).app.workspace.activeLeaf?.view?.getState?.()?.source);
-      if (source !== (profile.mode === 'source')) throw new Error(`Obsidian's editor isn't in ${profile.mode === 'source' ? 'Source mode' : 'Live Preview'} (source: ${source})`);
+      if (source !== (profile.mode === 'source'))
+        throw new Error(
+          `Obsidian's editor isn't in ${profile.mode === 'source' ? 'Source mode' : 'Live Preview'} (source: ${source})`,
+        );
       // the app (its bundle) and the installer (the Electron it runs in) are versioned apart: the
       // installer named only where it isn't the app's
       const { app, installer } = await versions();
-      return [installer === app ? app : `${app} (installer ${installer})`, ...plugins.map((p) => `${p.id} ${p.version}`)].join(', ');
+      return [
+        installer === app ? app : `${app} (installer ${installer})`,
+        ...plugins.map((p) => `${p.id} ${p.version}`),
+      ].join(', ');
     },
 
     async load(page: Page, doc) {
@@ -525,7 +579,8 @@ export function obsidianDriver(profile: Profile): Driver {
           const cm = editor().cm;
           // its folds, each folded as Obsidian folds the row at the caret (the last first: a fold inside
           // another before it), then its zoom by the plugin's own command at the root's row
-          const settle = (): Promise<unknown> => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 });
+          const settle = (): Promise<unknown> =>
+            (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 });
           for (const row of [...(view?.folded ?? [])].sort((a, b) => b - a)) {
             cm.dispatch({ selection: { anchor: cm.state.doc.line(row + 1).to } });
             app.commands.executeCommandById('editor:toggle-fold');
@@ -544,39 +599,63 @@ export function obsidianDriver(profile: Profile): Driver {
       state.viewed = !!d.view;
     },
 
-    ...(profile.drag && { drops: ['moveSubtree'] as const, drop: profile.drag === 'outliner' ? outlinerDrop : trueOutlinerDrop }),
+    ...(profile.drag && {
+      drops: ['moveSubtree'] as const,
+      drop: profile.drag === 'outliner' ? outlinerDrop : trueOutlinerDrop,
+    }),
 
     async read(page: Page) {
       const { viewed } = pageState(page);
-      const { doc: got, lost } = await page.evaluate(({ viewed, zoomAnchor, zoom }) => {
-        const cm = (window as any).app.workspace.activeEditor.editor.cm;
-        // the folds by their rows, Obsidian's (its edit view's), and the zoom: a case loaded with a view
-        const view = viewed
-          ? {
-              folded: ((window as any).app.workspace.activeLeaf.view.currentMode.getFoldInfo()?.folds ?? []).map((f: { from: number }) => f.from) as number[],
-              zoom:
-                zoom === 'obsidian-zoom'
-                  ? ((window as any).ObsidianZoomPlugin.getZoomRange((window as any).app.workspace.activeEditor.editor)?.from.line ?? null)
-                  : zoom
-                    ? (new Function(`return ${zoomAnchor}`)() as (cm: unknown) => number | null)(cm)
-                    : null,
-            }
-          : undefined;
-        const { anchor, head } = cm.state.selection.main;
-        // the caret is the editor's where its content has the page's focus, whether or not the
-        // window has the system's (CodeMirror's `hasFocus` wants both: a window of the shared
-        // instance can lose it a moment under load); another element's focus (the note's title) is no caret.
-        // true-outliner blurs the editor while its selection covers whole nodes (its block selection,
-        // marked by a class on the editor), the selection still the editor's.
-        const active = document.activeElement;
-        const focused = cm.hasFocus || (!!active && cm.contentDOM.contains(active)) || cm.dom.classList.contains('to-decor-block-selecting');
-        return {
-          doc: { text: cm.state.doc.toString() as string, sel: focused ? { anchor, head } : null, ...(view && { view }) },
-          lost: !cm.hasFocus && focused ? `window ${document.hasFocus() ? 'focused' : 'unfocused'}, ${document.visibilityState}` : null,
-        };
-      }, { viewed, zoomAnchor: zoomAnchor.toString(), zoom: profile.zoom ?? null });
+      const { doc: got, lost } = await page.evaluate(
+        ({ viewed, zoomAnchor, zoom }) => {
+          const cm = (window as any).app.workspace.activeEditor.editor.cm;
+          // the folds by their rows, Obsidian's (its edit view's), and the zoom: a case loaded with a view
+          const view = viewed
+            ? {
+                folded: ((window as any).app.workspace.activeLeaf.view.currentMode.getFoldInfo()?.folds ?? []).map(
+                  (f: { from: number }) => f.from,
+                ) as number[],
+                zoom:
+                  zoom === 'obsidian-zoom'
+                    ? ((window as any).ObsidianZoomPlugin.getZoomRange(
+                        (window as any).app.workspace.activeEditor.editor,
+                      )?.from.line ?? null)
+                    : zoom
+                      ? (new Function(`return ${zoomAnchor}`)() as (cm: unknown) => number | null)(cm)
+                      : null,
+              }
+            : undefined;
+          const { anchor, head } = cm.state.selection.main;
+          // the caret is the editor's where its content has the page's focus, whether or not the
+          // window has the system's (CodeMirror's `hasFocus` wants both: a window of the shared
+          // instance can lose it a moment under load); another element's focus (the note's title) is no caret.
+          // true-outliner blurs the editor while its selection covers whole nodes (its block selection,
+          // marked by a class on the editor), the selection still the editor's.
+          const active = document.activeElement;
+          const focused =
+            cm.hasFocus ||
+            (!!active && cm.contentDOM.contains(active)) ||
+            cm.dom.classList.contains('to-decor-block-selecting');
+          return {
+            doc: {
+              text: cm.state.doc.toString() as string,
+              sel: focused ? { anchor, head } : null,
+              ...(view && { view }),
+            },
+            lost:
+              !cm.hasFocus && focused
+                ? `window ${document.hasFocus() ? 'focused' : 'unfocused'}, ${document.visibilityState}`
+                : null,
+          };
+        },
+        { viewed, zoomAnchor: zoomAnchor.toString(), zoom: profile.zoom ?? null },
+      );
       // a record of each read that only the page's focus kept a caret in: what took the window's
-      if (lost) appendFileSync(join(dirname(pageState(page).log), 'focus.log'), `${new Date().toISOString()} ${profile.longId}: ${lost}\n`);
+      if (lost)
+        appendFileSync(
+          join(dirname(pageState(page).log), 'focus.log'),
+          `${new Date().toISOString()} ${profile.longId}: ${lost}\n`,
+        );
       // (a tab for an indentation moves no line: the view's rows stand)
       return pageState(page).retabbed ? { ...asSpaces(got), ...(got.view && { view: got.view }) } : got;
     },
@@ -590,7 +669,8 @@ export function obsidianDriver(profile: Profile): Driver {
  * released. It drags one item, the one pressed: a drop of the selection it has no gesture for.
  */
 async function outlinerDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
-  if (drop.press === null) throw new Unsupported('a drop of the selection: Outliner drags the item whose bullet is pressed');
+  if (drop.press === null)
+    throw new Unsupported('a drop of the selection: Outliner drags the item whose bullet is pressed');
   const at = await page.evaluate(({ press, seam, listDepth }) => {
     const cm = (window as any).app.workspace.activeEditor.editor.cm;
     const lineOf = (i: number) => cm.state.doc.line(i + 1);
@@ -618,7 +698,7 @@ async function outlinerDrop(page: Page, drop: Drop, settle: () => Promise<void>)
     tab ||= cm.defaultCharacterWidth * 4;
     return { from: { x: b.left + b.width / 2, y: b.top + b.height / 2 }, to: { x: left + listDepth * tab, y } };
   }, drop);
-  if (!at) throw new Unsupported("the pressed row has no bullet Outliner drags by");
+  if (!at) throw new Unsupported('the pressed row has no bullet Outliner drags by');
   await gesture(page, at.from, at.to, settle);
 }
 
@@ -631,14 +711,17 @@ async function outlinerDrop(page: Page, drop: Drop, settle: () => Promise<void>)
  * selection with no press it has no gesture for.
  */
 async function trueOutlinerDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
-  if (drop.press === null) throw new Unsupported('a drop of the selection: true-outliner drags the node whose mark is pressed');
+  if (drop.press === null)
+    throw new Unsupported('a drop of the selection: true-outliner drags the node whose mark is pressed');
   const at = await page.evaluate(({ press, seam, depth }) => {
     const cm = (window as any).app.workspace.activeEditor.editor.cm;
     const doc = cm.state.doc;
     const lineOf = (i: number) => doc.line(i + 1);
     const { node } = cm.domAtPos(lineOf(press!).from);
     const lineEl = ((node.nodeType === 1 ? node : node.parentElement) as HTMLElement | null)?.closest('.cm-line');
-    const mark = lineEl?.querySelector('.to-decor-marker-icon, .list-bullet, .list-number, .to-decor-ol-digits, .task-list-item-checkbox');
+    const mark = lineEl?.querySelector(
+      '.to-decor-marker-icon, .list-bullet, .list-number, .to-decor-ol-digits, .task-list-item-checkbox',
+    );
     if (!mark) return null;
     const b = mark.getBoundingClientRect();
     let y: number;

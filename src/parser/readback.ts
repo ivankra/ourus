@@ -21,10 +21,21 @@ export type MdLineContext = 'start' | 'continuation' | 'quoteStart';
  * paragraph's lazy continuations, which out of the quote may start a block it couldn't interrupt
  * there (`> q⏎2) x`, a list from 2).
  */
-export function firstNonParagraph(flavor: MdFlavor, lines: readonly string[], context: MdLineContext = 'start', above = 'x', lazy?: readonly boolean[]): number {
+export function firstNonParagraph(
+  flavor: MdFlavor,
+  lines: readonly string[],
+  context: MdLineContext = 'start',
+  above = 'x',
+  lazy?: readonly boolean[],
+): number {
   if (lines.length === 0 || lines.every((l) => trimMd(l) === '')) return -1;
   const lead = context === 'continuation' ? 1 : 0;
-  const written = context === 'quoteStart' ? lines.map((l, k) => (lazy?.[k] ? l : '> ' + l)) : context === 'continuation' ? [above, ...lines] : lines;
+  const written =
+    context === 'quoteStart'
+      ? lines.map((l, k) => (lazy?.[k] ? l : '> ' + l))
+      : context === 'continuation'
+        ? [above, ...lines]
+        : lines;
   const tree = MdTree.parse(written.join('\n'), flavor);
   // (a quote's children start where it does, on line 0; it ends where a lazy line starts a block)
   let parent = tree.root;
@@ -66,7 +77,8 @@ export function markupEscapeAt(flavor: MdFlavor, line: string, at: number): bool
   if (c === undefined) return false;
   let lead = 0;
   let column = 0;
-  while (lead < line.length && (line[lead] === ' ' || line[lead] === '\t')) column = line[lead++] === '\t' ? column + 4 - (column % 4) : column + 1;
+  while (lead < line.length && (line[lead] === ' ' || line[lead] === '\t'))
+    column = line[lead++] === '\t' ? column + 4 - (column % 4) : column + 1;
   // four columns in, a line starts no block: indented code, or a paragraph's continuation
   if (column >= 4 || at < lead) return false;
   if (at === lead) {
@@ -77,7 +89,8 @@ export function markupEscapeAt(flavor: MdFlavor, line: string, at: number): bool
   const before = line.slice(lead, at);
   if ((c === '.' || c === ')') && reDigits.test(before)) return true;
   if (c === ':' && reLabel.test(before)) return true;
-  if (c === '-' && flavor.has('table') && !before.includes('-')) return reDelimiterRow.test(line.slice(lead, at) + line.slice(at + 1));
+  if (c === '-' && flavor.has('table') && !before.includes('-'))
+    return reDelimiterRow.test(line.slice(lead, at) + line.slice(at + 1));
   return false;
 }
 
@@ -151,7 +164,12 @@ export function markupEscapes(flavor: MdFlavor, lines: readonly string[], place:
  * the one after it (a table's delimiter row makes the line above it a header); else a backslash
  * before the line's first character, which the text gains. Null where no escape does.
  */
-export function escapeParagraph(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace = {}, absorb = true): MdEscapedParagraph | null {
+export function escapeParagraph(
+  flavor: MdFlavor,
+  lines: readonly string[],
+  place: MdParagraphPlace = {},
+  absorb = true,
+): MdEscapedParagraph | null {
   const absorbed = absorb ? markupEscapes(flavor, lines, place) : [];
   const absorbedOn = byLine(absorbed);
   const text = lines.map((l, k) => {
@@ -172,9 +190,13 @@ export function escapeParagraph(flavor: MdFlavor, lines: readonly string[], plac
     allOn.set(e.line, [...others, placed]);
   }
   // then out of them: a markup escape's in the text with the gained ones in, a gained one's in the text before them
-  const before = (e: MdEscapeAt, gainedToo: boolean): number => (allOn.get(e.line) ?? []).filter((m) => m.at < e.at && (gainedToo || m.markup)).length;
+  const before = (e: MdEscapeAt, gainedToo: boolean): number =>
+    (allOn.get(e.line) ?? []).filter((m) => m.at < e.at && (gainedToo || m.markup)).length;
   const markup = all.filter((e) => e.markup).map((e) => ({ line: e.line, at: e.at - before(e, false) }));
-  const gained = all.filter((e) => !e.markup).map((e) => ({ line: e.line, at: e.at - before(e, true) })).sort((a, b) => a.line - b.line || a.at - b.at);
+  const gained = all
+    .filter((e) => !e.markup)
+    .map((e) => ({ line: e.line, at: e.at - before(e, true) }))
+    .sort((a, b) => a.line - b.line || a.at - b.at);
   const gainedOn = byLine(gained);
   const spelled = text.map((l, k) => {
     let out = l;
@@ -242,7 +264,10 @@ function windowEscapes(flavor: MdFlavor, lines: readonly string[], place: MdPara
   let from = 0;
   while (current.length - from > ESCAPE_WINDOW) {
     const window = current.slice(from, from + ESCAPE_WINDOW);
-    const at: MdParagraphPlace = from === 0 ? { context: place.context, above: place.above, lazy: place.lazy?.slice(0, ESCAPE_WINDOW) } : { context: 'continuation', above: current[from - 1]! };
+    const at: MdParagraphPlace =
+      from === 0
+        ? { context: place.context, above: place.above, lazy: place.lazy?.slice(0, ESCAPE_WINDOW) }
+        : { context: 'continuation', above: current[from - 1]! };
     const changed = firstChanged(flavor, window, at);
     // (the window's last line is read without the line after it, which can change how it reads)
     if (changed < 0 || changed === window.length - 1) {
@@ -297,7 +322,10 @@ function parsed(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPl
 /** Whether the backslash at `escape` in `lines` (`tree`, as `parsed` reads them) reads as an inline escape there (not literal, in a code span or math). */
 function inlineEscape(tree: MdTree, lines: readonly string[], place: MdParagraphPlace, escape: MdEscapeAt): boolean {
   const lead = place.context === 'continuation' ? 1 : 0;
-  const pos = (lead ? (place.above ?? 'x').length + 1 : 0) + lines.slice(0, escape.line).reduce((n, l) => n + l.length + 1, 0) + escape.at;
+  const pos =
+    (lead ? (place.above ?? 'x').length + 1 : 0) +
+    lines.slice(0, escape.line).reduce((n, l) => n + l.length + 1, 0) +
+    escape.at;
   const line = tree.line(escape.line + lead);
   // (a line that starts no inline text, alone, reads it as one)
   return tree.inlineEscapeAt(pos) || !line.leaf || tree.inlineText(line.leaf) === null;

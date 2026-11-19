@@ -153,4 +153,3 @@ export function spreadArguments(code: string): number[] {
   }
   return out;
 }
-

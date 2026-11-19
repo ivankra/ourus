@@ -8,7 +8,8 @@ export const rules: ProxyRules = {
   hosts: ['playground.lexical.dev'],
   respond(req: ProxyRequest): ProxyResponse | undefined {
     if (!req.url.pathname.startsWith('/_vercel/')) return undefined;
-    if (req.method === 'GET') return { status: 200, headers: [['content-type', 'text/javascript']], body: Buffer.alloc(0) };
+    if (req.method === 'GET')
+      return { status: 200, headers: [['content-type', 'text/javascript']], body: Buffer.alloc(0) };
     return { status: 204, headers: [], body: Buffer.alloc(0) };
   },
 };

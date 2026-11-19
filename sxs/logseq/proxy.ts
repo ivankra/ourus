@@ -17,7 +17,9 @@ export function expose(js: string): string | null {
   const log = js.indexOf('"[debug] undo remove: "');
   if (log < 0) return null;
   // page-pop-undo: `<name>=function(a){var b=<:undo-stack>.A(<get-state>()),...`, the last before its log
-  const defs = [...js.slice(Math.max(0, log - 3000), log).matchAll(/([\w$]+)=function\(a\)\{var b=([\w$]+)\.A\(([\w$]+)\(\)\)/g)];
+  const defs = [
+    ...js.slice(Math.max(0, log - 3000), log).matchAll(/([\w$]+)=function\(a\)\{var b=([\w$]+)\.A\(([\w$]+)\(\)\)/g),
+  ];
   const def = defs.pop();
   if (!def) return null;
   const [, , undoStack, getState] = def;

@@ -8,7 +8,16 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk?version=4.0';
 import Gtk from 'gi://Gtk?version=4.0';
-import { OurusDoc, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess, OurusView, executeCommand, settlePlaceholders } from '../../src/index.ts';
+import {
+  OurusDoc,
+  OurusDeferred,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+  OurusView,
+  executeCommand,
+  settlePlaceholders,
+} from '../../src/index.ts';
 
 const KEYS = {
   Tab: 'indent',
@@ -118,7 +127,9 @@ function readClipboard(clipboard, done) {
 function writeClipboard(clipboard, formats) {
   const encoder = new TextEncoder();
   const providers = Object.entries(formats).map(([type, text]) =>
-    type === 'text/plain' ? Gdk.ContentProvider.new_for_value(text) : Gdk.ContentProvider.new_for_bytes(type, new GLib.Bytes(encoder.encode(text))),
+    type === 'text/plain'
+      ? Gdk.ContentProvider.new_for_value(text)
+      : Gdk.ContentProvider.new_for_bytes(type, new GLib.Bytes(encoder.encode(text))),
   );
   clipboard.set_content(Gdk.ContentProvider.new_union(providers));
 }
@@ -194,7 +205,8 @@ function outliner(view, status) {
   function paste(type) {
     readClipboard(view.get_clipboard(), (formats) => {
       const text = formats['text/plain'];
-      if (!text || !(run(type === 'paste' ? { type, clipboard: formats } : { type, text }) instanceof OurusDeferred)) return;
+      if (!text || !(run(type === 'paste' ? { type, clipboard: formats } : { type, text }) instanceof OurusDeferred))
+        return;
       // not ours: GTK's paste, read back like typing
       buffer.begin_user_action();
       buffer.delete_selection(true, true);
@@ -263,9 +275,17 @@ function outliner(view, status) {
     let from = 0;
     while (from < old.length && from < text.length && old[from] === text[from]) from++;
     let end = 0;
-    while (end < old.length - from && end < text.length - from && old[old.length - 1 - end] === text[text.length - 1 - end]) end++;
+    while (
+      end < old.length - from &&
+      end < text.length - from &&
+      old[old.length - 1 - end] === text[text.length - 1 - end]
+    )
+      end++;
     const { anchor, head } = selection(text);
-    doc = doc.update({ changes: [{ from, to: old.length - end, insert: text.slice(from, text.length - end) }], ...(head === anchor ? { caret: head } : {}) });
+    doc = doc.update({
+      changes: [{ from, to: old.length - end, insert: text.slice(from, text.length - end) }],
+      ...(head === anchor ? { caret: head } : {}),
+    });
   }
   buffer.connect('changed', () => applying || readBack());
 
@@ -284,14 +304,27 @@ function outliner(view, status) {
     return GLib.SOURCE_REMOVE;
   }
   buffer.connect('mark-set', (_buffer, _iter, mark) => {
-    if (!applying && !settling && mark.get_name() === 'insert') settling = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, settle);
+    if (!applying && !settling && mark.get_name() === 'insert')
+      settling = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, settle);
   });
 }
 
 const app = new Gtk.Application({ application_id: 'io.github.ivankra.ourus.Gtk' });
 app.connect('activate', () => {
-  const window = new Gtk.ApplicationWindow({ application: app, title: 'ourus', default_width: 760, default_height: 560 });
-  const view = new Gtk.TextView({ monospace: true, wrap_mode: Gtk.WrapMode.WORD_CHAR, top_margin: 12, bottom_margin: 12, left_margin: 12, right_margin: 12 });
+  const window = new Gtk.ApplicationWindow({
+    application: app,
+    title: 'ourus',
+    default_width: 760,
+    default_height: 560,
+  });
+  const view = new Gtk.TextView({
+    monospace: true,
+    wrap_mode: Gtk.WrapMode.WORD_CHAR,
+    top_margin: 12,
+    bottom_margin: 12,
+    left_margin: 12,
+    right_margin: 12,
+  });
   const status = new Gtk.Label({ xalign: 0, margin_start: 12, margin_end: 12, margin_top: 6, margin_bottom: 6 });
   const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
   box.append(new Gtk.ScrolledWindow({ child: view, vexpand: true }));

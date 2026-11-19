@@ -15,7 +15,10 @@ export const rules: ProxyRules = {
   hosts: ['tine.page'],
   patch(req: ProxyRequest, res: ProxyResponse): ProxyResponse | undefined {
     const path = req.url.pathname;
-    if ((path === '/guide/app/' || path === '/guide/app/index.html') && /html/.test(header(res, 'content-type') ?? '')) {
+    if (
+      (path === '/guide/app/' || path === '/guide/app/index.html') &&
+      /html/.test(header(res, 'content-type') ?? '')
+    ) {
       return withBody(res, res.body.toString('utf8').replace(/<meta name="tine-published"[^>]*>/, ''));
     }
     if (/^\/guide\/app\/assets\/app-[\w-]+\.js$/.test(path)) {
@@ -24,15 +27,23 @@ export const rules: ProxyRules = {
       const js = res.body
         .toString('utf8')
         // the document store, `[doc, setDoc] = createStore({ byId, pages, feed, loaded })`
-        .replace(new RegExp(`\\[(${id}),(${id})\\]=(${id})\\(\\{byId:\\{\\},pages:\\[\\],feed:\\[\\],loaded:!1\\}\\)`), '[$1,$2]=globalThis.__sxsDoc=$3({byId:{},pages:[],feed:[],loaded:!1})')
+        .replace(
+          new RegExp(`\\[(${id}),(${id})\\]=(${id})\\(\\{byId:\\{\\},pages:\\[\\],feed:\\[\\],loaded:!1\\}\\)`),
+          '[$1,$2]=globalThis.__sxsDoc=$3({byId:{},pages:[],feed:[],loaded:!1})',
+        )
         // the mock backend's pages, which opening a page reads: an array of its page lists spread
         // together, looked up by a `find` of its own a few declarations on (`const A=[...x,...y],
         // g=e=>A.find(`; since the bundle of 2026-11, `const e=[...x,...y,...A],B=…,Q=n=>e.find(`)
-        .replace(new RegExp(`\\{const (${id})=(\\[\\.\\.\\.${id}(?:,\\.\\.\\.${id})*\\]),(?=[^;]{0,400}?=>\\1\\.find\\()`), (_, a, all) => `{const ${a}=globalThis.__sxsPages=${all},`)
+        .replace(
+          new RegExp(`\\{const (${id})=(\\[\\.\\.\\.${id}(?:,\\.\\.\\.${id})*\\]),(?=[^;]{0,400}?=>\\1\\.find\\()`),
+          (_, a, all) => `{const ${a}=globalThis.__sxsPages=${all},`,
+        )
         // a block's header facets from its text (`deriveFacets(raw, format)`: the parse's first block,
         // a bullet's or a heading's marker, priority and size, then the parse's properties)
         .replace(
-          new RegExp(`function (${id})\\((${id}),(${id})\\)\\{const (${id})=${id}\\(\\2,\\3\\),(${id})=\\4\\[0\\];let ${id}=null,${id}=null,${id}=null;if\\(\\5&&\\(\\5\\.kind==="bullet"\\|\\|\\5\\.kind==="heading"\\)\\)`),
+          new RegExp(
+            `function (${id})\\((${id}),(${id})\\)\\{const (${id})=${id}\\(\\2,\\3\\),(${id})=\\4\\[0\\];let ${id}=null,${id}=null,${id}=null;if\\(\\5&&\\(\\5\\.kind==="bullet"\\|\\|\\5\\.kind==="heading"\\)\\)`,
+          ),
           (m, f) => `globalThis.__sxsFacets=${f};${m}`,
         );
       return withBody(res, js);

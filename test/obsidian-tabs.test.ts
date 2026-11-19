@@ -18,7 +18,26 @@ import type { OurusConfig } from '../src/config.ts';
 import { OurusView } from '../src/view/index.ts';
 import { asTabs, retabs } from '../sxs/lib/tabs.ts';
 import type { TextDoc } from '../sxs/lib/text.ts';
-import { parseWithMarks, drawDoc, drawnSelection, drawOutline, drawsCaret, readDrawing, playActions, type PlayedState, specTestFlavors, NodeLabels, normalizeDrawing, describeOutcome, readClipboard, specTestView, readSpecFile, specConfig, specFiles, type SpecTest } from './lib/index.ts';
+import {
+  parseWithMarks,
+  drawDoc,
+  drawnSelection,
+  drawOutline,
+  drawsCaret,
+  readDrawing,
+  playActions,
+  type PlayedState,
+  specTestFlavors,
+  NodeLabels,
+  normalizeDrawing,
+  describeOutcome,
+  readClipboard,
+  specTestView,
+  readSpecFile,
+  specConfig,
+  specFiles,
+  type SpecTest,
+} from './lib/index.ts';
 import { OurusDeferred, OurusFailed, OurusRejected } from '../src/commands/index.ts';
 
 /** A drawn buffer's document, and its start loaded as tabs (placeholders carried as carets are). */
@@ -35,7 +54,14 @@ function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: Ourus
   return {
     spaces,
     // (tabs change no line: a label names the same line's node)
-    tabs: { view: specTestView(t, parseWithMarks(d.text, start.placeholders.map(at), config), start.view).withSelection(d.sel!), clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
+    tabs: {
+      view: specTestView(t, parseWithMarks(d.text, start.placeholders.map(at), config), start.view).withSelection(
+        d.sel!,
+      ),
+      clipboard: readClipboard(t.initial.clipboard),
+      labels: labels.ids,
+      drop: start.drop,
+    },
   };
 }
 
@@ -57,7 +83,8 @@ function place(view: OurusView, pos: number): string {
   if (at.zone === 'gap') return `gap of node ${order.findIndex((n) => n.persistentNode === at.owner.persistentNode)}`;
   // (a line's start, a whole-line selection's end: in its parent's prefix by spaces, in its own
   // marker's indentation by a tab; tabs change no line)
-  if ((at.zone === 'marker' || at.zone === 'prefix') && pos === doc.lineAt(pos).from) return `start of line ${doc.lineAt(pos).index}`;
+  if ((at.zone === 'marker' || at.zone === 'prefix') && pos === doc.lineAt(pos).from)
+    return `start of line ${doc.lineAt(pos).index}`;
   return at.zone;
 }
 
@@ -76,7 +103,10 @@ function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
     const at = `${t.file}:${step.line} (${flavor}, tabs)`;
     for (const action of step.actions) {
       state = playActions(state, [action]);
-      assert.ok(!(state.last instanceof OurusFailed), `${at}: ${action} failed to write${state.last instanceof OurusFailed ? `: ${state.last.detail}` : ''}`);
+      assert.ok(
+        !(state.last instanceof OurusFailed),
+        `${at}: ${action} failed to write${state.last instanceof OurusFailed ? `: ${state.last.detail}` : ''}`,
+      );
     }
     const { buffer, result } = step.expect;
     if (result !== undefined) assert.equal(describeOutcome(state), result, `${at}: result`);
@@ -85,13 +115,20 @@ function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
     if (buffer === undefined || state.last instanceof OurusDeferred || buffer.includes('◌')) continue;
     const drawn = readDrawing(normalizeDrawing(buffer));
     // (with the view the state has, by line, which tabs keep: a subtree selection ends at a zoom's end)
-    const byLine = (id: number | null): number | null => (id === null ? null : (state.view.doc.node(id)?.startLine ?? null));
+    const byLine = (id: number | null): number | null =>
+      id === null ? null : (state.view.doc.node(id)?.startLine ?? null);
     const plain = parseWithMarks(drawn.text, drawn.placeholders, config);
     const zoomLine = byLine(state.view.zoom);
-    const expectedView = OurusView.of(plain).withFolded([...state.view.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? [])).withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
+    const expectedView = OurusView.of(plain)
+      .withFolded([...state.view.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? []))
+      .withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
     const expected = reading(expectedView, drawnSelection(expectedView, drawn), drawsCaret(buffer));
     const got = reading(state.view, state.view.selection, drawsCaret(buffer));
-    assert.equal(got, expected, `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.view, state.view.selection))}`);
+    assert.equal(
+      got,
+      expected,
+      `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.view, state.view.selection))}`,
+    );
   }
 }
 

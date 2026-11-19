@@ -3,7 +3,24 @@
 
 import { OurusConfig, decorates } from '../config.ts';
 import { MdBlockAt, MdFlavor, MdTree, mdDocumentStart, type MdBlock, type MdLine } from '../parser/index.ts';
-import { ChangeSet, MarkSet, advanceColumns, atLine, docPos, localOffset, lineIndex, type DocPos, type LineIndex, type LocalOffset, diffLines, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type MarkLists } from '../text/index.ts';
+import {
+  ChangeSet,
+  MarkSet,
+  advanceColumns,
+  atLine,
+  docPos,
+  localOffset,
+  lineIndex,
+  type DocPos,
+  type LineIndex,
+  type LocalOffset,
+  diffLines,
+  isSpaceOrTab,
+  lineIndexAt,
+  trimMd,
+  type ChangeSpec,
+  type MarkLists,
+} from '../text/index.ts';
 import { OurusNode, type PersistentNode } from './node.ts';
 import { Lineage } from './lineage.ts';
 import { Touched, readOutline } from './outline.ts';
@@ -72,7 +89,14 @@ export class OurusDoc {
   #byId: Map<number, OurusNode> | null = null;
   #blockIds: readonly BlockId[] | null = null;
 
-  private constructor(marks: MarkSet, mdTree: MdTree, config: OurusConfig, root: PersistentNode, lineage: Lineage, nextId: number) {
+  private constructor(
+    marks: MarkSet,
+    mdTree: MdTree,
+    config: OurusConfig,
+    root: PersistentNode,
+    lineage: Lineage,
+    nextId: number,
+  ) {
     this.text = marks.text;
     this.marks = marks;
     this.mdTree = mdTree;
@@ -83,13 +107,18 @@ export class OurusDoc {
   }
 
   /** Parses `text`. Options missing from `config` take defaults; `marks` are on `text`. */
-  static parse(text: string, options: { readonly config?: Partial<OurusConfig>; readonly marks?: MarkLists } = {}): OurusDoc {
+  static parse(
+    text: string,
+    options: { readonly config?: Partial<OurusConfig>; readonly marks?: MarkLists } = {},
+  ): OurusDoc {
     return OurusDoc.#readWhole(MarkSet.of(text, options.marks), OurusConfig.of(options.config), new Lineage());
   }
 
   /** `text` read whole, its new ids `lineage`'s. */
   static #readWhole(marks: MarkSet, config: OurusConfig, lineage: Lineage): OurusDoc {
-    const [held, tree] = read(marks, (sentinels) => MdTree.parse(marks.text, MdFlavor.named(config.flavor), { sentinels, document: true }));
+    const [held, tree] = read(marks, (sentinels) =>
+      MdTree.parse(marks.text, MdFlavor.named(config.flavor), { sentinels, document: true }),
+    );
     const root = readOutline(tree, lineage, null, Touched.none, undefined, config);
     return new OurusDoc(held, tree, config, root, lineage, lineage.next);
   }
@@ -107,16 +136,27 @@ export class OurusDoc {
    */
   update(params: OurusDocUpdate = {}): OurusDoc {
     if (params.text !== undefined && params.changes) throw new Error('text gives the changes: no changes with it');
-    const set = ChangeSet.of(params.text !== undefined ? diffLines(this.text, params.text) : (params.changes ?? []), this.text.length);
+    const set = ChangeSet.of(
+      params.text !== undefined ? diffLines(this.text, params.text) : (params.changes ?? []),
+      this.text.length,
+    );
     if (!set.changes.length && !params.marks && !params.identity?.size) return this;
     const text = set.apply(this.text);
     const mapped = this.marks.map(set, text);
     let candidates = params.marks ? MarkSet.of(text, params.marks) : mapped;
-    if (!params.marks && params.caret !== undefined && this.keptAt(set, text, params.caret, mapped)) candidates = candidates.with({ placeholders: [...candidates.placeholders, params.caret] });
+    if (!params.marks && params.caret !== undefined && this.keptAt(set, text, params.caret, mapped))
+      candidates = candidates.with({ placeholders: [...candidates.placeholders, params.caret] });
     const old = this.mdTree;
     const [marks, tree] = read(candidates, (sentinels) => old.update(set.changes, { sentinels }));
     const touched = touchedLines(tree, set, mapped, marks);
-    const root = readOutline(tree, this.lineage, { tree: old, root: this.root, changes: set.changes, startOf: (id) => this.node(id)?.startLine }, touched, params.identity, this.config);
+    const root = readOutline(
+      tree,
+      this.lineage,
+      { tree: old, root: this.root, changes: set.changes, startOf: (id) => this.node(id)?.startLine },
+      touched,
+      params.identity,
+      this.config,
+    );
     return new OurusDoc(marks, tree, this.config, root, this.lineage, this.lineage.next);
   }
 
@@ -137,7 +177,11 @@ export class OurusDoc {
       // read anew, the ids anew (the lineage's still)
       return OurusDoc.#readWhole(this.marks, next, this.lineage);
     }
-    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent && next.headings === this.config.headings) {
+    if (
+      next.quotes === this.config.quotes &&
+      next.listParent === this.config.listParent &&
+      next.headings === this.config.headings
+    ) {
       const doc = new OurusDoc(this.marks, this.mdTree, next, this.root, this.lineage, this.nextId);
       // (the same outline: its indexes shared)
       doc.#rootNode = this.#rootNode;
@@ -145,8 +189,21 @@ export class OurusDoc {
       doc.#blockIds = this.#blockIds;
       return doc;
     }
-    const previous = { tree: this.mdTree, root: this.root, changes: [], startOf: (id: number) => this.node(id)?.startLine, regroup: true };
-    const root = readOutline(this.mdTree, this.lineage, previous, Touched.of([[0, this.mdTree.lineCount]]), undefined, next);
+    const previous = {
+      tree: this.mdTree,
+      root: this.root,
+      changes: [],
+      startOf: (id: number) => this.node(id)?.startLine,
+      regroup: true,
+    };
+    const root = readOutline(
+      this.mdTree,
+      this.lineage,
+      previous,
+      Touched.of([[0, this.mdTree.lineCount]]),
+      undefined,
+      next,
+    );
     return new OurusDoc(this.marks, this.mdTree, next, root, this.lineage, this.lineage.next);
   }
 
@@ -219,7 +276,8 @@ export class OurusDoc {
       text = this.#read(node)?.text ?? null;
       // (cached only where read from its own lines here: a node of another snapshot is read from the
       // lines it had, which here may be another node's, cached for it in every snapshot sharing it)
-      if (node.kind === 'root' || startingAt(this, node.startLine).some((n) => n.persistentNode === p)) texts.set(p, text);
+      if (node.kind === 'root' || startingAt(this, node.startLine).some((n) => n.persistentNode === p))
+        texts.set(p, text);
     }
     return text;
   }
@@ -249,7 +307,8 @@ export class OurusDoc {
       else lo = mid + 1;
     }
     const line = read.lines[lo];
-    if (!line || offset > starts[lo]! + line.length) throw new RangeError(`offset ${offset} past the text of the ${node.kind} at line ${node.startLine}`);
+    if (!line || offset > starts[lo]! + line.length)
+      throw new RangeError(`offset ${offset} past the text of the ${node.kind} at line ${node.startLine}`);
     return docPos(documentOffset(line, offset - starts[lo]!, assoc));
   }
 
@@ -289,11 +348,18 @@ export class OurusDoc {
    * this document's flavor: the backslashes that keep them its text in; null where none does.
    */
   escapeParagraph(lines: readonly string[]): string[] | null {
-    const spelled = escapeParagraph(this.mdTree.flavor, 'paragraph', false, lines, lines.map(() => false));
+    const spelled = escapeParagraph(
+      this.mdTree.flavor,
+      'paragraph',
+      false,
+      lines,
+      lines.map(() => false),
+    );
     if (!spelled) return null;
     return spelled.lines.map((l, k) => {
       let out = l;
-      for (const m of spelled.markup.filter((e) => e.line === k).reverse()) out = out.slice(0, m.at) + '\\' + out.slice(m.at);
+      for (const m of spelled.markup.filter((e) => e.line === k).reverse())
+        out = out.slice(0, m.at) + '\\' + out.slice(m.at);
       return out;
     });
   }
@@ -316,7 +382,12 @@ export class OurusDoc {
    */
   hiddenSpaces(node: OurusNode): { readonly from: number; readonly to: number } | null {
     const text = this.textOf(node);
-    if (!(text instanceof OurusProse) || text.type !== 'paragraph' || (node.kind !== 'item' && node.kind !== 'paragraph')) return null;
+    if (
+      !(text instanceof OurusProse) ||
+      text.type !== 'paragraph' ||
+      (node.kind !== 'item' && node.kind !== 'paragraph')
+    )
+      return null;
     // (before a text: an empty one has trailing blanks)
     if (text.empty) return null;
     const task = text.frame.find((p) => p.part === 'task');
@@ -377,7 +448,10 @@ export class OurusDoc {
     if (!node || !text) return line.contentFrom;
     // (a block-id line its text carries: where the host draws block ids, the caret staying out of it, the
     // end of the text; else past its indentation)
-    if (i > node.textLastLine) return decorates(this.config, 'blockId') ? this.posOf(node, textEnd(text), -1) : line.contentFrom + /^[ \t]*/.exec(this.text.slice(line.contentFrom, line.to))![0].length;
+    if (i > node.textLastLine)
+      return decorates(this.config, 'blockId')
+        ? this.posOf(node, textEnd(text), -1)
+        : line.contentFrom + /^[ \t]*/.exec(this.text.slice(line.contentFrom, line.to))![0].length;
     const hidden = this.hiddenSpaces(node);
     if (hidden && this.lineAt(hidden.from).index === i) return hidden.from;
     const k = i - this.lineAt(this.posOf(node, 0)).index;
@@ -385,12 +459,16 @@ export class OurusDoc {
     if (k < 0 || k >= lines.length) return line.contentFrom;
     const from = lines.slice(0, k).reduce((n, l) => n + l.length + 1, 0);
     // (code: past what starts its line but a fence, indented code's columns or a footnote's label)
-    let at = text instanceof OurusProse ? text.textStart(k) : (text.frame.find((p) => p.from === from && (p.part === 'indent' || p.part === 'label'))?.to ?? from);
+    let at =
+      text instanceof OurusProse
+        ? text.textStart(k)
+        : (text.frame.find((p) => p.from === from && (p.part === 'indent' || p.part === 'label'))?.to ?? from);
     // (on a marker's line its text starts below: at the line's end)
     at = Math.min(at, from + lines[k]!.length);
     // (a later line of a text keeps its spaces as text, the user's whitespace, as Markdown hides them
     // on the first: ShiftEnter1)
-    if (!(k > 0 && text instanceof OurusProse)) while (at < from + lines[k]!.length && isSpaceOrTab(text.text.charCodeAt(at))) at++;
+    if (!(k > 0 && text instanceof OurusProse))
+      while (at < from + lines[k]!.length && isSpaceOrTab(text.text.charCodeAt(at))) at++;
     // past the blanks Markdown leaves out of the text there, before an escape's backslash
     let pos = this.posOf(node, at, -1);
     const end = this.posOf(node, at, 1);
@@ -489,7 +567,11 @@ export class OurusDoc {
     const { root, block, first } = read;
     const type = block.type === 'code_block' ? (block.attrs.fenced ? 'fenced_code' : 'indented_code') : block.type;
     // (indented code can't start with a blank line: it would be the gap above it)
-    return type === text.type && (type !== 'fenced_code' || !!block.attrs.closed === text.closed) && (type !== 'indented_code' || root.offsets[0] === first);
+    return (
+      type === text.type &&
+      (type !== 'fenced_code' || !!block.attrs.closed === text.closed) &&
+      (type !== 'indented_code' || root.offsets[0] === first)
+    );
   }
 
   /**
@@ -512,8 +594,14 @@ export class OurusDoc {
     const wrapped = at > 0 && lines[0] !== '' && lines.some((l) => /^ *\t/.test(l));
     const first = wrapped ? 1 : 0;
     // (an empty last line, a code line, read as one: a final line ending starts none)
-    const source = wrapped ? `${['', '', '-', '1.', '', '100.'][at]}\n` + lines.map((l) => ' '.repeat(at) + l).join('\n') : lines.join('\n');
-    const tree = MdTree.parse(source, this.mdTree.flavor, lines[lines.length - 1] === '' && lines.length > 1 ? { sentinels: [source.length] } : {});
+    const source = wrapped
+      ? `${['', '', '-', '1.', '', '100.'][at]}\n` + lines.map((l) => ' '.repeat(at) + l).join('\n')
+      : lines.join('\n');
+    const tree = MdTree.parse(
+      source,
+      this.mdTree.flavor,
+      lines[lines.length - 1] === '' && lines.length > 1 ? { sentinels: [source.length] } : {},
+    );
     let root = tree.root;
     if (wrapped) {
       const list = root.children[0];
@@ -547,15 +635,24 @@ export class OurusDoc {
     // (and only past nothing on its line but markup, containers' markers, a checkbox of any status,
     // `#`s: a deletion in a line of text, most of them, reads nothing again)
     // (the first line's from past a byte-order mark)
-    const lineStart = Math.max(text.lastIndexOf('\n', caret - 1) + 1, text.lastIndexOf('\r', caret - 1) + 1, mdDocumentStart(text));
+    const lineStart = Math.max(
+      text.lastIndexOf('\n', caret - 1) + 1,
+      text.lastIndexOf('\r', caret - 1) + 1,
+      mdDocumentStart(text),
+    );
     if (!/^[ \t>*+\-0-9.)[\]xX#]*(?:\[[^\r\n]\][ \t]*)?$/.test(text.slice(lineStart, caret))) return false;
     // (read with the other marks as they are after the changes, in both: without them, an unrelated held
     // node elsewhere reads otherwise, and the two outlines differ for that)
     const others = { placeholders: mapped.placeholders.filter((pos) => pos !== caret), auto: mapped.auto };
-    const held = this.update({ changes: changes.changes, marks: { ...others, placeholders: [...others.placeholders, caret].sort((a, b) => a - b) } });
+    const held = this.update({
+      changes: changes.changes,
+      marks: { ...others, placeholders: [...others.placeholders, caret].sort((a, b) => a - b) },
+    });
     if (!held.marks.placeholders.includes(caret)) return false;
     const before = shape(this.root);
-    return shape(this.update({ changes: changes.changes, marks: others }).root) !== before && shape(held.root) === before;
+    return (
+      shape(this.update({ changes: changes.changes, marks: others }).root) !== before && shape(held.root) === before
+    );
   }
 }
 

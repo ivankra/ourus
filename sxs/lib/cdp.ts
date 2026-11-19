@@ -38,9 +38,14 @@ export class Cdp {
   static connect(url: string, timeout = 5000): Promise<Cdp> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
-      const timer = setTimeout(() => (ws.close(), reject(new Error(`no DevTools connection to ${url} in ${timeout}ms`))), timeout);
+      const timer = setTimeout(
+        () => (ws.close(), reject(new Error(`no DevTools connection to ${url} in ${timeout}ms`))),
+        timeout,
+      );
       ws.addEventListener('open', () => (clearTimeout(timer), resolve(new Cdp(ws))), { once: true });
-      ws.addEventListener('error', () => (clearTimeout(timer), reject(new Error(`can't connect to ${url}`))), { once: true });
+      ws.addEventListener('error', () => (clearTimeout(timer), reject(new Error(`can't connect to ${url}`))), {
+        once: true,
+      });
     });
   }
 
@@ -58,7 +63,10 @@ export class Cdp {
         this.pending.delete(id);
         reject(new Error(`${method}: no answer in ${timeout}ms`));
       }, timeout);
-      this.pending.set(id, { resolve: (v) => (clearTimeout(timer), resolve(v)), reject: (e) => (clearTimeout(timer), reject(e)) });
+      this.pending.set(id, {
+        resolve: (v) => (clearTimeout(timer), resolve(v)),
+        reject: (e) => (clearTimeout(timer), reject(e)),
+      });
       this.ws.send(JSON.stringify({ id, method, params, ...(sessionId && { sessionId }) }));
     });
   }
@@ -85,9 +93,19 @@ export class Cdp {
    * the page doesn't answer in `timeout` (a hung page, a dialog up).
    */
   async evaluate<T = unknown>(targetId: string, expression: string, timeout = 3000): Promise<T> {
-    const { sessionId } = await this.send<{ sessionId: string }>('Target.attachToTarget', { targetId, flatten: true }, undefined, timeout);
+    const { sessionId } = await this.send<{ sessionId: string }>(
+      'Target.attachToTarget',
+      { targetId, flatten: true },
+      undefined,
+      timeout,
+    );
     try {
-      const r = await this.send<{ result: { value: T }; exceptionDetails?: { text: string } }>('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, sessionId, timeout);
+      const r = await this.send<{ result: { value: T }; exceptionDetails?: { text: string } }>(
+        'Runtime.evaluate',
+        { expression, returnByValue: true, awaitPromise: true },
+        sessionId,
+        timeout,
+      );
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.text);
       return r.result.value;
     } finally {

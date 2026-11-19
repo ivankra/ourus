@@ -32,14 +32,22 @@ function shellWord(s: string): string {
  */
 export function parseCookies(copied: string): { name: string; value: string }[] {
   const s = copied.trim();
-  const words = (option: RegExp): string[] => [...s.matchAll(option)].map((m) => shellWord(s.slice(m.index + m[0].length)));
-  const fromCurl = words(/(?:^|\s)(?:-b|--cookie)\s+/g)[0] ?? words(/(?:^|\s)(?:-H|--header)\s+/g).find((h) => /^cookie:/i.test(h))?.replace(/^cookie:\s*/i, '');
+  const words = (option: RegExp): string[] =>
+    [...s.matchAll(option)].map((m) => shellWord(s.slice(m.index + m[0].length)));
+  const fromCurl =
+    words(/(?:^|\s)(?:-b|--cookie)\s+/g)[0] ??
+    words(/(?:^|\s)(?:-H|--header)\s+/g)
+      .find((h) => /^cookie:/i.test(h))
+      ?.replace(/^cookie:\s*/i, '');
   const header = fromCurl ?? s.replace(/^cookie:\s*/i, '');
   return header
     .split(';')
     .map((part) => part.trim())
     .filter((part) => part.includes('='))
-    .map((part) => ({ name: part.slice(0, part.indexOf('=')).trim(), value: part.slice(part.indexOf('=') + 1).trim() }));
+    .map((part) => ({
+      name: part.slice(0, part.indexOf('=')).trim(),
+      value: part.slice(part.indexOf('=') + 1).trim(),
+    }));
 }
 
 /**
@@ -53,11 +61,23 @@ export async function addSessionCookies(page: Page, env: string, url: string): P
   const copied = process.env[env];
   if (!copied) return false;
   const cookies = parseCookies(copied).filter((c) => !/^(ph_|_ga|_gid|_fbp|ajs_)/.test(c.name));
-  if (!cookies.length) throw new LoginRequired(`${env} holds no cookies: give it the \`cookie\` header of a signed-in request to ${new URL(url).host}, or the whole "Copy as cURL" of one`);
+  if (!cookies.length)
+    throw new LoginRequired(
+      `${env} holds no cookies: give it the \`cookie\` header of a signed-in request to ${new URL(url).host}, or the whole "Copy as cURL" of one`,
+    );
   const site = new URL(url).hostname.split('.').slice(-2).join('.');
   const cdp = await page.context().newCDPSession(page);
   try {
-    await cdp.send('Network.setCookies', { cookies: cookies.map((c) => ({ ...c, domain: `.${site}`, path: '/', secure: true, httpOnly: false, sameSite: 'Lax' as const })) });
+    await cdp.send('Network.setCookies', {
+      cookies: cookies.map((c) => ({
+        ...c,
+        domain: `.${site}`,
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      })),
+    });
   } finally {
     await cdp.detach().catch(() => {});
   }

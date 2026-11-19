@@ -13,7 +13,8 @@ import { header, withBody, type ProxyRequest, type ProxyResponse, type ProxyRule
  * The API's writes and its reports on the visitor: answered `{}`, never sent. Its reads are the page's
  * own data (the app breaks on an empty answer: `backlinks is not iterable`), cached by their body.
  */
-const LOCAL = /^\/api\/v3\/(submitTransaction|saveTransactions\w*|ping|etClient|record\w+|logClientEvent\w*|getUserAnalyticsSettings)$/;
+const LOCAL =
+  /^\/api\/v3\/(submitTransaction|saveTransactions\w*|ping|etClient|record\w+|logClientEvent\w*|getUserAnalyticsSettings)$/;
 
 /**
  * Notion's event collectors (Splunk, Statsig's `exp.notion.com`): another origin than the page's, so
@@ -34,19 +35,39 @@ export const SCRIPT_PATCHES: [string, RegExp, string][] = [
   // The editor's mode for a block's page (`getModeType`): "edit" takes a signed-in user, and a page
   // being edited or shared as editable. An anonymous visitor gets "view" whatever the role: the
   // function takes both as given, so the mode is "edit" for a role that may edit.
-  ['getModeType(', /(getModeType\(\w+,\w+,\w+\)\{[^}]*?\w+=)\w+\.currentUser\.isLoggedIn\(\);return (\w+)&&(\w+)&&\(this\.state\.editing\|\|/, '$1!0;return $2&&$3&&(!0||'],
+  [
+    'getModeType(',
+    /(getModeType\(\w+,\w+,\w+\)\{[^}]*?\w+=)\w+\.currentUser\.isLoggedIn\(\);return (\w+)&&(\w+)&&\(this\.state\.editing\|\|/,
+    '$1!0;return $2&&$3&&(!0||',
+  ],
   // the block actions' check that a public page is in "edit" mode (a block selection's Delete, ...):
   // a visitor's stays "view" whatever the editor's mode
-  ['hasPublicPermission&&"edit"!==', /function (\w+)\((\w+)\)\{return!!\2&&\2\.hasPublicPermission&&"edit"!==\2\.permission\}/, 'function $1($2){return!1}'],
+  [
+    'hasPublicPermission&&"edit"!==',
+    /function (\w+)\((\w+)\)\{return!!\2&&\2\.hasPublicPermission&&"edit"!==\2\.permission\}/,
+    'function $1($2){return!1}',
+  ],
   // the space's block limit, which a paste of blocks checks first (`canCreate`): a visitor's space is
   // over it, and the paste does nothing; as for a space with no limit
-  ['gracePeriodEndDate?{canCreate', /(function \w+\(\w+,(\w+),\w+\)\{return )(\2\?\2\.gracePeriodEndDate\?)/, '$1$2=void 0,$3'],
+  [
+    'gracePeriodEndDate?{canCreate',
+    /(function \w+\(\w+,(\w+),\w+\)\{return )(\2\?\2\.gracePeriodEndDate\?)/,
+    '$1$2=void 0,$3',
+  ],
   // a paste's blocks, made from its HTML, name their author: the signed-in user's record, which a
   // visitor hasn't, and the paste does nothing. A made-up one's id instead (nothing is saved)
   // whether selected blocks may be deleted (`canDelete`): the signed-in user's roles in the space, and
   // a visitor has none, so a block selection's Delete did nothing
-  ['needsParentEditAccess', /(function \w+\(\{environment:\w+,publicEditMode:\w+,blocks:\w+\}\)\{)(if\(\w+\(\d+\)\.l\.state\)return\{canDelete:!1)/, '$1return{canDelete:!0};$2'],
-  ['AppStoreCurrentUserStore.state,', /(AppStoreCurrentUserStore\.state,(\w+)=\(0,\w+\(\d+\)\.Z\)\(\);)if\(!(\w+)\|\|!\2\)return;let (\w+)=\3\.getValue\(\);if\(!\4\)return;/, `$1if(!$2)return;let $4=$3&&$3.getValue()||{id:"${VISITOR}"};`],
+  [
+    'needsParentEditAccess',
+    /(function \w+\(\{environment:\w+,publicEditMode:\w+,blocks:\w+\}\)\{)(if\(\w+\(\d+\)\.l\.state\)return\{canDelete:!1)/,
+    '$1return{canDelete:!0};$2',
+  ],
+  [
+    'AppStoreCurrentUserStore.state,',
+    /(AppStoreCurrentUserStore\.state,(\w+)=\(0,\w+\(\d+\)\.Z\)\(\);)if\(!(\w+)\|\|!\2\)return;let (\w+)=\3\.getValue\(\);if\(!\4\)return;/,
+    `$1if(!$2)return;let $4=$3&&$3.getValue()||{id:"${VISITOR}"};`,
+  ],
 ];
 
 /**
@@ -71,7 +92,8 @@ export const rules: ProxyRules = {
   key(req: ProxyRequest) {
     // the app's feature flags, asked for with a body of the visitor's ids and times: one answer for any
     if (req.url.pathname === '/api/v3/getAppConfig') return req.url.href;
-    if (req.method === 'POST' && isApi(req)) return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
+    if (req.method === 'POST' && isApi(req))
+      return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
     // the page, whatever test's document its query carries (`?sxs=`, read from the cookie and the
     // referer, not from the page): one copy, so one build of the app's for every test (each copy
     // cached when its test first ran had the build of that day, and cost a load from Notion)
@@ -114,7 +136,9 @@ export const rules: ProxyRules = {
         // a test's document, given in the page's URL (`?sxs=`, its blocks as JSON: `NotionBlock`)
         // (or in a cookie of that name: the app may drop the query from its URL before it asks)
         const cookie = /(?:^|;\s*)sxs=([^;]*)/.exec(String(req.headers.cookie ?? ''))?.[1];
-        const sxs = (cookie && decodeURIComponent(cookie)) || new URL(String(req.headers.referer ?? 'http://x/')).searchParams.get('sxs');
+        const sxs =
+          (cookie && decodeURIComponent(cookie)) ||
+          new URL(String(req.headers.referer ?? 'http://x/')).searchParams.get('sxs');
         if (sxs) {
           const blocks: NotionBlock[] = JSON.parse(sxs);
           const spaceId = page.space_id;
@@ -127,7 +151,20 @@ export const rules: ProxyRules = {
             const properties: Record<string, unknown> = { title: b.title };
             if (b.type === 'to_do') properties.checked = [[b.checked ? 'Yes' : 'No']];
             if (b.type === 'code') properties.language = [[b.language ?? 'Plain Text']];
-            const value = { id: ids[i], version: 1, type: b.type, properties, ...(b.start !== undefined && { format: { list_start_index: b.start } }), content: [], created_time: 1, last_edited_time: 1, parent_id: parent < 0 ? page.id : ids[parent], parent_table: 'block', alive: true, space_id: spaceId };
+            const value = {
+              id: ids[i],
+              version: 1,
+              type: b.type,
+              properties,
+              ...(b.start !== undefined && { format: { list_start_index: b.start } }),
+              content: [],
+              created_time: 1,
+              last_edited_time: 1,
+              parent_id: parent < 0 ? page.id : ids[parent],
+              parent_table: 'block',
+              alive: true,
+              space_id: spaceId,
+            };
             data.recordMap.block[ids[i]!] = { spaceId, value: { value, role: 'reader' } };
             (parent < 0 ? page.content : data.recordMap.block[ids[parent]!].value.value.content).push(ids[i]);
           });

@@ -43,19 +43,38 @@ interface Item {
 const FENCE = /^(`{3,})\n([\s\S]*)\n\1$/;
 
 /** The fence a code block reads back with (WorkFlowy's export writes three backticks): the shortest run of three or more longer than any in the code. */
-const fenceFor = (code: string): string => '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
+const fenceFor = (code: string): string =>
+  '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
 
 /** A block's canonical text as an item, and how many characters of its first line the item type took. */
 function toItem(depth: number, text: string): Item & { prefix: number; cut?: number } {
   const code = FENCE.exec(text);
-  if (code) return { depth, name: code[2]!, note: null, layout: 'code-block', completed: false, prefix: code[1]!.length + 1 };
+  if (code)
+    return { depth, name: code[2]!, note: null, layout: 'code-block', completed: false, prefix: code[1]!.length + 1 };
   const [first, ...rest] = text.split('\n');
   const note = rest.length ? rest.join('\n') : null;
   const task = /^\[([ xX])\](?: |$)/.exec(first!);
-  if (task) return { depth, name: first!.slice(task[0].length), note, layout: 'todo', completed: task[1] !== ' ', prefix: task[0].length };
+  if (task)
+    return {
+      depth,
+      name: first!.slice(task[0].length),
+      note,
+      layout: 'todo',
+      completed: task[1] !== ' ',
+      prefix: task[0].length,
+    };
   const heading = /^(#{1,3}) /.exec(first!);
-  if (heading) return { depth, name: first!.slice(heading[0].length), note, layout: `h${heading[1]!.length}` as Item['layout'], completed: false, prefix: heading[0].length };
-  if (first!.startsWith('> ')) return { depth, name: first!.slice(2), note, layout: 'quote-block', completed: false, prefix: 2 };
+  if (heading)
+    return {
+      depth,
+      name: first!.slice(heading[0].length),
+      note,
+      layout: `h${heading[1]!.length}` as Item['layout'],
+      completed: false,
+      prefix: heading[0].length,
+    };
+  if (first!.startsWith('> '))
+    return { depth, name: first!.slice(2), note, layout: 'quote-block', completed: false, prefix: 2 };
   // a numbered item: its number its place in its run of numbered siblings
   const numbered = /^\d{1,9}\. /.exec(first!);
   const prefix = numbered?.[0].length ?? 0;
@@ -65,9 +84,20 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(name);
   const layout = numbered ? 'numbered' : 'bullets';
   const number = numbered ? { number: Number(numbered[0].slice(0, -2)) } : {};
-  if (literal) return { depth, name: literal[1] + name.slice(literal[0].length), note, layout, completed: false, prefix, cut: prefix + literal[1]!.length, ...number };
+  if (literal)
+    return {
+      depth,
+      name: literal[1] + name.slice(literal[0].length),
+      note,
+      layout,
+      completed: false,
+      prefix,
+      cut: prefix + literal[1]!.length,
+      ...number,
+    };
   // and a `#` that is text (a heading is the item's layout, its name plain: Enter9)
-  if (/^\\#/.test(name)) return { depth, name: name.slice(1), note, layout, completed: false, prefix, cut: prefix, ...number };
+  if (/^\\#/.test(name))
+    return { depth, name: name.slice(1), note, layout, completed: false, prefix, cut: prefix, ...number };
   return { depth, name, note, layout, completed: false, prefix, ...number };
 }
 
@@ -78,17 +108,41 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
 function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number; fence?: string } {
   if (it.layout === 'code-block') {
     const fence = fenceFor(it.name);
-    return { text: `${fence}\n${it.name}\n${fence}` + (it.note !== null ? '\n' + it.note : ''), prefix: fence.length + 1, fence };
+    return {
+      text: `${fence}\n${it.name}\n${fence}` + (it.note !== null ? '\n' + it.note : ''),
+      prefix: fence.length + 1,
+      fence,
+    };
   }
-  if (it.layout === 'quote-block') return { text: '> ' + it.name + (it.note !== null ? '\n' + it.note : ''), prefix: 2 };
-  const prefix = it.layout === 'todo' ? (it.completed ? '[x] ' : '[ ] ') : /^h[123]$/.test(it.layout) ? '#'.repeat(Number(it.layout[1])) + ' ' : it.layout === 'numbered' && number !== null ? `${number}. ` : it.completed ? '[x] ' : '';
+  if (it.layout === 'quote-block')
+    return { text: '> ' + it.name + (it.note !== null ? '\n' + it.note : ''), prefix: 2 };
+  const prefix =
+    it.layout === 'todo'
+      ? it.completed
+        ? '[x] '
+        : '[ ] '
+      : /^h[123]$/.test(it.layout)
+        ? '#'.repeat(Number(it.layout[1])) + ' '
+        : it.layout === 'numbered' && number !== null
+          ? `${number}. `
+          : it.completed
+            ? '[x] '
+            : '';
   const plain = !prefix || it.layout === 'numbered';
   const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.name) : null;
   // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
   const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.name);
-  const name = literal ? it.name.slice(0, literal[0].length) + '\\' + it.name.slice(literal[0].length) : hash ? '\\' + it.name : it.name;
+  const name = literal
+    ? it.name.slice(0, literal[0].length) + '\\' + it.name.slice(literal[0].length)
+    : hash
+      ? '\\' + it.name
+      : it.name;
   const cut = literal ? literal[0].length : hash ? 0 : undefined;
-  return { text: prefix + name + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length, ...(cut !== undefined && { cut }) };
+  return {
+    text: prefix + name + (it.note !== null ? '\n' + it.note : ''),
+    prefix: prefix.length,
+    ...(cut !== undefined && { cut }),
+  };
 }
 
 /** The test's item, made once per page. */
@@ -127,7 +181,10 @@ async function checkExport(page: Page, got: Outline): Promise<void> {
   }
   const verdict = compareOutlines({ ...exported, sel: null }, { ...got, sel: null });
   const show = (s: string): string => s.replace(/\n$/, '').replace(/^/gm, '    ');
-  if (verdict !== 'agree') console.log(`WorkFlowy's export reads otherwise (${verdict}):\n  export:\n${show(items)}\n  as blocks:\n${show(draw({ ...exported, sel: null }, { ordered: true }))}\n  read:\n${show(draw({ ...got, sel: null }, { ordered: true }))}`);
+  if (verdict !== 'agree')
+    console.log(
+      `WorkFlowy's export reads otherwise (${verdict}):\n  export:\n${show(items)}\n  as blocks:\n${show(draw({ ...exported, sel: null }, { ordered: true }))}\n  read:\n${show(draw({ ...got, sel: null }, { ordered: true }))}`,
+    );
 }
 
 export const driver: Driver = {
@@ -178,7 +235,12 @@ export const driver: Driver = {
     redo: 'Control+y',
     // WorkFlowy's "focus last" item, then the end of its text (the start: `act`)
     cursorDocEnd: ['Control+End', 'End'],
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   emulated: ['cursorDocStart'],
   // a fenced block is a code block item (`holds` declines what it can't hold); tables and other atoms
@@ -232,26 +294,37 @@ export const driver: Driver = {
   holds(doc: Outline) {
     if (doc.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'heading deeper than H3';
     // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
-    if (doc.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which WorkFlowy holds as the text #';
+    if (doc.blocks.some((b) => /^#{1,6}$/.test(b.text)))
+      return 'heading with no text (# alone), which WorkFlowy holds as the text #';
     // a code block is an item of its own, its fence three or more backticks, no more than its code needs,
     // and no language (WorkFlowy keeps none); the caret in its code
     for (const b of doc.blocks) {
       if (!/(^|\n)(`{3,}|~{3,})/.test(b.text)) continue;
       const code = FENCE.exec(b.text);
-      if (!code) return "fenced block with a language, tildes, or text around it in its item: WorkFlowy's code block is an item of backticks alone";
-      if (code[1] !== fenceFor(code[2]!)) return "code block's fence longer than its code needs, which WorkFlowy's reads back without";
+      if (!code)
+        return "fenced block with a language, tildes, or text around it in its item: WorkFlowy's code block is an item of backticks alone";
+      if (code[1] !== fenceFor(code[2]!))
+        return "code block's fence longer than its code needs, which WorkFlowy's reads back without";
     }
     if (doc.sel) {
       const it = toItem(0, doc.blocks[doc.sel.block]!.text);
-      if (it.layout === 'code-block' && Math.max(doc.sel.anchor, doc.sel.head) > it.prefix + it.name.length) return "caret in a code block's fences";
+      if (it.layout === 'code-block' && Math.max(doc.sel.anchor, doc.sel.head) > it.prefix + it.name.length)
+        return "caret in a code block's fences";
       // the name and the note are fields of their own: no selection spans both
       const nameEnd = it.prefix + it.name.length;
-      if (it.note !== null && Math.min(doc.sel.anchor, doc.sel.head) <= nameEnd && Math.max(doc.sel.anchor, doc.sel.head) > nameEnd) return "selection across an item's name and its note";
+      if (
+        it.note !== null &&
+        Math.min(doc.sel.anchor, doc.sel.head) <= nameEnd &&
+        Math.max(doc.sel.anchor, doc.sel.head) > nameEnd
+      )
+        return "selection across an item's name and its note";
     }
     // a to-do's checkbox, a heading's level and a quote's `>` are the item's type, not text: no caret goes there
-    if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "caret in a task's checkbox, a heading's #s or a quote's >";
+    if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix)
+      return "caret in a task's checkbox, a heading's #s or a quote's >";
     // an item has one layout: numbered, or a task, or a heading, or a quote
-    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} |> )/.test(b.text))) return 'numbered task, heading or quote';
+    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} |> )/.test(b.text)))
+      return 'numbered task, heading or quote';
     // a run of numbered siblings counts on from its first item's number (its `numbered_start`)
     const run: number[] = [];
     for (const b of doc.blocks) {
@@ -265,14 +338,25 @@ export const driver: Driver = {
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => (window as any).WF?.rootItem && document.querySelector('.name > .content'), null, { timeout: 120000 });
-    const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+    await page.waitForFunction(() => (window as any).WF?.rootItem && document.querySelector('.name > .content'), null, {
+      timeout: 120000,
+    });
+    const settled = await page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+    );
     if (settled.timedOut) throw new Error(`WorkFlowy didn't settle after loading: ${settled.pending}`);
     // ready once a key does what it should: Tab indents
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await idle();
       await page.keyboard.press('Tab');
       await idle();
@@ -288,7 +372,8 @@ export const driver: Driver = {
     await page.evaluate(async () => {
       const WF = (window as any).WF;
       const { features } = await (await fetch('/get_enabled_features/')).json();
-      for (const [name, on] of Object.entries(features as Record<string, boolean>)) if (on && !WF.Features.on(name)) WF.Features.enable(name);
+      for (const [name, on] of Object.entries(features as Record<string, boolean>))
+        if (on && !WF.Features.on(name)) WF.Features.enable(name);
       if (!WF.Features.on('markdown_pasting')) WF.Features.enable('markdown_pasting');
       if (!WF.Features.on('numbered_list')) throw new Error("WorkFlowy's numbered lists didn't come on");
     });
@@ -305,7 +390,8 @@ export const driver: Driver = {
       // an offset in the block's text: in the item's type prefix, the name's start; past the first line, the note
       const nameEnd = it.prefix + it.name.length;
       const inNote = Math.max(doc.sel.anchor, doc.sel.head) > nameEnd && it.note !== null;
-      const local = (p: number) => (inNote ? p - nameEnd - 1 : Math.max(0, p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0)));
+      const local = (p: number) =>
+        inNote ? p - nameEnd - 1 : Math.max(0, p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0));
       sel = { block: doc.sel.block, anchor: local(doc.sel.anchor), head: local(doc.sel.head), inNote };
       if (inNote && it.note === '') {
         openNote = true;
@@ -356,8 +442,11 @@ export const driver: Driver = {
             if (it.layout !== 'bullets') ref.setMetadata((m: any) => void (m.layoutMode = it.layout));
             // a run's first number, where it isn't 1 (a later item's number counts on from the one before)
             const before = parent.getChildren()[count[it.depth]! - 2];
-            const runStarts = it.layout === 'numbered' && !(before && before.data.projectReferenceOrThrow.getItem()?.layoutMode === 'numbered');
-            if (runStarts && it.number !== undefined && it.number !== 1) ref.setMetadata((m: any) => void (m.numbered_start = it.number));
+            const runStarts =
+              it.layout === 'numbered' &&
+              !(before && before.data.projectReferenceOrThrow.getItem()?.layoutMode === 'numbered');
+            if (runStarts && it.number !== undefined && it.number !== 1)
+              ref.setMetadata((m: any) => void (m.numbered_start = it.number));
             if (it.completed) ref.getItem().applyLocalComplete();
             made.push(item);
           }
@@ -373,7 +462,9 @@ export const driver: Driver = {
           await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
         }
         for (let i = 0; i < 300 && !made.every(rendered); i++) await new Promise((r) => setTimeout(r, 10));
-        const drawn = (it: any, i: number) => !items[i]!.note || it.getElement().querySelector(':scope > .notes > .content')?.textContent === it.getNoteInPlainText();
+        const drawn = (it: any, i: number) =>
+          !items[i]!.note ||
+          it.getElement().querySelector(':scope > .notes > .content')?.textContent === it.getNoteInPlainText();
         for (let i = 0; i < 300 && !made.every(drawn); i++) await new Promise((r) => setTimeout(r, 10));
         if (!made.every(drawn)) throw new Error("the test's notes weren't drawn");
         if (!made.every(rendered)) throw new Error("the test's items didn't render");
@@ -383,7 +474,8 @@ export const driver: Driver = {
           for (const i of view.folded) WF.collapseItem(made[i]);
           if (view.zoom !== null) WF.zoomTo(made[view.zoom]);
           await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
-          if (view.zoom !== null && !WF.currentItem().equals(made[view.zoom])) throw new Error("the zoom root wasn't zoomed into");
+          if (view.zoom !== null && !WF.currentItem().equals(made[view.zoom]))
+            throw new Error("the zoom root wasn't zoomed into");
         }
         // a selection of items, as Shift+Up or Down past an item's edge makes one (`selectsBlocks`)
         if (selected) {
@@ -425,7 +517,13 @@ export const driver: Driver = {
           s.extend(an, ao);
         } else s.addRange(range);
       },
-      { items, sel, selected: !doc.sel && doc.selected?.length ? doc.selected : null, container: CONTAINER, view: doc.view ?? null },
+      {
+        items,
+        sel,
+        selected: !doc.sel && doc.selected?.length ? doc.selected : null,
+        container: CONTAINER,
+        view: doc.view ?? null,
+      },
     );
     viewed(page).on = !!doc.view;
     if (openNote) {
@@ -435,76 +533,123 @@ export const driver: Driver = {
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate(({ container, viewed }) => {
-      const WF = (window as any).WF;
-      const box = (window as any).__ourusBox ? WF.getItemById((window as any).__ourusBox) : null;
-      const active = document.activeElement as HTMLElement | null;
-      const content = active?.classList.contains('content') ? active : null;
-      const inNote = !!content?.closest('.notes');
-      const focusedId = content ? WF.focusedItem()?.getId() : null;
-      const flat: { depth: number; name: string; runs: Run[]; note: string | null; layout: string; completed: boolean; id: string; shown: number | null; start: number | null; collapsed: boolean }[] = [];
-      // a name's rich text (WorkFlowy's HTML: `<b>`, `<i>`, `<s>`, `<code>`, `<a href>`) as runs, each
-      // with its formatting; any other element is its text
-      const runsOf = (root: Node): Run[] => {
-        const out: Run[] = [];
-        const visit = (n: Node, f: Omit<Run, 'text'>): void => {
-          if (n.nodeType === Node.TEXT_NODE) {
-            out.push({ text: n.textContent ?? '', ...f });
-            return;
-          }
-          const tag = n.nodeType === Node.ELEMENT_NODE ? (n as Element).tagName : '';
-          const href = tag === 'A' ? (n as Element).getAttribute('href') : null;
-          const g = { ...f, ...((tag === 'B' || tag === 'STRONG') && { bold: true }), ...((tag === 'I' || tag === 'EM') && { italic: true }), ...((tag === 'S' || tag === 'STRIKE' || tag === 'DEL') && { strike: true }), ...(tag === 'CODE' && { code: true }), ...(href !== null && { href }) };
-          for (const c of n.childNodes) visit(c, g);
-        };
-        visit(root, {});
-        return out;
-      };
-      const html = (s: string): Node => {
-        const t = document.createElement('template');
-        t.innerHTML = s;
-        return t.content;
-      };
-      const walk = (it: any, depth: number) => {
-        for (const c of it.getChildren()) {
-          const internal = c.data.projectReferenceOrThrow.getItem();
-          const layout = internal?.layoutMode ?? 'bullets';
-          let name = c.getNameInPlainText();
-          let runs = runsOf(html(c.getName()));
-          let note: string | null = c.getNoteInPlainText() || null;
-          // the name or note being edited: its editor's text, ahead of what WorkFlowy stored (it saves
-          // half a second after typing stops); a note being edited is there even when empty
-          if (c.getId() === focusedId) {
-            const text: string = (content as any).editor?.plainText ?? content!.textContent ?? '';
-            if (inNote) note = text;
-            else {
-              name = text;
-              runs = runsOf(content!);
+    const raw = await page.evaluate(
+      ({ container, viewed }) => {
+        const WF = (window as any).WF;
+        const box = (window as any).__ourusBox ? WF.getItemById((window as any).__ourusBox) : null;
+        const active = document.activeElement as HTMLElement | null;
+        const content = active?.classList.contains('content') ? active : null;
+        const inNote = !!content?.closest('.notes');
+        const focusedId = content ? WF.focusedItem()?.getId() : null;
+        const flat: {
+          depth: number;
+          name: string;
+          runs: Run[];
+          note: string | null;
+          layout: string;
+          completed: boolean;
+          id: string;
+          shown: number | null;
+          start: number | null;
+          collapsed: boolean;
+        }[] = [];
+        // a name's rich text (WorkFlowy's HTML: `<b>`, `<i>`, `<s>`, `<code>`, `<a href>`) as runs, each
+        // with its formatting; any other element is its text
+        const runsOf = (root: Node): Run[] => {
+          const out: Run[] = [];
+          const visit = (n: Node, f: Omit<Run, 'text'>): void => {
+            if (n.nodeType === Node.TEXT_NODE) {
+              out.push({ text: n.textContent ?? '', ...f });
+              return;
             }
+            const tag = n.nodeType === Node.ELEMENT_NODE ? (n as Element).tagName : '';
+            const href = tag === 'A' ? (n as Element).getAttribute('href') : null;
+            const g = {
+              ...f,
+              ...((tag === 'B' || tag === 'STRONG') && { bold: true }),
+              ...((tag === 'I' || tag === 'EM') && { italic: true }),
+              ...((tag === 'S' || tag === 'STRIKE' || tag === 'DEL') && { strike: true }),
+              ...(tag === 'CODE' && { code: true }),
+              ...(href !== null && { href }),
+            };
+            for (const c of n.childNodes) visit(c, g);
+          };
+          visit(root, {});
+          return out;
+        };
+        const html = (s: string): Node => {
+          const t = document.createElement('template');
+          t.innerHTML = s;
+          return t.content;
+        };
+        const walk = (it: any, depth: number) => {
+          for (const c of it.getChildren()) {
+            const internal = c.data.projectReferenceOrThrow.getItem();
+            const layout = internal?.layoutMode ?? 'bullets';
+            let name = c.getNameInPlainText();
+            let runs = runsOf(html(c.getName()));
+            let note: string | null = c.getNoteInPlainText() || null;
+            // the name or note being edited: its editor's text, ahead of what WorkFlowy stored (it saves
+            // half a second after typing stops); a note being edited is there even when empty
+            if (c.getId() === focusedId) {
+              const text: string = (content as any).editor?.plainText ?? content!.textContent ?? '';
+              if (inNote) note = text;
+              else {
+                name = text;
+                runs = runsOf(content!);
+              }
+            }
+            // a numbered item's number as WorkFlowy draws it: a prefix of the name, outside its text
+            const drawn =
+              layout === 'numbered'
+                ? [...(c.getElement()?.querySelectorAll(':scope > .name span') ?? [])].find(
+                    (sp: any) => !sp.closest('.content') && /^\d+\.$/.test(sp.textContent.trim()),
+                  )
+                : undefined;
+            const start = internal?.metadata?.numbered_start ?? null;
+            flat.push({
+              depth,
+              name,
+              runs,
+              note,
+              layout,
+              completed: c.isCompleted(),
+              id: c.getId(),
+              shown: drawn ? parseInt(drawn.textContent, 10) : null,
+              start,
+              collapsed: c.getChildren().length > 0 && !c.isExpanded(),
+            });
+            walk(c, depth + 1);
           }
-          // a numbered item's number as WorkFlowy draws it: a prefix of the name, outside its text
-          const drawn = layout === 'numbered' ? [...(c.getElement()?.querySelectorAll(':scope > .name span') ?? [])].find((sp: any) => !sp.closest('.content') && /^\d+\.$/.test(sp.textContent.trim())) : undefined;
-          const start = internal?.metadata?.numbered_start ?? null;
-          flat.push({ depth, name, runs, note, layout, completed: c.isCompleted(), id: c.getId(), shown: drawn ? parseInt(drawn.textContent, 10) : null, start, collapsed: c.getChildren().length > 0 && !c.isExpanded() });
-          walk(c, depth + 1);
+        };
+        if (box) walk(box, 0);
+        let sel: { block: number; anchor: number; head: number; inNote: boolean } | null = null;
+        if (content && focusedId) {
+          // the selection in the editor's own text offsets
+          const { start, end, reversed } = WF.DomEditableText.selectedIn(content);
+          sel = {
+            block: flat.findIndex((f) => f.id === focusedId),
+            anchor: reversed ? end : start,
+            head: reversed ? start : end,
+            inNote,
+          };
         }
-      };
-      if (box) walk(box, 0);
-      let sel: { block: number; anchor: number; head: number; inNote: boolean } | null = null;
-      if (content && focusedId) {
-        // the selection in the editor's own text offsets
-        const { start, end, reversed } = WF.DomEditableText.selectedIn(content);
-        sel = { block: flat.findIndex((f) => f.id === focusedId), anchor: reversed ? end : start, head: reversed ? start : end, inNote };
-      }
-      // items selected whole; a select all (Ctrl-A again) selects the container itself: every item in it
-      const chosen: any[] = WF.getSelection();
-      const selected = box && chosen.some((it) => it.getId() === box.getId()) ? flat.flatMap((f, k) => (f.depth === 0 ? [k] : [])) : chosen.map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
-      // the view: the collapsed items, and the item zoomed into, if one of the test's (the container: none)
-      const current = WF.currentItem().getId();
-      const zoom = flat.findIndex((f) => f.id === current);
-      const view = viewed ? { folded: flat.flatMap((f, k) => (f.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
-      return { flat, sel, selected, view };
-    }, { container: CONTAINER, viewed: viewed(page).on });
+        // items selected whole; a select all (Ctrl-A again) selects the container itself: every item in it
+        const chosen: any[] = WF.getSelection();
+        const selected =
+          box && chosen.some((it) => it.getId() === box.getId())
+            ? flat.flatMap((f, k) => (f.depth === 0 ? [k] : []))
+            : chosen.map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
+        // the view: the collapsed items, and the item zoomed into, if one of the test's (the container: none)
+        const current = WF.currentItem().getId();
+        const zoom = flat.findIndex((f) => f.id === current);
+        const view = viewed
+          ? { folded: flat.flatMap((f, k) => (f.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null }
+          : undefined;
+        return { flat, sel, selected, view };
+      },
+      { container: CONTAINER, viewed: viewed(page).on },
+    );
     // a numbered item's number: as drawn, else as WorkFlowy counts it (the run's start, then one more
     // than the numbered sibling before)
     const run: number[] = [];
@@ -515,7 +660,9 @@ export const driver: Driver = {
     });
     // a name as Markdown, its formatting in markup (a code block's as it is), and where an offset in
     // the name is in it
-    const mds = raw.flat.map((f) => (f.layout === 'code-block' ? { text: f.name, at: (p: number) => p } : runsAsMarkdown(f.runs)));
+    const mds = raw.flat.map((f) =>
+      f.layout === 'code-block' ? { text: f.name, at: (p: number) => p } : runsAsMarkdown(f.runs),
+    );
     const texts = raw.flat.map((f, i) => fromItem({ ...f, name: mds[i]!.text } as Item, numbers[i]!));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
     let sel: Outline['sel'] = null;
@@ -523,11 +670,19 @@ export const driver: Driver = {
       const { prefix, cut } = texts[raw.sel.block]!;
       const { fence } = texts[raw.sel.block]!;
       const md = mds[raw.sel.block]!;
-      const base = raw.sel.inNote ? prefix + md.text.length + (cut !== undefined ? 1 : 0) + 1 + (fence ? fence.length + 1 : 0) : prefix;
-      const at = (p: number): number => (raw.sel!.inNote ? base + p : base + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0));
+      const base = raw.sel.inNote
+        ? prefix + md.text.length + (cut !== undefined ? 1 : 0) + 1 + (fence ? fence.length + 1 : 0)
+        : prefix;
+      const at = (p: number): number =>
+        raw.sel!.inNote ? base + p : base + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0);
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
-    const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
+    const got: Outline = {
+      blocks,
+      sel,
+      ...(raw.selected.length && { selected: raw.selected }),
+      ...(raw.view && { view: raw.view }),
+    };
     if (process.env.OURUS_SXS_WF_EXPORT) await checkExport(page, got);
     return got;
   },
@@ -595,7 +750,8 @@ async function workflowyDrop(page: Page, drop: Drop, settle: () => Promise<void>
     // (an indentation past its own for its child), inside the 0.7 indentation either way
     const chain: any[] = [];
     for (let it = above; !it.equals(box); it = it.getParent()) chain.unshift(it);
-    const left = depth < chain.length ? rect(el(chain[depth])).left : rect(el(above)).left + 36 * (depth - chain.length + 1);
+    const left =
+      depth < chain.length ? rect(el(chain[depth])).left : rect(el(above)).left + 36 * (depth - chain.length + 1);
     return { from, to: { x: left + 7, y } };
   }, drop);
   if (!at) throw new Unsupported('the pressed item has no bullet');

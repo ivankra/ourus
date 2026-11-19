@@ -19,7 +19,15 @@ const RUNS = Number(process.argv[2] ?? 3000);
 const MODE = (process.argv[3] ?? 'md') as Mode;
 const GEN = process.argv[4] ?? 'all';
 
-const CMDS: Cmd[] = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'deleteContentBackward', 'deleteContentForward'];
+const CMDS: Cmd[] = [
+  'indent',
+  'outdent',
+  'moveSubtreeUp',
+  'moveSubtreeDown',
+  'enter',
+  'deleteContentBackward',
+  'deleteContentForward',
+];
 const TEXTS = ['a', 'b c', 'x', 'long text', ''];
 const MARKERS = ['- ', '- ', '* ', '1. ', '- [ ] ', '- [x] '];
 const OTHER = ['', '', '# H', '## H2', '### H3', 'para', 'p q', '> q'];
@@ -27,7 +35,10 @@ const OTHER = ['', '', '# H', '## H2', '### H3', 'para', 'p q', '> q'];
 type Line = string | readonly [number, string, string];
 const arbLines = fc.array(
   fc.oneof(
-    { weight: 6, arbitrary: fc.tuple(fc.integer({ min: 0, max: 3 }), fc.constantFrom(...MARKERS), fc.constantFrom(...TEXTS)) },
+    {
+      weight: 6,
+      arbitrary: fc.tuple(fc.integer({ min: 0, max: 3 }), fc.constantFrom(...MARKERS), fc.constantFrom(...TEXTS)),
+    },
     { weight: 2, arbitrary: fc.constantFrom(...OTHER) },
   ),
   { minLength: 1, maxLength: 10 },
@@ -56,13 +67,18 @@ const arbTidy = arbLines.chain((lines: Line[]) =>
 
 /** Loose: any depth, units of 2, 3, 4 spaces or a tab (the repo's arbOutlineDoc, extended). */
 const arbLoose = arbLines.chain((lines: Line[]) =>
-  fc.constantFrom('  ', '\t', '   ', '    ').map((unit) => lines.map((l) => (typeof l === 'string' ? l : unit.repeat(l[0]) + l[1] + l[2])).join('\n') + '\n'),
+  fc
+    .constantFrom('  ', '\t', '   ', '    ')
+    .map((unit) => lines.map((l) => (typeof l === 'string' ? l : unit.repeat(l[0]) + l[1] + l[2])).join('\n') + '\n'),
 );
 
 const arbDocText = GEN === 'tidy' ? arbTidy : GEN === 'loose' ? arbLoose : fc.oneof(arbTidy, arbLoose);
 
 /** A step: a command, and optionally where to put the caret first (node index, offset). */
-const arbSteps = fc.array(fc.tuple(fc.constantFrom(...CMDS), fc.option(fc.tuple(fc.nat(), fc.nat()), { freq: 2 })), { minLength: 1, maxLength: 5 });
+const arbSteps = fc.array(fc.tuple(fc.constantFrom(...CMDS), fc.option(fc.tuple(fc.nat(), fc.nat()), { freq: 2 })), {
+  minLength: 1,
+  maxLength: 5,
+});
 
 let skipped = 0;
 let mdDecided = 0;
@@ -71,7 +87,8 @@ const oracle = { applied: 0, same: 0, differ: 0, modelRejects: 0 };
 /** A first-cut category from what each side did. */
 function category(ourus: string, model: string, inText: boolean): string {
   if (ourus === 'rejected:write-failed') return 'A the check stepped in (a writer bug)';
-  if (ourus === 'deferredToHost') return inText ? 'B raw edit (host default) inside text' : 'C host default at a node boundary';
+  if (ourus === 'deferredToHost')
+    return inText ? 'B raw edit (host default) inside text' : 'C host default at a node boundary';
   if (ourus.startsWith('rejected') && model === 'success') return 'D ourus refuses, model applies';
   if (ourus === 'success' && model.startsWith('rejected')) return 'E ourus applies, model refuses';
   return 'F both act, differently';
@@ -83,7 +100,11 @@ interface Disagreement {
 }
 
 /** Runs one case; returns the first disagreement, or null. Tallies into `stats`. */
-function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: Map<string, [number, number]>): Disagreement | null {
+function runCase(
+  text: string,
+  steps: [Cmd, [number, number] | null][],
+  stats?: Map<string, [number, number]>,
+): Disagreement | null {
   let view = OurusView.of(OurusDoc.parse(text));
   let pos = -1;
   for (let i = 0; i < steps.length; i++) {
@@ -113,7 +134,10 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
     const r = state.last!;
     const ourusStatus = r instanceof OurusRejected ? `rejected:${r.reason}` : resultStatus(r);
     const after = lift(state.view.doc);
-    const got = { tree: JSON.stringify(shape(after.root)), caret: caretKey(after.root, after.toCaret(state.view.selection.head)) };
+    const got = {
+      tree: JSON.stringify(shape(after.root)),
+      caret: caretKey(after.root, after.toCaret(state.view.selection.head)),
+    };
     const want =
       model.status === 'success'
         ? { tree: JSON.stringify(shape(model.root)), caret: caretKey(model.root, model.caret) }
@@ -136,7 +160,9 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
     if (!treeOk || !caretOk) {
       const parent = findParent(l.root, caret.node)?.kind ?? '?';
       const where = `${caret.node.kind}${caret.node.text === '' ? '(empty)' : ''}${caret.offset === 0 ? '@start' : caret.offset === caret.node.text.length ? '@end' : '@mid'} in ${parent}`;
-      const inText = (cmd === 'deleteContentBackward' && caret.offset > 0) || (cmd === 'deleteContentForward' && caret.offset < caret.node.text.length);
+      const inText =
+        (cmd === 'deleteContentBackward' && caret.offset > 0) ||
+        (cmd === 'deleteContentForward' && caret.offset < caret.node.text.length);
       const key = `${category(ourusStatus, model.status === 'success' ? 'success' : 'rejected', inText)} | ${cmd} | ourus ${ourusStatus} | model ${model.status === 'success' ? 'success' : 'rejected:' + model.reason} | ${!treeOk ? (caretOk ? 'tree' : 'tree+caret') : 'caret'} | ${where}`;
       const report = [
         '```markdown',
@@ -147,7 +173,14 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
         '```markdown',
         drawDoc(state.view, state.view.selection).replace(/\n$/, ''),
         '```',
-        ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'success' ? model.root : l.root).map((x) => '    ' + x)]),
+        ...(treeOk
+          ? []
+          : [
+              'ourus outline:',
+              ...draw(after.root).map((x) => '    ' + x),
+              'model outline:',
+              ...draw(model.status === 'success' ? model.root : l.root).map((x) => '    ' + x),
+            ]),
         ...(caretOk ? [] : [`caret: ourus ${got.caret}, model ${want.caret}`]),
       ].join('\n');
       return { key, report };
@@ -189,8 +222,12 @@ for (const c of CMDS) {
 }
 console.log(`${'all'.padEnd(24)} ${agree}/${total}  ${((100 * agree) / Math.max(total, 1)).toFixed(1)}%`);
 console.log(`\nsteps skipped (caret in whitespace or chrome the model can't address): ${skipped}`);
-console.log(`steps where a Markdown rule decided the model's outcome: ${mdDecided}/${total} (${((100 * mdDecided) / total).toFixed(1)}%)`);
-console.log(`model as the check's expected outline: of ${oracle.applied} steps ourus applied, the model's tree matches ${oracle.same}, differs ${oracle.differ}, model rejects ${oracle.modelRejects}`);
+console.log(
+  `steps where a Markdown rule decided the model's outcome: ${mdDecided}/${total} (${((100 * mdDecided) / total).toFixed(1)}%)`,
+);
+console.log(
+  `model as the check's expected outline: of ${oracle.applied} steps ourus applied, the model's tree matches ${oracle.same}, differs ${oracle.differ}, model rejects ${oracle.modelRejects}`,
+);
 const cats = new Map<string, number>();
 for (const [k, b] of buckets) cats.set(k.split(' | ')[0]!, (cats.get(k.split(' | ')[0]!) ?? 0) + b.count);
 console.log('\n## disagreements by category (cases)');

@@ -18,7 +18,12 @@ function selected(ctx: CommandContext, selection: OurusSelection): OurusResult |
 
 /** The ids of a selection's roots as `selectedSubtrees` reads them, to compare two selections as nodes; null for text. */
 function rootsOf(view: OurusView, selection: OurusSelection): string | null {
-  return view.selectedSubtrees(selection)?.map((n) => n.id).join() ?? null;
+  return (
+    view
+      .selectedSubtrees(selection)
+      ?.map((n) => n.id)
+      .join() ?? null
+  );
 }
 
 /**
@@ -74,7 +79,8 @@ export function expandSelectionCommand(ctx: CommandContext): OurusResult | null 
   const text = doc.textOf(node);
   if (text && current === null) {
     const own = { from: doc.posOf(node, textStart(text), 1), to: doc.posOf(node, textEnd(text), -1) };
-    if (own.from <= from && to <= own.to && (own.from !== from || own.to !== to)) return selected(ctx, { anchor: own.from, head: own.to });
+    if (own.from <= from && to <= own.to && (own.from !== from || own.to !== to))
+      return selected(ctx, { anchor: own.from, head: own.to });
   }
   for (const rung of rungsOf(view, node)) {
     if (!holds(rung)) continue;
@@ -144,14 +150,29 @@ export function selectNodeByCommand(ctx: CommandContext, dir: -1 | 1): OurusResu
     if (blank) {
       // the node below going down, the one above (whose gap it is) going up
       const node = dir > 0 ? visibleAfterLine(view, line) : (touched[0] ?? null);
-      return node ? selected(ctx, view.selectionOf([node.id], dir > 0 ? 'down' : 'up')) : new OurusDeferred('host-default');
+      return node
+        ? selected(ctx, view.selectionOf([node.id], dir > 0 ? 'down' : 'up'))
+        : new OurusDeferred('host-default');
     }
     if (!touched.length) return new OurusDeferred('host-default');
     const node = touched[0]!;
-    const own = (pos: number): boolean => doc.lineAt(pos).index >= node.textFirstLine && doc.lineAt(pos).index <= node.textLastLine;
+    const own = (pos: number): boolean =>
+      doc.lineAt(pos).index >= node.textFirstLine && doc.lineAt(pos).index <= node.textLastLine;
     // in one node's text: a line at a time (the host's), but from its edge
-    if (touched.length === 1 && own(sel.anchor) && own(sel.head) && line !== (dir > 0 ? node.textLastLine : node.textFirstLine)) return new OurusDeferred('host-default');
-    return selected(ctx, view.selectionOf(touched.map((n) => n.id), dir > 0 ? 'down' : 'up'));
+    if (
+      touched.length === 1 &&
+      own(sel.anchor) &&
+      own(sel.head) &&
+      line !== (dir > 0 ? node.textLastLine : node.textFirstLine)
+    )
+      return new OurusDeferred('host-default');
+    return selected(
+      ctx,
+      view.selectionOf(
+        touched.map((n) => n.id),
+        dir > 0 ? 'down' : 'up',
+      ),
+    );
   }
   const up = sel.head < sel.anchor;
   const anchor = roots.length === 1 || !up ? roots[0]! : roots[roots.length - 1]!;
@@ -160,7 +181,10 @@ export function selectNodeByCommand(ctx: CommandContext, dir: -1 | 1): OurusResu
   // (`selectNodeUp: sibling`: above the anchor's node, the candidate goes by siblings, both ways)
   const bySibling = doc.config.selectNodeUp === 'sibling';
   for (;;) {
-    candidate = bySibling && (candidate.startLine < anchor.startLine || (candidate === anchor && dir < 0)) ? siblingStep(view, candidate, dir) : step(view, candidate, dir);
+    candidate =
+      bySibling && (candidate.startLine < anchor.startLine || (candidate === anchor && dir < 0))
+        ? siblingStep(view, candidate, dir)
+        : step(view, candidate, dir);
     if (!candidate) return selected(ctx, sel);
     const ids = [anchor.id, candidate.id];
     const next = view.selectedSubtrees(view.selectionOf(ids));

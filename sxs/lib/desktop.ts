@@ -24,9 +24,21 @@ export const freePort = (): Promise<number> =>
  * one), once it takes connections. `detached`, for an app left running after the run: in a process group
  * of its own, and gone with its last client (`-terminate`), so that stopping the app stops it.
  */
-export function startXvfb(say: (line: string) => void, { detached = false } = {}): Promise<{ display: string; proc: ChildProcess }> {
+export function startXvfb(
+  say: (line: string) => void,
+  { detached = false } = {},
+): Promise<{ display: string; proc: ChildProcess }> {
   ensureAptInstalled('a display', [{ pkg: 'xvfb', command: 'Xvfb' }], say);
-  const args = ['-displayfd', '3', '-screen', '0', '1280x900x24', '-nolisten', 'tcp', ...(detached ? ['-terminate'] : [])];
+  const args = [
+    '-displayfd',
+    '3',
+    '-screen',
+    '0',
+    '1280x900x24',
+    '-nolisten',
+    'tcp',
+    ...(detached ? ['-terminate'] : []),
+  ];
   const proc = spawn('Xvfb', args, { detached, stdio: ['ignore', 'ignore', 'ignore', 'pipe'] });
   return new Promise((resolve, reject) => {
     const fail = (why: string): void => {
@@ -86,7 +98,8 @@ export async function takeLock(lock: string, wait: boolean, what: string): Promi
         } catch {}
         if (!holder || !alive(holder)) rmSync(lock, { force: true });
         else if (!wait) throw new Error(`another run has ${what} (pid ${holder}, ${lock})`);
-        else if (Date.now() - t0 > 1200000) throw new Error(`another run has held ${what} for twenty minutes (pid ${holder}, ${lock})`);
+        else if (Date.now() - t0 > 1200000)
+          throw new Error(`another run has held ${what} for twenty minutes (pid ${holder}, ${lock})`);
         else await sleep(200);
       }
     }

@@ -2,7 +2,8 @@
 
 Parser of flavored Markdown to a lossless, incrementally updated syntax tree.
 It knows nothing of outlines, commands or editors.
-Users import it through `index.ts`; extension authors also import `extend.ts` (`ourus/extend`).
+Hosts import its common part from `ourus` (`MdTree`, `MdFlavor`, `MdHtmlParser`, `MdBlockAt` and the tree's
+types); all of the API below, the helpers too, and what extension authors need are `ourus/extend`'s.
 
 Basic usage:
 

@@ -19,17 +19,22 @@ import { mdCalloutAt, type MdBlock, type MdFlavor } from '../parser/index.ts';
 
 export type OurusNodeKind = 'root' | 'heading' | 'item' | 'paragraph' | 'quote' | 'atom';
 
-
 /**
  * How a quote reads as `quotes` says, `firstLine` its first line's content (past every container's
  * prefix, its own `>` too): a paragraph framed by `> ` (`text`, a quote holding one paragraph from its first line,
  * blank lines in it after that the paragraph's gap), an atom (`atom`, a callout too), or a container (a callout but under `atom`).
  */
-export function quoteKind(quote: MdBlock, quotes: OurusConfig['quotes'], firstLine: () => string, callouts = true): 'paragraph' | 'atom' | 'quote' {
+export function quoteKind(
+  quote: MdBlock,
+  quotes: OurusConfig['quotes'],
+  firstLine: () => string,
+  callouts = true,
+): 'paragraph' | 'atom' | 'quote' {
   // (under `atom` a callout is one too: its lines as written)
   if (quotes === 'atom') return 'atom';
   // (a first line `[!type]` a callout's title only in a flavor that has callouts: elsewhere a quote's text)
-  if (quotes === 'container' || quote.children[0]?.type === 'callout_title' || (callouts && mdCalloutAt(firstLine()))) return 'quote';
+  if (quotes === 'container' || quote.children[0]?.type === 'callout_title' || (callouts && mdCalloutAt(firstLine())))
+    return 'quote';
   // (the blank lines in it after the paragraph are its gap: `> a⏎>` reads as `> a⏎`)
   const only = quote.children.length === 1 ? quote.children[0]! : null;
   return only?.type === 'paragraph' && quote.offsets[0] === 0 ? 'paragraph' : 'quote';
@@ -39,7 +44,12 @@ export function quoteKind(quote: MdBlock, quotes: OurusConfig['quotes'], firstLi
  * The kind of node a block of a container is read as, or null for one that is no node (a list, whose
  * items are; frontmatter). A quote's as `quoteKind` says.
  */
-export function nodeKindOf(block: MdBlock, quotes: OurusConfig['quotes'], firstLine: () => string, callouts = true): Exclude<OurusNodeKind, 'root'> | null {
+export function nodeKindOf(
+  block: MdBlock,
+  quotes: OurusConfig['quotes'],
+  firstLine: () => string,
+  callouts = true,
+): Exclude<OurusNodeKind, 'root'> | null {
   switch (block.type) {
     case 'heading':
       return 'heading';
@@ -61,7 +71,12 @@ export function nodeKindOf(block: MdBlock, quotes: OurusConfig['quotes'], firstL
  * quote on its marker's line that `quoteKind` makes a text or an atom (`- > q`; `firstLine` that line
  * past the item's marker); else none (a list, a quote that is a container).
  */
-export function itemHead(item: MdBlock, flavor: MdFlavor, quotes: OurusConfig['quotes'], firstLine: () => string): MdBlock | null {
+export function itemHead(
+  item: MdBlock,
+  flavor: MdFlavor,
+  quotes: OurusConfig['quotes'],
+  firstLine: () => string,
+): MdBlock | null {
   const first = item.children[0];
   if (!first) return null;
   if (first.type === 'blockquote') {
@@ -69,7 +84,11 @@ export function itemHead(item: MdBlock, flavor: MdFlavor, quotes: OurusConfig['q
     return kind === 'atom' ? first : kind === 'paragraph' ? first.children[0]! : null;
   }
   const content = flavor.content(first.type);
-  return content === 'inline' || content === 'verbatim' || nodeKindOf(first, quotes, firstLine, flavor.has('callouts')) === 'atom' ? first : null;
+  return content === 'inline' ||
+    content === 'verbatim' ||
+    nodeKindOf(first, quotes, firstLine, flavor.has('callouts')) === 'atom'
+    ? first
+    : null;
 }
 
 /**
@@ -117,7 +136,11 @@ const BLOCKS: ReadonlySet<OurusNodeKind> = new Set(['paragraph', 'atom']);
  * `config.listParent` says (`listAdopters`) owns the items of the lists right after it, consecutive
  * lists included. Reading and the draft's normal form both nest by it.
  */
-export function outlineChildren<T extends FlatChild>(flat: readonly T[], root: boolean, config: Pick<OurusConfig, 'listParent' | 'headings'>): OutlineChild<T>[] {
+export function outlineChildren<T extends FlatChild>(
+  flat: readonly T[],
+  root: boolean,
+  config: Pick<OurusConfig, 'listParent' | 'headings'>,
+): OutlineChild<T>[] {
   const adopters = root ? listAdopters(config.listParent) : NONE;
   const top: OutlineChild<T>[] = [];
   const sections: OutlineChild<T>[] = [];

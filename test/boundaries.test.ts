@@ -10,7 +10,16 @@ import { test } from 'node:test';
 const src = resolve(import.meta.dirname, '../src');
 
 /** Components, lowest first. A component is a directory or a single file of `src/`. */
-const LAYERS: Record<string, number> = { text: 0, parser: 1, config: 1, doc: 2, writer: 3, view: 3, commands: 4, index: 5 };
+const LAYERS: Record<string, number> = {
+  text: 0,
+  parser: 1,
+  config: 1,
+  doc: 2,
+  writer: 3,
+  view: 3,
+  commands: 4,
+  index: 5,
+};
 
 /**
  * Components whose files are layered too, lowest first: an import between two of them goes down. The
@@ -60,7 +69,10 @@ function violations(): string[] {
       if (from === to) {
         const order = ORDERS[from];
         if (!order) continue;
-        const [a, b] = [order.indexOf(relative(join(src, from), file)), order.indexOf(relative(join(src, from), target))];
+        const [a, b] = [
+          order.indexOf(relative(join(src, from), file)),
+          order.indexOf(relative(join(src, from), target)),
+        ];
         if (a < 0 || b < 0) out.push(`${edge}: not in ${from}'s order`);
         else if (b >= a) out.push(`${edge}: imports up ${from}'s order`);
         continue;
@@ -73,7 +85,7 @@ function violations(): string[] {
   return out;
 }
 
-test('imports go down the layers, through entries, and down a component\'s files where it has an order', () => {
+test("imports go down the layers, through entries, and down a component's files where it has an order", () => {
   assert.deepEqual(violations(), []);
 });
 
@@ -111,6 +123,6 @@ function runtimeCycles(): string[][] {
   return cycles;
 }
 
-test('no component\'s files import each other round a cycle at run time, but those left (`CYCLES_LEFT`)', () => {
+test("no component's files import each other round a cycle at run time, but those left (`CYCLES_LEFT`)", () => {
   assert.deepEqual(runtimeCycles(), []);
 });

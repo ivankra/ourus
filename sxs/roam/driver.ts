@@ -34,18 +34,31 @@ interface RoamBlock {
  * attribute, a numbered block's number its parent's view (`numbered`: the children of a parent with
  * `children-view-type: numbered` are numbered from 1).
  */
-function toRoam(depth: number, text: string): RoamBlock & { from: number; to: number; numbered: boolean; cut?: number } {
+function toRoam(
+  depth: number,
+  text: string,
+): RoamBlock & { from: number; to: number; numbered: boolean; cut?: number } {
   const n = /^\d{1,9}\. /.exec(text);
   if (n) {
     const rest = toRoam(depth, text.slice(n[0].length));
-    return { ...rest, from: rest.from + n[0].length, numbered: true, ...(rest.cut !== undefined && { cut: rest.cut + n[0].length }) };
+    return {
+      ...rest,
+      from: rest.from + n[0].length,
+      numbered: true,
+      ...(rest.cut !== undefined && { cut: rest.cut + n[0].length }),
+    };
   }
   // a `#` that is text, likewise (a heading is an attribute, its string plain text: Enter9)
   if (/^\\#/.test(text)) return { depth, string: text.slice(1), heading: 0, from: 0, to: 0, numbered: false, cut: 0 };
   // a number that is text: escaped in the canonical text, not in Roam's, which has no Markdown to
   // escape in (`cut`, where the escape was)
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text);
-  if (literal) return { ...toRoamText(depth, literal[1] + text.slice(literal[0].length)), numbered: false, cut: literal[1]!.length };
+  if (literal)
+    return {
+      ...toRoamText(depth, literal[1] + text.slice(literal[0].length)),
+      numbered: false,
+      cut: literal[1]!.length,
+    };
   return { ...toRoamText(depth, text), numbered: false };
 }
 
@@ -56,7 +69,14 @@ function toRoamText(depth: number, text: string): RoamBlock & { from: number; to
     return { depth, string: marker + text.slice(3), heading: 0, from: 3, to: marker.length };
   }
   const heading = /^(#{1,3}) /.exec(text);
-  if (heading) return { depth, string: text.slice(heading[0].length), heading: heading[1]!.length, from: heading[0].length, to: 0 };
+  if (heading)
+    return {
+      depth,
+      string: text.slice(heading[0].length),
+      heading: heading[1]!.length,
+      from: heading[0].length,
+      to: 0,
+    };
   return { depth, string: text, heading: 0, from: 0, to: 0 };
 }
 
@@ -68,7 +88,11 @@ function fromRoam(b: RoamBlock, number: number | null): { text: string; from: nu
   const literal = /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(t.text);
   // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
   const hash = !b.heading && /^#{1,6}(?=[ \t]|$)/.test(t.text);
-  const text = literal ? t.text.slice(0, literal[0].length) + '\\' + t.text.slice(literal[0].length) : hash ? '\\' + t.text : t.text;
+  const text = literal
+    ? t.text.slice(0, literal[0].length) + '\\' + t.text.slice(literal[0].length)
+    : hash
+      ? '\\' + t.text
+      : t.text;
   const cut = literal ? t.to + pre.length + literal[0].length : hash ? t.to + pre.length : undefined;
   return { text: pre + text, from: t.from, to: t.to + pre.length, ...(cut !== undefined && { cut }) };
 }
@@ -143,7 +167,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   drops: ['moveSubtree'],
   drop,
@@ -200,7 +229,8 @@ export const driver: Driver = {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\d{1,9}\. /, '')))) return 'heading deeper than H3';
     // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
-    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Roam holds as the text #';
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text)))
+      return 'heading with no text (# alone), which Roam holds as the text #';
     // numbering is a parent's: all its children numbered, from 1, or none
     const kids = new Map<number, number[]>();
     const path: number[] = [];
@@ -212,21 +242,40 @@ export const driver: Driver = {
     });
     for (const list of kids.values()) {
       const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
-      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'list numbered in part, or not from 1';
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1))
+        return 'list numbered in part, or not from 1';
     }
-    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toRoam(0, o.blocks[o.sel.block]!.text).from && /^#/.test(o.blocks[o.sel.block]!.text)) return "caret in a heading's #s";
+    if (
+      o.sel &&
+      Math.min(o.sel.anchor, o.sel.head) < toRoam(0, o.blocks[o.sel.block]!.text).from &&
+      /^#/.test(o.blocks[o.sel.block]!.text)
+    )
+      return "caret in a heading's #s";
     return undefined;
   },
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => (window as any).roamAlphaAPI?.data && document.querySelector('.roam-block'), null, { timeout: 120000 });
-    const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+    await page.waitForFunction(
+      () => (window as any).roamAlphaAPI?.data && document.querySelector('.roam-block'),
+      null,
+      { timeout: 120000 },
+    );
+    const settled = await page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+    );
     if (settled.timedOut) throw new Error(`Roam didn't settle after loading: ${settled.pending}`);
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await idle();
       await page.keyboard.press('Tab');
       await idle();
@@ -245,15 +294,25 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     const blocks = o.blocks.map((b) => toRoam(b.depth, b.text));
-    const at = (p: number, { from, to, cut }: { from: number; to: number; cut?: number }): number => shiftOffset(p - (cut !== undefined && p > cut ? 1 : 0), from, to);
+    const at = (p: number, { from, to, cut }: { from: number; to: number; cut?: number }): number =>
+      shiftOffset(p - (cut !== undefined && p > cut ? 1 : 0), from, to);
     // (blocks selected whole: the first opened at its start, to select from with the keys below)
     const selected = o.selected?.length ? o.selected : null;
-    const sel = o.sel ? { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+    const sel = o.sel
+      ? {
+          block: o.sel.block,
+          anchor: at(o.sel.anchor, blocks[o.sel.block]!),
+          head: at(o.sel.head, blocks[o.sel.block]!),
+        }
+      : selected && { block: selected[0]!, anchor: 0, head: 0 };
     // a block selection outlives its page (Roam's): the last test's, left on a page since deleted, would
     // take this test's first Escape, which clears it rather than selecting (two Escapes were `selectNode`
     // till 2026-11-03, the first clearing what a test before left, the second selecting: on a clean start
     // they selected and cleared). So the start has none: Escape, nothing edited, clears it
-    const leftover = () => page.evaluate(() => (((window as any).roamAlphaAPI.ui.multiselect.getSelected() as unknown[] | undefined) ?? []).length > 0);
+    const leftover = () =>
+      page.evaluate(
+        () => (((window as any).roamAlphaAPI.ui.multiselect.getSelected() as unknown[] | undefined) ?? []).length > 0,
+      );
     for (let i = 0; i < 3 && (await leftover()); i++) {
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
       await page.keyboard.press('Escape');
@@ -275,7 +334,10 @@ export const driver: Driver = {
         for (const b of blocks) {
           const uid = api.util.generateUID();
           if (b.numbered) numbered.add(parents[b.depth]!);
-          await api.data.block.create({ location: { 'parent-uid': parents[b.depth], order: order[b.depth] }, block: { string: b.string, uid, ...(b.heading && { heading: b.heading }), open: true } });
+          await api.data.block.create({
+            location: { 'parent-uid': parents[b.depth], order: order[b.depth] },
+            block: { string: b.string, uid, ...(b.heading && { heading: b.heading }), open: true },
+          });
           order[b.depth] = (order[b.depth] ?? 0) + 1;
           parents[b.depth + 1] = uid;
           order[b.depth + 1] = 0;
@@ -285,7 +347,8 @@ export const driver: Driver = {
         }
         // a parent whose children are numbered views them so: the page, or a block
         for (const parent of numbered) {
-          if (parent === pageUid) await api.data.page.update({ page: { uid: parent, 'children-view-type': 'numbered' } });
+          if (parent === pageUid)
+            await api.data.page.update({ page: { uid: parent, 'children-view-type': 'numbered' } });
           else await api.data.block.update({ block: { uid: parent, 'children-view-type': 'numbered' } });
         }
         await api.ui.mainWindow.openPage({ page: { uid: pageUid } });
@@ -299,7 +362,9 @@ export const driver: Driver = {
           if (view.zoom !== null) {
             const root = uids[view.zoom]!;
             await api.ui.mainWindow.openBlock({ block: { uid: root } });
-            const shown = async () => (await api.ui.mainWindow.getOpenPageOrBlockUid()) === root && !!document.querySelector(`.roam-article [id$="${root}"]`);
+            const shown = async () =>
+              (await api.ui.mainWindow.getOpenPageOrBlockUid()) === root &&
+              !!document.querySelector(`.roam-article [id$="${root}"]`);
             for (let i = 0; i < 300 && !(await shown()); i++) await wait(10);
             if (!(await shown())) throw new Error(`the zoom root didn't open (at ${location.hash})`);
           }
@@ -307,18 +372,33 @@ export const driver: Driver = {
         }
         if (sel) {
           const uid = uids[sel.block]!;
-          const editing = () => (document.activeElement as HTMLElement | null)?.tagName === 'TEXTAREA' && api.ui.getFocusedBlock()?.['block-uid'] === uid;
+          const editing = () =>
+            (document.activeElement as HTMLElement | null)?.tagName === 'TEXTAREA' &&
+            api.ui.getFocusedBlock()?.['block-uid'] === uid;
           for (let attempt = 0; attempt < 3 && !editing(); attempt++) {
-            await api.ui.setBlockFocusAndSelection({ location: { 'block-uid': uid, 'window-id': 'main-window' }, selection: { start: Math.min(sel.anchor, sel.head), end: Math.max(sel.anchor, sel.head) } });
+            await api.ui.setBlockFocusAndSelection({
+              location: { 'block-uid': uid, 'window-id': 'main-window' },
+              selection: { start: Math.min(sel.anchor, sel.head), end: Math.max(sel.anchor, sel.head) },
+            });
             for (let i = 0; i < 100 && !editing(); i++) await wait(10);
           }
-          if (!editing()) throw new Error(`the block didn't open for editing (focus: ${document.activeElement?.tagName})`);
+          if (!editing())
+            throw new Error(`the block didn't open for editing (focus: ${document.activeElement?.tagName})`);
           const ta = document.activeElement as HTMLTextAreaElement;
-          ta.setSelectionRange(Math.min(sel.anchor, sel.head), Math.max(sel.anchor, sel.head), sel.head < sel.anchor ? 'backward' : 'forward');
+          ta.setSelectionRange(
+            Math.min(sel.anchor, sel.head),
+            Math.max(sel.anchor, sel.head),
+            sel.head < sel.anchor ? 'backward' : 'forward',
+          );
         }
         return pageUid;
       },
-      { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: pageState(page).current, view: o.view ?? null },
+      {
+        blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })),
+        sel,
+        previous: pageState(page).current,
+        view: o.view ?? null,
+      },
     );
     pageState(page).viewed = !!o.view;
     // blocks selected whole, as a user selects them: Escape selects the block being edited, each
@@ -331,58 +411,110 @@ export const driver: Driver = {
         return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
       };
       for (let i = 0; i < 3 && (await reached()) < 0; i++) await page.keyboard.press('Escape');
-      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++)
+        await page.keyboard.press('Shift+ArrowDown');
     }
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate(async ({ pageUid, viewed }) => {
-      const api = (window as any).roamAlphaAPI;
-      const tree = api.pull('[:block/uid :block/string :block/heading :block/order :block/open :children/view-type {:block/children ...}]', [':block/uid', pageUid]);
-      const flat: { depth: number; string: string; heading: number; uid: string; number: number | null; closed: boolean }[] = [];
-      // a parent viewing its children as numbered numbers them from 1
-      const numbers = (x: any): boolean => String(x?.[':children/view-type'] ?? '').replace(/^:/, '') === 'numbered';
-      const walk = (parent: any, depth: number) => {
-        [...(parent?.[':block/children'] ?? [])].sort((a, b) => a[':block/order'] - b[':block/order']).forEach((k, n) => {
-          // closed: a block drawn without its children drawn; one not drawn itself, as stored
-          const kids = [...(k[':block/children'] ?? [])].sort((a: any, b: any) => a[':block/order'] - b[':block/order']);
-          const drawn = (uid: string): boolean => !!document.querySelector(`.roam-article [id$="${uid}"]`);
-          const closed = kids.length > 0 && (drawn(k[':block/uid']) ? !drawn(kids[0][':block/uid']) : k[':block/open'] === false);
-          flat.push({ depth, string: k[':block/string'] ?? '', heading: k[':block/heading'] ?? 0, uid: k[':block/uid'], number: numbers(parent) ? n + 1 : null, closed });
-          walk(k, depth + 1);
-        });
-      };
-      walk(tree, 0);
-      const focused = api.ui.getFocusedBlock()?.['block-uid'];
-      const ta = document.activeElement as HTMLTextAreaElement | null;
-      const i = focused && ta?.tagName === 'TEXTAREA' ? flat.findIndex((b) => b.uid === focused) : -1;
-      // the block being edited: its textarea, ahead of what Roam stored
-      if (i >= 0) flat[i]!.string = ta!.value;
-      const back = ta?.selectionDirection === 'backward';
-      // the blocks selected whole (highlighted), the topmost: a block's children are selected with it
-      const lit = new Set([...document.querySelectorAll('.roam-article .block-highlight-blue')].map((e) => flat.findIndex((b) => b.uid === e.closest('.roam-block-container')?.getAttribute('data-block-uid'))).filter((k) => k >= 0));
-      const under = (k: number): boolean => {
-        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
-        return false;
-      };
-      const selected = i >= 0 ? [] : [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
-      // the view: the closed blocks, and the block open in the main window, if one of the test's (its
-      // page: none)
-      const open = viewed ? await api.ui.mainWindow.getOpenPageOrBlockUid() : null;
-      const zoom = flat.findIndex((b) => b.uid === open);
-      const view = viewed ? { folded: flat.flatMap((b, k) => (b.closed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
-      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected, view };
-    }, { pageUid: pageState(page).current, viewed: pageState(page).viewed });
+    const raw = await page.evaluate(
+      async ({ pageUid, viewed }) => {
+        const api = (window as any).roamAlphaAPI;
+        const tree = api.pull(
+          '[:block/uid :block/string :block/heading :block/order :block/open :children/view-type {:block/children ...}]',
+          [':block/uid', pageUid],
+        );
+        const flat: {
+          depth: number;
+          string: string;
+          heading: number;
+          uid: string;
+          number: number | null;
+          closed: boolean;
+        }[] = [];
+        // a parent viewing its children as numbered numbers them from 1
+        const numbers = (x: any): boolean => String(x?.[':children/view-type'] ?? '').replace(/^:/, '') === 'numbered';
+        const walk = (parent: any, depth: number) => {
+          [...(parent?.[':block/children'] ?? [])]
+            .sort((a, b) => a[':block/order'] - b[':block/order'])
+            .forEach((k, n) => {
+              // closed: a block drawn without its children drawn; one not drawn itself, as stored
+              const kids = [...(k[':block/children'] ?? [])].sort(
+                (a: any, b: any) => a[':block/order'] - b[':block/order'],
+              );
+              const drawn = (uid: string): boolean => !!document.querySelector(`.roam-article [id$="${uid}"]`);
+              const closed =
+                kids.length > 0 &&
+                (drawn(k[':block/uid']) ? !drawn(kids[0][':block/uid']) : k[':block/open'] === false);
+              flat.push({
+                depth,
+                string: k[':block/string'] ?? '',
+                heading: k[':block/heading'] ?? 0,
+                uid: k[':block/uid'],
+                number: numbers(parent) ? n + 1 : null,
+                closed,
+              });
+              walk(k, depth + 1);
+            });
+        };
+        walk(tree, 0);
+        const focused = api.ui.getFocusedBlock()?.['block-uid'];
+        const ta = document.activeElement as HTMLTextAreaElement | null;
+        const i = focused && ta?.tagName === 'TEXTAREA' ? flat.findIndex((b) => b.uid === focused) : -1;
+        // the block being edited: its textarea, ahead of what Roam stored
+        if (i >= 0) flat[i]!.string = ta!.value;
+        const back = ta?.selectionDirection === 'backward';
+        // the blocks selected whole (highlighted), the topmost: a block's children are selected with it
+        const lit = new Set(
+          [...document.querySelectorAll('.roam-article .block-highlight-blue')]
+            .map((e) =>
+              flat.findIndex((b) => b.uid === e.closest('.roam-block-container')?.getAttribute('data-block-uid')),
+            )
+            .filter((k) => k >= 0),
+        );
+        const under = (k: number): boolean => {
+          for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--)
+            if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
+          return false;
+        };
+        const selected = i >= 0 ? [] : [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
+        // the view: the closed blocks, and the block open in the main window, if one of the test's (its
+        // page: none)
+        const open = viewed ? await api.ui.mainWindow.getOpenPageOrBlockUid() : null;
+        const zoom = flat.findIndex((b) => b.uid === open);
+        const view = viewed
+          ? { folded: flat.flatMap((b, k) => (b.closed ? [k] : [])), zoom: zoom >= 0 ? zoom : null }
+          : undefined;
+        return {
+          flat,
+          sel:
+            i >= 0
+              ? {
+                  block: i,
+                  anchor: back ? ta!.selectionEnd : ta!.selectionStart,
+                  head: back ? ta!.selectionStart : ta!.selectionEnd,
+                }
+              : null,
+          selected,
+          view,
+        };
+      },
+      { pageUid: pageState(page).current, viewed: pageState(page).viewed },
+    );
     const texts = raw.flat.map((b) => fromRoam(b, b.number));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
     let sel = raw.sel;
     if (sel) {
       const { from, to, cut } = texts[sel.block]!;
-      const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
+      const at = (p: number): number =>
+        shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
       sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
     // (its italic `__x__` as Markdown's)
-    return { ...italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
+    return {
+      ...italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }),
+      ...(raw.view && { view: raw.view }),
+    };
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {
@@ -447,19 +579,29 @@ async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promis
       const api = (window as any).roamAlphaAPI;
       // the blocks as `read` has them, in document order
       const uids: string[] = [];
-      const walk = (b: any) => [...(b?.[':block/children'] ?? [])].sort((x, y) => x[':block/order'] - y[':block/order']).forEach((k) => (uids.push(k[':block/uid']), walk(k)));
+      const walk = (b: any) =>
+        [...(b?.[':block/children'] ?? [])]
+          .sort((x, y) => x[':block/order'] - y[':block/order'])
+          .forEach((k) => (uids.push(k[':block/uid']), walk(k)));
       walk(api.pull('[:block/uid :block/order {:block/children ...}]', [':block/uid', pageUid]));
-      const block = (i: number) => document.querySelector(`.roam-article .roam-block-container[data-block-uid="${uids[i]}"]`) as HTMLElement | null;
+      const block = (i: number) =>
+        document.querySelector(
+          `.roam-article .roam-block-container[data-block-uid="${uids[i]}"]`,
+        ) as HTMLElement | null;
       const pressed = block(press!);
       const bullet = pressed?.querySelector(':scope > .rm-block-main .rm-bullet');
       if (!pressed || !bullet) return null;
       // the list the place is in: the page's (a top-level block's), or the parent's children
-      const list = (to.parent === 'root' ? block(0)?.parentElement : block(to.parent)?.querySelector(':scope > .rm-block-children')) as HTMLElement | null | undefined;
+      const list = (
+        to.parent === 'root' ? block(0)?.parentElement : block(to.parent)?.querySelector(':scope > .rm-block-children')
+      ) as HTMLElement | null | undefined;
       const after = to.after === null ? null : block(to.after);
       if (!list || after === undefined) return null;
       const y = after ? after.getBoundingClientRect().bottom : list.getBoundingClientRect().top;
       const b = bullet.getBoundingClientRect();
-      const x = list.getBoundingClientRect().left + (b.left + b.width / 2 - pressed.parentElement!.getBoundingClientRect().left);
+      const x =
+        list.getBoundingClientRect().left +
+        (b.left + b.width / 2 - pressed.parentElement!.getBoundingClientRect().left);
       return { from: { x: b.left + b.width / 2, y: b.top + b.height / 2 }, to: { x, y: y + 4 }, line: y };
     },
     { pageUid: pageState(page).current, press, to: drop.to },
@@ -471,7 +613,14 @@ async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promis
     dragging = false;
     // (the bar: 4px high, its bottom on the separator; the place's area hovered)
     await page
-      .waitForFunction((line) => [...document.querySelectorAll('.dnd-drop-bar')].some((e) => Math.abs(e.getBoundingClientRect().bottom - line) < 2), at.line, { timeout: 2000 })
+      .waitForFunction(
+        (line) =>
+          [...document.querySelectorAll('.dnd-drop-bar')].some(
+            (e) => Math.abs(e.getBoundingClientRect().bottom - line) < 2,
+          ),
+        at.line,
+        { timeout: 2000 },
+      )
       // (no bar: released all the same, as a hand would, and judged by what it did)
       .catch(() => {});
   };

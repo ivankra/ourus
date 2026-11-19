@@ -19,7 +19,36 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OurusConfig } from '../src/config.ts';
-import { parseWithMarks, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, allNodes, readDrawing, readText, withoutCaret, isAction, playActions, type PlayedState, drawDropPoints, NodeLabels, normalizeDrawing, describeOutcome, readClipboard, specTestView, drawnView, actionsLine, readSpec, specConfig, SPEC_TAGS, tokenizeActions, type Clipboard, type SpecTest } from '../test/lib/index.ts';
+import {
+  parseWithMarks,
+  drawDoc,
+  drawLabels,
+  drawnSelection,
+  drawOutline,
+  drawsCaret,
+  drawText,
+  allNodes,
+  readDrawing,
+  readText,
+  withoutCaret,
+  isAction,
+  playActions,
+  type PlayedState,
+  drawDropPoints,
+  NodeLabels,
+  normalizeDrawing,
+  describeOutcome,
+  readClipboard,
+  specTestView,
+  drawnView,
+  actionsLine,
+  readSpec,
+  specConfig,
+  SPEC_TAGS,
+  tokenizeActions,
+  type Clipboard,
+  type SpecTest,
+} from '../test/lib/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
@@ -108,7 +137,19 @@ function fail(message: string): never {
 const breaks = (s: string): string => s.replace(/\\n|⏎/g, '\n');
 
 function parseArgs(argv: readonly string[]): Args {
-  const o: Args = { apps: '', config: {}, each: [], clip: '', tags: [], outline: false, labels: false, format: 'human', exact: false, positional: [], pass: [] };
+  const o: Args = {
+    apps: '',
+    config: {},
+    each: [],
+    clip: '',
+    tags: [],
+    outline: false,
+    labels: false,
+    format: 'human',
+    exact: false,
+    positional: [],
+    pass: [],
+  };
   if (argv.length === 0) {
     console.log(HELP);
     process.exit(0);
@@ -137,11 +178,20 @@ function parseArgs(argv: readonly string[]): Args {
     // the SxS's own (`--cache=offline`, `--plain-clipboard`, `--pace=`, `--headed`, ...), for each app's run
     else if (['cache', 'pace', 'slow', 'plain-clipboard', 'headed', 'fresh', 'timing'].includes(key)) o.pass.push(arg);
     else if (OurusConfig.has(key)) o.config[key] = value;
-    else fail(`unknown option --${key}; the config's are ${[...Object.keys(OurusConfig.values), ...Object.keys(OurusConfig.lists)].join(', ')} (node sxs/probe.ts --help)`);
+    else
+      fail(
+        `unknown option --${key}; the config's are ${[...Object.keys(OurusConfig.values), ...Object.keys(OurusConfig.lists)].join(', ')} (node sxs/probe.ts --help)`,
+      );
   }
-  for (const tag of o.tags) if (!(SPEC_TAGS as readonly string[]).includes(tag)) fail(`unknown tag ${tag}: the tags are ${SPEC_TAGS.join(', ')}`);
+  for (const tag of o.tags)
+    if (!(SPEC_TAGS as readonly string[]).includes(tag))
+      fail(`unknown tag ${tag}: the tags are ${SPEC_TAGS.join(', ')}`);
   // `|` for the caret, in the buffer's argument alone (the first, or the one after the apps)
-  const buffer = o.positional[0]?.includes('|') ? 0 : o.positional[0] !== undefined && !isBuffer(o.positional[0]) && o.positional[1]?.includes('|') ? 1 : -1;
+  const buffer = o.positional[0]?.includes('|')
+    ? 0
+    : o.positional[0] !== undefined && !isBuffer(o.positional[0]) && o.positional[1]?.includes('|')
+      ? 1
+      : -1;
   if (buffer >= 0) o.positional[buffer] = typedCaret(o.positional[buffer]!);
   // a file of probes alone (an `.md` that exists), after the apps or without them, is `--file`
   if (o.caseName === undefined && o.file === undefined) {
@@ -163,7 +213,11 @@ function parseArgs(argv: readonly string[]): Args {
     // a word where a buffer goes, no caret in it (after the apps, or alone and capitalized, as IDs are):
     // a case's ID mistyped, not a buffer; after a buffer it is a step (`probe.ts 'hello┃' enter`)
     const apps = o.positional.length === 2 && !isBuffer(o.positional[0]!);
-    if (last !== undefined && /^[A-Za-z][\w-]*$/.test(last) && (apps || (o.positional.length === 1 && /^[A-Z]/.test(last)))) {
+    if (
+      last !== undefined &&
+      /^[A-Za-z][\w-]*$/.test(last) &&
+      (apps || (o.positional.length === 1 && /^[A-Z]/.test(last)))
+    ) {
       fail(`no case ${last} (a spec case's ID, or a buffer with a caret ┃)`);
     }
   }
@@ -179,7 +233,8 @@ function parseArgs(argv: readonly string[]): Args {
 function typedCaret(arg: string): string {
   if (/[┃«»]/.test(arg)) return arg;
   const bars = arg.split('|').length - 1;
-  if (bars > 1) fail(`the buffer ${JSON.stringify(arg)} has ${bars} |: one, the caret (a | in the text wants the caret drawn ┃)`);
+  if (bars > 1)
+    fail(`the buffer ${JSON.stringify(arg)} has ${bars} |: one, the caret (a | in the text wants the caret drawn ┃)`);
   return arg.replace('|', '┃');
 }
 
@@ -203,17 +258,23 @@ function findCase(name: string): SpecTest {
   const all = readdirSync(specDir)
     .filter((f) => f.endsWith('.md') && f !== 'README.md' && (!file || f === file || f === `${file}.md`))
     .flatMap((f) => readSpec(f, readFileSync(join(specDir, f), 'utf8')));
-  const slug = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N} -]/gu, '').replace(/ /g, '-');
-  const picked = anchor
-    ? all.filter((t) => slug(t.name) === anchor.toLowerCase())
-    : all.filter((t) => t.name === name);
+  const slug = (s: string): string =>
+    s
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N} -]/gu, '')
+      .replace(/ /g, '-');
+  const picked = anchor ? all.filter((t) => slug(t.name) === anchor.toLowerCase()) : all.filter((t) => t.name === name);
   if (picked.length === 0) fail(`no case ${name}`);
-  if (picked.length > 1) fail(`${name} is ${picked.length} cases: ${picked.map((t) => `${t.name} (${t.file})`).join(', ')}`);
+  if (picked.length > 1)
+    fail(`${name} is ${picked.length} cases: ${picked.map((t) => `${t.name} (${t.file})`).join(', ')}`);
   return picked[0]!;
 }
 
 /** The command line's clipboard: its text, and its HTML beside it. */
-const clipboardOf = (o: Args): Clipboard => (o.clip || o.clipHtml !== undefined ? { 'text/plain': readText(o.clip), ...(o.clipHtml !== undefined && { 'text/html': o.clipHtml }) } : {});
+const clipboardOf = (o: Args): Clipboard =>
+  o.clip || o.clipHtml !== undefined
+    ? { 'text/plain': readText(o.clip), ...(o.clipHtml !== undefined && { 'text/html': o.clipHtml }) }
+    : {};
 
 /** A spec case as a probe: its options with the command line's over them. */
 const fromCase = (t: SpecTest, o: Args): Probe => ({
@@ -234,7 +295,11 @@ function probesOf(o: Args): Probe[] {
   }
   if (o.file !== undefined) {
     if (o.positional.length) fail('--file has the probes: no buffer or steps beside it');
-    return readSpec('probe.md', readFileSync(o.file, 'utf8')).map((t) => ({ ...fromCase(t, o), name: t.name, drawn: undefined }));
+    return readSpec('probe.md', readFileSync(o.file, 'utf8')).map((t) => ({
+      ...fromCase(t, o),
+      name: t.name,
+      drawn: undefined,
+    }));
   }
   const [source, ...stepArgs] = o.positional;
   if (source === undefined) fail('a buffer to start from (node sxs/probe.ts --help)');
@@ -242,7 +307,17 @@ function probesOf(o: Args): Probe[] {
   if (source !== '-' && !o.exact && !start.endsWith('\n')) start += '\n';
   if (!/[┃«]|⟦selected⟧/.test(start)) fail('the buffer has no caret (┃) or selection («»)');
   if (!stepArgs.length) fail('no actions: an argument per step after the buffer');
-  return [{ name: 'P1', start, steps: stepArgs.map((a) => tokenizeActions(a)), options: o.config, clipboard: clipboardOf(o), tags: o.tags, unnamed: true }];
+  return [
+    {
+      name: 'P1',
+      start,
+      steps: stepArgs.map((a) => tokenizeActions(a)),
+      options: o.config,
+      clipboard: clipboardOf(o),
+      tags: o.tags,
+      unnamed: true,
+    },
+  ];
 }
 
 // ------------------------------------------------------------------ ourus
@@ -268,7 +343,9 @@ function labelled(start: string, config: Record<string, string>): string {
   const d = readDrawing(start);
   if (d.labels.size) return start;
   const lines = new Map<number, number[]>();
-  allNodes(parseWithMarks(d.text, d.placeholders, specConfig(config))).slice(0, 50).forEach((n, k) => lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), k + 1]));
+  allNodes(parseWithMarks(d.text, d.placeholders, specConfig(config)))
+    .slice(0, 50)
+    .forEach((n, k) => lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), k + 1]));
   return drawLabels(start, lines);
 }
 
@@ -278,7 +355,9 @@ class Labelling {
   #next = 1;
   constructor(doc: OurusDoc, lines: ReadonlyMap<number, readonly number[]>) {
     for (const [line, own] of lines) {
-      const nodes = allNodes(doc).filter((n) => n.startLine === line).sort((a, b) => a.depth - b.depth);
+      const nodes = allNodes(doc)
+        .filter((n) => n.startLine === line)
+        .sort((a, b) => a.depth - b.depth);
       own.forEach((label, k) => {
         const node = nodes[nodes.length - own.length + k];
         if (node) this.#ids.set(node.id, label);
@@ -306,13 +385,23 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
   named.check(doc, start.labels, null);
   // (the view its buffer draws, `⟦folded⟧` and `⟦zoomed⟧`: a case's as the spec runs it)
   const drawn = p.test ? null : drawnView(doc, start.view);
-  const view = p.test ? specTestView(p.test, doc, start.view) : OurusView.of(doc, { folded: drawn!.folded }).withZoom(drawn!.zoom);
-  let state: PlayedState = { view: view.withSelection(drawnSelection(view, start)), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
+  const view = p.test
+    ? specTestView(p.test, doc, start.view)
+    : OurusView.of(doc, { folded: drawn!.folded }).withZoom(drawn!.zoom);
+  let state: PlayedState = {
+    view: view.withSelection(drawnSelection(view, start)),
+    clipboard: p.clipboard,
+    drop: start.drop,
+    labels: named.ids,
+  };
   const labelling = labels ? new Labelling(state.view.doc, start.labels) : null;
   const out: OurStep[] = [];
   for (const actions of p.steps) {
     const unknown = actions.filter((a) => !isAction(a));
-    if (unknown.length) fail(`unknown action ${unknown[0]}: a command (enter, indent, ...), "typed text", a motion (cursorDocEnd, ...), undo or redo`);
+    if (unknown.length)
+      fail(
+        `unknown action ${unknown[0]}: a command (enter, indent, ...), "typed text", a motion (cursorDocEnd, ...), undo or redo`,
+      );
     let broken: string | undefined;
     try {
       for (const action of actions) {
@@ -324,7 +413,11 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       broken = `throws: ${e instanceof Error ? e.message : String(e)}`;
     }
     const text = state.view.doc.text;
-    const buffer = normalizeDrawing(labelling ? labelling.draw(drawDoc(state.view, state.view.selection), state.view.doc) : drawDoc(state.view, state.view.selection));
+    const buffer = normalizeDrawing(
+      labelling
+        ? labelling.draw(drawDoc(state.view, state.view.selection), state.view.doc)
+        : drawDoc(state.view, state.view.selection),
+    );
     out.push({
       actions,
       buffer,
@@ -332,8 +425,12 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       result: describeOutcome(state),
       outline: drawOutline(state.view.doc),
       ...(broken ? { broken } : {}),
-      ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
-      ...(state.last instanceof OurusSuccess && state.last.dropMap ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.view.selection) } : {}),
+      ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined
+        ? { clipboard: state.clipboard['text/plain'] }
+        : {}),
+      ...(state.last instanceof OurusSuccess && state.last.dropMap
+        ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.view.selection) }
+        : {}),
     });
     if (broken) break;
   }
@@ -345,7 +442,8 @@ function combinations(base: Record<string, string>, each: readonly string[]): Re
   let runs = [base];
   for (const key of each) {
     const values = (OurusConfig.values as Record<string, readonly unknown[]>)[key];
-    if (!values) fail(`--each=${key}: ${OurusConfig.has(key) ? 'a list option, not one of a few values' : 'no such option'}`);
+    if (!values)
+      fail(`--each=${key}: ${OurusConfig.has(key) ? 'a list option, not one of a few values' : 'no such option'}`);
     runs = runs.flatMap((r) => values.map((v) => ({ ...r, [key]: String(v) })));
   }
   return runs;
@@ -370,7 +468,8 @@ const bracketed = (drawn: string): string => {
 };
 
 /** A fence for `content`: longer than any run of backticks starting one of its lines. */
-const fenceFor = (content: string): string => '`'.repeat(Math.max(3, ...content.split('\n').map((l) => (/^ {0,3}(`+)/.exec(l)?.[1]!.length ?? 0) + 1)));
+const fenceFor = (content: string): string =>
+  '`'.repeat(Math.max(3, ...content.split('\n').map((l) => (/^ {0,3}(`+)/.exec(l)?.[1]!.length ?? 0) + 1)));
 
 const block = (kind: string, content: string): string => {
   const fence = fenceFor(content);
@@ -384,7 +483,9 @@ function textYaml(key: string, text: string, by = ''): string {
   const trailing = /\n*$/.exec(text)![0].length;
   const body = trailing ? text.slice(0, -trailing) : text;
   // lines that all start with spaces need an indentation indicator, or YAML takes them for its own
-  const indicator = (/^ /.test(body.split('\n').find((l) => l !== '') ?? '') ? '|2' : '|') + (trailing === 0 ? '-' : trailing === 1 ? '' : '+');
+  const indicator =
+    (/^ /.test(body.split('\n').find((l) => l !== '') ?? '') ? '|2' : '|') +
+    (trailing === 0 ? '-' : trailing === 1 ? '' : '+');
   const lines = [...body.split('\n'), ...Array(Math.max(0, trailing - 1)).fill('')];
   return `${by}${key}: ${indicator}\n${lines.map((l) => (l === '' ? '' : `${by}  ${l}`)).join('\n')}`;
 }
@@ -393,18 +494,27 @@ function textYaml(key: string, text: string, by = ''): string {
 function clipboardYaml(clipboard: Clipboard): string[] {
   const formats = Object.entries(clipboard);
   if (formats.length === 0) return [];
-  if (formats.length === 1 && clipboard['text/plain'] !== undefined) return [textYaml('clipboard', clipboard['text/plain'])];
+  if (formats.length === 1 && clipboard['text/plain'] !== undefined)
+    return [textYaml('clipboard', clipboard['text/plain'])];
   return ['clipboard:', ...formats.map(([type, text]) => textYaml(type, text, '  '))];
 }
 
 /** A probe as a spec case: its config, its start, and each step with ourus's state drawn. */
 function caseOf(p: Probe, ours: OurStep[]): string {
-  const yaml = [`tags: ${['rare', ...p.tags].join(' ')}`, ...Object.entries(p.options).map(([k, v]) => `${k}: ${v}`), ...clipboardYaml(p.clipboard)].join('\n');
+  const yaml = [
+    `tags: ${['rare', ...p.tags].join(' ')}`,
+    ...Object.entries(p.options).map(([k, v]) => `${k}: ${v}`),
+    ...clipboardYaml(p.clipboard),
+  ].join('\n');
   // a step that copies or cuts checks the clipboard too, as the spec's cases do; a spec case's step
   // (`--case`) checks its buffer only where the case draws one, as the SxS does (what isn't drawn isn't checked)
   const steps = ours.map((s, k) => {
     const buffer = p.drawn && p.drawn[k] === undefined ? [] : [block('markdown', s.buffer)];
-    return [actionsLine(s.actions), ...(s.clipboard !== undefined ? [block('yaml', clipboardYaml({ 'text/plain': s.clipboard }).join('\n'))] : []), ...buffer].join('\n\n');
+    return [
+      actionsLine(s.actions),
+      ...(s.clipboard !== undefined ? [block('yaml', clipboardYaml({ 'text/plain': s.clipboard }).join('\n'))] : []),
+      ...buffer,
+    ].join('\n\n');
   });
   return [`## ${p.name}`, block('yaml', yaml), block('markdown', p.start), ...steps].join('\n\n');
 }
@@ -413,7 +523,19 @@ function caseOf(p: Probe, ours: OurStep[]): string {
 
 /** What a run of an app wrote (`AppRun` in run.ts), as far as a probe reads it. */
 interface AppRun {
-  examples: { name: string; verdict: string; adapted?: string[]; error?: string; steps: { actions: string[]; verdict?: string; ourus: string | null; app: string | null; clipboard?: { ourus: string | null; app: string | null } }[] }[];
+  examples: {
+    name: string;
+    verdict: string;
+    adapted?: string[];
+    error?: string;
+    steps: {
+      actions: string[];
+      verdict?: string;
+      ourus: string | null;
+      app: string | null;
+      clipboard?: { ourus: string | null; app: string | null };
+    }[];
+  }[];
   skipped: { name: string; reason: string }[];
 }
 
@@ -426,7 +548,15 @@ interface AppResult {
   seconds: number;
 }
 
-async function runApps(apps: readonly string[], all: Map<string, Driver>, specFile: string, dir: string, pass: readonly string[], say: (line: string) => void, done: (r: AppResult) => void = () => {}): Promise<AppResult[]> {
+async function runApps(
+  apps: readonly string[],
+  all: Map<string, Driver>,
+  specFile: string,
+  dir: string,
+  pass: readonly string[],
+  say: (line: string) => void,
+  done: (r: AppResult) => void = () => {},
+): Promise<AppResult[]> {
   await ensureProxy(cacheMode([...pass]), say);
   const runner = fileURLToPath(new URL('./run.ts', import.meta.url));
   return Promise.all(
@@ -435,13 +565,30 @@ async function runApps(apps: readonly string[], all: Map<string, Driver>, specFi
       const json = join(dir, `${app}.json`);
       const log = openSync(join(dir, `${app}.log`), 'w');
       // the app's window released cleanly is kept loaded by the pool: the next probe takes it over rather than loading it
-      const child = spawn(process.execPath, [...process.execArgv, runner, app, `--probe=${specFile}`, `--json=${json}`, '--no-report', ...pass], { stdio: ['ignore', log, log] });
+      const child = spawn(
+        process.execPath,
+        [...process.execArgv, runner, app, `--probe=${specFile}`, `--json=${json}`, '--no-report', ...pass],
+        { stdio: ['ignore', log, log] },
+      );
       const code = await new Promise<number>((done) => child.on('exit', (c) => done(c ?? 1)));
       closeSync(log);
       const seconds = (Date.now() - t0) / 1000;
       const driver = all.get(app)!;
       const run = code === 0 && existsSync(json) ? (JSON.parse(readFileSync(json, 'utf8')) as AppRun) : null;
-      const result: AppResult = { app, driver, run, seconds, ...(run ? {} : { missing: code === LOGIN_EXIT ? 'wants a login' : `failed (exit ${code}): ${relative(process.cwd(), join(dir, `${app}.log`))}` }) };
+      const result: AppResult = {
+        app,
+        driver,
+        run,
+        seconds,
+        ...(run
+          ? {}
+          : {
+              missing:
+                code === LOGIN_EXIT
+                  ? 'wants a login'
+                  : `failed (exit ${code}): ${relative(process.cwd(), join(dir, `${app}.log`))}`,
+            }),
+      };
       done(result);
       return result;
     }),
@@ -458,26 +605,40 @@ async function main(): Promise<void> {
   const picked = await resolveApps(o.apps);
   if (picked.unknown.length) fail(`no such app: ${picked.unknown.join(', ')}; name US (ourus), ${await appNames()}`);
   const apps = picked.apps;
-  if (o.each.length && apps.length) fail('--each plays ourus alone: the apps play the case under their own declared values');
+  if (o.each.length && apps.length)
+    fail('--each plays ourus alone: the apps play the case under their own declared values');
   let broken = false;
   const say = (line: string): void => console.error(line);
 
   // ourus first: what the apps are compared with, and the probe file's drawings
   if (o.labels) for (const p of probes) p.start = labelled(p.start, p.options);
-  const ours = probes.map((p) => combinations(p.options, o.each).map((config) => ({ config, steps: playOurus(p, config, o.labels) })));
+  const ours = probes.map((p) =>
+    combinations(p.options, o.each).map((config) => ({ config, steps: playOurus(p, config, o.labels) })),
+  );
   for (const runs of ours) for (const r of runs) if (r.steps.some((s) => s.broken)) broken = true;
 
   const text = o.format !== 'spec' && o.format !== 'json';
   const out = (line: string): void => console.log(line);
   // header lines coloured on a terminal: a step's actions, ourus's result, each app's line by its verdict
   const tty = process.stdout.isTTY === true;
-  const paint = (code: string) => (line: string): string => (tty ? `\x1b[${code}m${line}\x1b[0m` : line);
+  const paint =
+    (code: string) =>
+    (line: string): string =>
+      tty ? `\x1b[${code}m${line}\x1b[0m` : line;
   const bold = paint('1');
   const dim = paint('2');
   const cyan = paint('1;36');
   const blue = paint('1;34');
   const whiteBold = paint('1;37');
-  const BY_MARK: Record<string, (line: string) => string> = { '✓': paint('32'), C: paint('33'), S: paint('33'), '✗': paint('1;31'), E: paint('35'), '?': paint('35'), '-': dim };
+  const BY_MARK: Record<string, (line: string) => string> = {
+    '✓': paint('32'),
+    C: paint('33'),
+    S: paint('33'),
+    '✗': paint('1;31'),
+    E: paint('35'),
+    '?': paint('35'),
+    '-': dim,
+  };
   const marked = (mark: string, line: string): string => (BY_MARK[mark] ?? ((l: string) => l))(line);
   const verbatim = (drawn: string): void => out(bracketed(drawn));
   let results: AppResult[] = [];
@@ -486,12 +647,17 @@ async function main(): Promise<void> {
   if (apps.length) {
     // a probe the apps can't be given: one whose ourus fails, or whose state a buffer can't draw
     const playable = probes.filter((p, i) => ours[i]![0]!.steps.every((s) => !s.broken && s.drawable));
-    for (const p of probes) if (!playable.includes(p)) say(`${p.name}: not played on the apps (ourus fails, or a state has no final line break)`);
+    for (const p of probes)
+      if (!playable.includes(p))
+        say(`${p.name}: not played on the apps (ourus fails, or a state has no final line break)`);
     if (playable.length) {
       dir = join(cacheDir, 'probe', new Date().toISOString().replace(/[:.]/g, '-'));
       mkdirSync(dir, { recursive: true });
       specFile = join(dir, 'probe.md');
-      writeFileSync(specFile, `# Probe\n\n${playable.map((p) => caseOf(p, ours[probes.indexOf(p)]![0]!.steps)).join('\n\n')}\n`);
+      writeFileSync(
+        specFile,
+        `# Probe\n\n${playable.map((p) => caseOf(p, ours[probes.indexOf(p)]![0]!.steps)).join('\n\n')}\n`,
+      );
       readSpec('probe.md', readFileSync(specFile, 'utf8')); // as the apps' runs will read it: a format error is ours, here
     }
   }
@@ -507,12 +673,21 @@ async function main(): Promise<void> {
         const options = Object.entries(run.config).map(([k, v]) => `${k}: ${v}`);
         const clipboard = Object.entries(p.clipboard).map(([type, body]) => `${type} ${JSON.stringify(body)}`);
         // a probe's name where it has one (a file's case), its options where it has any
-        if (!p.unnamed || options.length) out(bold(`== ${p.unnamed ? '' : p.name}${options.length ? `${p.unnamed ? '' : '  '}(${options.join(', ')})` : ''}`));
+        if (!p.unnamed || options.length)
+          out(
+            bold(
+              `== ${p.unnamed ? '' : p.name}${options.length ? `${p.unnamed ? '' : '  '}(${options.join(', ')})` : ''}`,
+            ),
+          );
         if (clipboard.length) out(bold(`clipboard: ${clipboard.join(', ')}`));
         verbatim(p.start);
         for (const [k, s] of run.steps.entries()) {
           // ourus's result where it didn't apply (a refusal, the host's), on the actions' line
-          out(cyan(`> ${s.actions.join(' ')}${s.result === 'success' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
+          out(
+            cyan(
+              `> ${s.actions.join(' ')}${s.result === 'success' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`,
+            ),
+          );
           verbatim(s.buffer);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);
           if (s.dropPoints !== undefined) {
@@ -521,7 +696,10 @@ async function main(): Promise<void> {
           }
           const drawn = p.drawn?.[k];
           // (a drawing without a caret doesn't check it)
-          if (drawn !== undefined && normalizeDrawing(drawn) !== (drawsCaret(drawn) ? s.buffer : withoutCaret(s.buffer))) {
+          if (
+            drawn !== undefined &&
+            normalizeDrawing(drawn) !== (drawsCaret(drawn) ? s.buffer : withoutCaret(s.buffer))
+          ) {
             out(marked('✗', '✗ the case draws:'));
             verbatim(drawn);
             broken = true;
@@ -574,7 +752,9 @@ async function main(): Promise<void> {
       // what the app is compared with: ourus's own result, or ourus's as blocks or under the app's values
       // (ourus's own as a text app draws it, without placeholders, is ourus's)
       const differs = step.ourus !== null && step.ourus !== s.buffer;
-      const label = differs ? `${r.driver.model === 'block' ? 'ourus as blocks' : 'ourus'}${under.length ? `, under ${under.join(', ')}` : ''}` : 'ourus';
+      const label = differs
+        ? `${r.driver.model === 'block' ? 'ourus as blocks' : 'ourus'}${under.length ? `, under ${under.join(', ')}` : ''}`
+        : 'ourus';
       const other = label !== 'ourus';
       const key = `${at}${label}\n${step.ourus}`;
       const mark = SYMBOL[step.verdict ?? ''] ?? step.verdict ?? '?';
@@ -591,14 +771,18 @@ async function main(): Promise<void> {
       if (step.app === undefined || step.app === null) out('(not read)');
       else verbatim(step.app);
       // the app's clipboard where it isn't ourus's
-      if (step.clipboard && step.clipboard.app !== step.clipboard.ourus) out(`clipboard: ${JSON.stringify(step.clipboard.app)}`);
+      if (step.clipboard && step.clipboard.app !== step.clipboard.ourus)
+        out(`clipboard: ${JSON.stringify(step.clipboard.app)}`);
     }
   };
   if (specFile) {
     const all = await drivers();
     // the verdict, the id, a `*` where adapted, the seconds (to 9.9s), two spaces
     column = Math.max(...apps.map((app) => `✓ ${all.get(app)!.longId}* 0.0s`.length)) + 2;
-    if (text) out(whiteBold(`Probing ${apps.length} app${apps.length === 1 ? '' : 's'}, logs: ${relative(process.cwd(), dir!)}/`));
+    if (text)
+      out(
+        whiteBold(`Probing ${apps.length} app${apps.length === 1 ? '' : 's'}, logs: ${relative(process.cwd(), dir!)}/`),
+      );
     results = await runApps(apps, all, specFile, dir!, o.pass, say, text ? entry : undefined);
   }
 
@@ -618,7 +802,14 @@ async function main(): Promise<void> {
         results.map((r) => {
           const e = r.run?.examples.find((x) => x.name === p.name);
           const skip = r.run?.skipped.find((x) => x.name === p.name);
-          return [r.driver.longId, e ? { verdict: e.verdict, adapted: e.adapted ?? [], error: e.error, steps: e.steps } : skip ? { skipped: skip.reason } : { missing: r.missing ?? 'not run' }];
+          return [
+            r.driver.longId,
+            e
+              ? { verdict: e.verdict, adapted: e.adapted ?? [], error: e.error, steps: e.steps }
+              : skip
+                ? { skipped: skip.reason }
+                : { missing: r.missing ?? 'not run' },
+          ];
         }),
       ),
     }));

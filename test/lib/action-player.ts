@@ -8,7 +8,17 @@
 // typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
 // keys does), and caret motions named as CodeMirror's commands are.
 
-import { executeCommand, leavesZoom, settlePlaceholders, type OurusCommand, type OurusResult, type OurusSelection, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import {
+  executeCommand,
+  leavesZoom,
+  settlePlaceholders,
+  type OurusCommand,
+  type OurusResult,
+  type OurusSelection,
+  OurusDeferred,
+  OurusRejected,
+  OurusSuccess,
+} from '../../src/commands/index.ts';
 import { CommandContext } from '../../src/commands/context.ts';
 import { dragRun, placeAtSeam } from '../../src/commands/drag.ts';
 import type { OurusDoc } from '../../src/doc/index.ts';
@@ -81,9 +91,11 @@ const DROP = /^(?:moveSubtree(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?|p
 /** A pickup held for a step to check (spec/drag.md): `drag`, the selection's nodes, or `drag ②`. */
 const PICKUP = /^drag(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?$/u;
 /** The view's commands, a label naming the node a click would (`fold ①`): else the selection's. */
-const VIEW = /^(fold|unfold|toggleFold|zoomIn)(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?$|^(zoomOut|clearZoom)$/u;
+const VIEW =
+  /^(fold|unfold|toggleFold|zoomIn)(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?$|^(zoomOut|clearZoom)$/u;
 
-const isMotion = (action: string): boolean => /^(?:cursor|select)/.test(action) && action.replace(/^(?:cursor|select)/, '') in MOTIONS;
+const isMotion = (action: string): boolean =>
+  /^(?:cursor|select)/.test(action) && action.replace(/^(?:cursor|select)/, '') in MOTIONS;
 
 /**
  * Actions only the host performs, besides typed text and motions. `undo` and `redo` stand in for
@@ -98,7 +110,15 @@ export const isCommandAction = (token: string): boolean => COMMANDS.has(token);
 /** A key pressed as is in an app (`key:Control+a`, Playwright's notation), for probing a key no action names: ourus does nothing at it. */
 const isRawKey = (token: string): boolean => /^key:\S+$/.test(token);
 
-export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || isRawKey(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token) || VIEW.test(token);
+export const isAction = (token: string): boolean =>
+  /^"[^"]*"$/.test(token) ||
+  isRawKey(token) ||
+  COMMANDS.has(token) ||
+  HOST_ACTIONS.has(token) ||
+  isMotion(token) ||
+  DROP.test(token) ||
+  PICKUP.test(token) ||
+  VIEW.test(token);
 
 /** Whether an action is a drop, which plays at the start's drop line. */
 export const isDropAction = (token: string): boolean => DROP.test(token);
@@ -134,7 +154,12 @@ interface Snapshot {
   readonly doc: OurusDoc;
 }
 
-const snapshot = (state: PlayedState, selection = state.view.selection): Snapshot => ({ text: state.view.doc.text, marks: state.view.doc.marks, selection, doc: state.view.doc });
+const snapshot = (state: PlayedState, selection = state.view.selection): Snapshot => ({
+  text: state.view.doc.text,
+  marks: state.view.doc.marks,
+  selection,
+  doc: state.view.doc,
+});
 
 export function playActions(state: PlayedState, actions: readonly string[]): PlayedState {
   for (const action of actions) {
@@ -143,8 +168,12 @@ export function playActions(state: PlayedState, actions: readonly string[]): Pla
       continue;
     }
     const before = snapshot(state);
-    state = step({ ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) }, action);
-    if (state.view.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
+    state = step(
+      { ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) },
+      action,
+    );
+    if (state.view.doc.text !== before.text)
+      state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
     const settled = settlePlaceholders(state.view);
     // leaving a placeholder joins the step before it, which made the empty node: one undo takes both back
     // (the selection the settling gives, which it keeps where the view shows it)
@@ -189,7 +218,11 @@ function step(state: PlayedState, action: string): PlayedState {
       const dest = target.line >= 0 && target.line < doc.lineCount ? doc.mdTree.line(target.line) : null;
       // past the first or last line, the caret goes to that end of the text; a column in the line's
       // markers or indentation lands at the start of its text
-      head = dest ? Math.max(atColumn(text, dest.from, dest.to, goal), doc.textStart(dest.index)) : target.line < 0 ? 0 : text.length;
+      head = dest
+        ? Math.max(atColumn(text, dest.from, dest.to, goal), doc.textStart(dest.index))
+        : target.line < 0
+          ? 0
+          : text.length;
     }
     // zoomed, kept in the zoom, as a host keeps its user's selection there (obsidian-zoom's
     // `LimitSelectionWhenZoomedIn`)
@@ -198,7 +231,8 @@ function step(state: PlayedState, action: string): PlayedState {
     return { ...state, goal, view: viewed.withSelection({ anchor: extend ? selection.anchor : head, head }) };
   }
   const dropped = DROP.exec(action);
-  if (dropped) return { ...run(state, action === 'pasteAt' ? pasteAtCommand(state) : dropCommand(state, dropped[1])), drop: null };
+  if (dropped)
+    return { ...run(state, action === 'pasteAt' ? pasteAtCommand(state) : dropCommand(state, dropped[1])), drop: null };
   const view = VIEW.exec(action);
   if (view) {
     if (view[3]) return run(state, { type: view[3] as 'zoomOut' | 'clearZoom' });
@@ -257,7 +291,8 @@ function run(state: PlayedState, command: OurusCommand | OurusResult): PlayedSta
 
 /** `next`, a step of the host's own: refused where it leaves `state`'s zoom, as a host checks its own edits (`leavesZoom`). */
 function guarded(state: PlayedState, next: PlayedState): PlayedState {
-  if (!(next.last instanceof OurusDeferred) || state.view.zoom === null || next.view.doc === state.view.doc) return next;
+  if (!(next.last instanceof OurusDeferred) || state.view.zoom === null || next.view.doc === state.view.doc)
+    return next;
   if (!leavesZoom(state.view, next.view.doc)) return next;
   return { ...state, last: new OurusRejected('outside-zoom', "the host's own edit would leave the zoom") };
 }
@@ -273,7 +308,8 @@ function hostRun(state: PlayedState, command: OurusCommand | OurusResult): Playe
   const type = command.type;
   const last = executeCommand(view.withSelection(selection), command);
   if (last instanceof OurusSuccess) {
-    if (applyChanges(text, last.changes) !== last.view.doc.text) throw new Error(`${type}: its changes don't produce its document`);
+    if (applyChanges(text, last.changes) !== last.view.doc.text)
+      throw new Error(`${type}: its changes don't produce its document`);
     return { ...state, view: last.view, last, ...(last.clipboard && { clipboard: last.clipboard }) };
   }
   if (last instanceof OurusRejected) return { ...state, last };
@@ -299,11 +335,21 @@ function hostRun(state: PlayedState, command: OurusCommand | OurusResult): Playe
     case 'cut': {
       if (from === to) return { ...state, last };
       const clipboard = { 'text/plain': text.slice(from, to) };
-      return type === 'cut' ? { ...edit(state, { from, to, insert: '' }), clipboard, last } : { ...state, clipboard, last };
+      return type === 'cut'
+        ? { ...edit(state, { from, to, insert: '' }), clipboard, last }
+        : { ...state, clipboard, last };
     }
     // to the start of the line, as a line that doesn't wrap has it (in a block app, of the block's text)
     case 'deleteSoftLineBackward':
-      return { ...edit(state, from !== to ? { from, to, insert: '' } : { from: Math.min(lineStart(doc, from, !!state.blocks), from), to, insert: '' }), last };
+      return {
+        ...edit(
+          state,
+          from !== to
+            ? { from, to, insert: '' }
+            : { from: Math.min(lineStart(doc, from, !!state.blocks), from), to, insert: '' },
+        ),
+        last,
+      };
     case 'deleteContentForward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
       if (to === text.length) return { ...state, last };
@@ -339,10 +385,19 @@ function typeText(state: PlayedState, text: string): PlayedState {
     const doc = view.doc;
     const last = executeCommand(view.withSelection(selection), { type: 'insertText', text: ch });
     if (last instanceof OurusSuccess) {
-      if (applyChanges(doc.text, last.changes) !== last.view.doc.text) throw new Error(`insertText: its changes don't produce its document`);
+      if (applyChanges(doc.text, last.changes) !== last.view.doc.text)
+        throw new Error(`insertText: its changes don't produce its document`);
       state = { ...state, view: last.view, last };
     } else if (last instanceof OurusRejected) state = { ...state, last };
-    else state = guarded(state, { ...edit(state, { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head), insert: ch }), last });
+    else
+      state = guarded(state, {
+        ...edit(state, {
+          from: Math.min(selection.anchor, selection.head),
+          to: Math.max(selection.anchor, selection.head),
+          insert: ch,
+        }),
+        last,
+      });
   }
   return state;
 }
@@ -373,15 +428,23 @@ function charBefore(text: string, pos: number): number {
   if (pos <= 0) return 0;
   if (text.slice(pos - 2, pos) === '\r\n') return pos - 2;
   const c = text.charCodeAt(pos - 1);
-  return c >= 0xdc00 && c < 0xe000 && pos >= 2 && text.charCodeAt(pos - 2) >= 0xd800 && text.charCodeAt(pos - 2) < 0xdc00 ? pos - 2 : pos - 1;
+  return c >= 0xdc00 &&
+    c < 0xe000 &&
+    pos >= 2 &&
+    text.charCodeAt(pos - 2) >= 0xd800 &&
+    text.charCodeAt(pos - 2) < 0xdc00
+    ? pos - 2
+    : pos - 1;
 }
 
 /** One character on: a grapheme, as a host's Delete takes it (`👍🏽` whole, a line ending's `\r\n`). */
 function charAfter(text: string, pos: number): number {
   if (pos >= text.length) return text.length;
-  const first = graphemes.segment(text.slice(pos, pos + 64))[Symbol.iterator]().next().value;
+  const first = graphemes
+    .segment(text.slice(pos, pos + 64))
+    [Symbol.iterator]()
+    .next().value;
   return pos + (first?.segment.length ?? 1);
 }
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-

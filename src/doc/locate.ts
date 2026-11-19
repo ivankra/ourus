@@ -12,20 +12,46 @@ export type Located =
   /** In a node's text: `offset` in its string (`text.text`, the frame included). */
   | { readonly zone: 'text'; readonly node: OurusNode; readonly text: OurusText; readonly offset: number }
   /** In a frame part (a checkbox, `#`s, a fence, ...): `offset` in the text's string. */
-  | { readonly zone: 'frame'; readonly node: OurusNode; readonly text: OurusText; readonly part: string; readonly offset: number }
+  | {
+      readonly zone: 'frame';
+      readonly node: OurusNode;
+      readonly text: OurusText;
+      readonly part: string;
+      readonly offset: number;
+    }
   /**
    * In an item's marker piece (`marker`): its indentation, its marker's characters, or the padding
    * after them (`part`, a position right after the marker its padding's); or in another container's
    * prefix piece (`prefix`): which piece of the line, and where in it.
    */
-  | { readonly zone: 'marker'; readonly node: OurusNode; readonly line: MdLine; readonly piece: number; readonly offset: number; readonly part: 'indent' | 'marker' | 'padding' }
-  | { readonly zone: 'prefix'; readonly node: OurusNode; readonly line: MdLine; readonly piece: number; readonly offset: number }
+  | {
+      readonly zone: 'marker';
+      readonly node: OurusNode;
+      readonly line: MdLine;
+      readonly piece: number;
+      readonly offset: number;
+      readonly part: 'indent' | 'marker' | 'padding';
+    }
+  | {
+      readonly zone: 'prefix';
+      readonly node: OurusNode;
+      readonly line: MdLine;
+      readonly piece: number;
+      readonly offset: number;
+    }
   /**
    * On a block-id line a node's text carries after it (`OurusText.blockIdLines`), or a blank line
    * before one: which of them (`line`; on a blank line, the one after it, `blank`), and `offset` in
    * it, past its indentation (0 on a blank line and in the indentation).
    */
-  | { readonly zone: 'blockIdLine'; readonly node: OurusNode; readonly text: OurusText; readonly line: number; readonly blank: boolean; readonly offset: number }
+  | {
+      readonly zone: 'blockIdLine';
+      readonly node: OurusNode;
+      readonly text: OurusText;
+      readonly line: number;
+      readonly blank: boolean;
+      readonly offset: number;
+    }
   /** On a blank line: the node above's, whose gap it is. */
   | { readonly zone: 'gap'; readonly owner: OurusNode }
   /** Before the first node (frontmatter, blank lines), or past the last line. */
@@ -59,7 +85,14 @@ export function locate(doc: OurusDoc, pos: number): Located {
     const p = line.prefix[at];
     if (p?.kind === 'marker') {
       const [start, end] = [doc.mdTree.markerFrom(p.container), doc.mdTree.markerTo(p.container)];
-      return { zone: 'marker', node, line, piece: at, offset: pos - p.from, part: pos < start ? 'indent' : pos < end ? 'marker' : 'padding' };
+      return {
+        zone: 'marker',
+        node,
+        line,
+        piece: at,
+        offset: pos - p.from,
+        part: pos < start ? 'indent' : pos < end ? 'marker' : 'padding',
+      };
     }
     if (p) return { zone: 'prefix', node, line, piece: at, offset: pos - p.from };
   }
@@ -73,7 +106,15 @@ export function locate(doc: OurusDoc, pos: number): Located {
   const offset = doc.offsetOf(node, pos);
   // a closing frame's start is the end of the text: an underline starts with the line break after the
   // title, an ATX title's closing `#`s and a block id with the blanks before them
-  const part = text.frame.find((p) => p.from <= offset && offset < p.to && !((p.part === 'underline' || p.part === 'blockId' || (p.part === 'close' && text.type === 'heading')) && offset === p.from));
+  const part = text.frame.find(
+    (p) =>
+      p.from <= offset &&
+      offset < p.to &&
+      !(
+        (p.part === 'underline' || p.part === 'blockId' || (p.part === 'close' && text.type === 'heading')) &&
+        offset === p.from
+      ),
+  );
   return part ? { zone: 'frame', node, text, part: part.part, offset } : { zone: 'text', node, text, offset };
 }
 
@@ -83,7 +124,15 @@ function blockIdLineAt(node: OurusNode, text: OurusText, line: MdLine, pos: numb
   for (const [k, carried] of text.blockIdLines.entries()) {
     at += carried.blankLines + 1;
     if (line.index < at) return { zone: 'blockIdLine', node, text, line: k, blank: true, offset: 0 };
-    if (line.index === at) return { zone: 'blockIdLine', node, text, line: k, blank: false, offset: Math.max(0, pos - (line.to - carried.line.length)) };
+    if (line.index === at)
+      return {
+        zone: 'blockIdLine',
+        node,
+        text,
+        line: k,
+        blank: false,
+        offset: Math.max(0, pos - (line.to - carried.line.length)),
+      };
   }
   return { zone: 'none' };
 }

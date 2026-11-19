@@ -13,11 +13,16 @@ import { bundleOptions } from './bundle.ts';
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
     const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
-    const usage = lines.slice(1, lines.findIndex((line, i) => i > 0 && !line.startsWith('//')));
+    const usage = lines.slice(
+      1,
+      lines.findIndex((line, i) => i > 0 && !line.startsWith('//')),
+    );
     console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(0);
   }
-  const unknown = args.filter((a, i) => a !== '--serve' && a !== '--port' && !(args[i - 1] === '--port' && /^\d+$/.test(a)));
+  const unknown = args.filter(
+    (a, i) => a !== '--serve' && a !== '--port' && !(args[i - 1] === '--port' && /^\d+$/.test(a)),
+  );
   if (unknown.length) {
     console.error(`no such option: ${unknown.join(', ')} (--help lists them)`);
     process.exit(2);

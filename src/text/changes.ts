@@ -185,7 +185,8 @@ class Builder {
   change(length: number, insert: string, a: number, b: number): void {
     if (length === 0 && insert === '') {
       // nothing here, but the change goes on: what of it comes next joins what came before
-      if ((a >= 0 && a === this.last.a) || (b >= 0 && b === this.last.b)) this.last = { a: a >= 0 ? a : this.last.a, b: b >= 0 ? b : this.last.b };
+      if ((a >= 0 && a === this.last.a) || (b >= 0 && b === this.last.b))
+        this.last = { a: a >= 0 ? a : this.last.a, b: b >= 0 ? b : this.last.b };
       return;
     }
     const k = this.changes.length - 1;
@@ -210,7 +211,9 @@ class Builder {
  * Adjacent insertions at one point keep their order.
  */
 export function normalizeChanges(changes: readonly ChangeSpec[]): ChangeSpec[] {
-  for (const c of changes) if (!Number.isSafeInteger(c.from) || !Number.isSafeInteger(c.to) || c.from < 0 || c.to < c.from) throw new RangeError(`invalid change range ${c.from}–${c.to}`);
+  for (const c of changes)
+    if (!Number.isSafeInteger(c.from) || !Number.isSafeInteger(c.to) || c.from < 0 || c.to < c.from)
+      throw new RangeError(`invalid change range ${c.from}–${c.to}`);
   const sorted = changes
     .filter((c) => c.from !== c.to || c.insert !== '')
     .map((c, i) => ({ c, i }))
@@ -276,7 +279,8 @@ export class ChangeIndex {
   constructor(changes: readonly ChangeSpec[]) {
     this.#changes = normalizeChanges(changes);
     this.#shifts = [0];
-    for (const c of this.#changes) this.#shifts.push(this.#shifts[this.#shifts.length - 1]! + c.insert.length - (c.to - c.from));
+    for (const c of this.#changes)
+      this.#shifts.push(this.#shifts[this.#shifts.length - 1]! + c.insert.length - (c.to - c.from));
   }
 
   /** How many changes start before `pos` (`strict`), or at it or before. */
@@ -387,7 +391,11 @@ export function diffLines(before: string, after: string, { span = false }: { spa
   // the length of the common ending, then back to where a line starts in the old text (in the new
   // one it may not: what is kept after the change, an old line's rest, keeps its node)
   let end = 0;
-  while (end < shorter - start && before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)) end++;
+  while (
+    end < shorter - start &&
+    before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)
+  )
+    end++;
   while (end > 0 && before.length - end > start && !lineStart(before, before.length - end)) end--;
   // between, line by line: the lines both keep unchanged, each change a run of lines between them
   // (an untouched node between two edits keeps its identity)
@@ -436,7 +444,8 @@ function commonLines(a: readonly string[], b: readonly string[]): [number, numbe
   for (let d = 0; d <= max; d++) {
     trace.push(v.slice());
     for (let k = -d; k <= d; k += 2) {
-      let x = k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!) ? v[offset + k + 1]! : v[offset + k - 1]! + 1;
+      let x =
+        k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!) ? v[offset + k + 1]! : v[offset + k - 1]! + 1;
       let y = x - k;
       while (x < n && y < m && a[x] === b[y]) x++, y++;
       v[offset + k] = x;
@@ -470,6 +479,11 @@ function diffText(before: string, after: string): ChangeSpec[] {
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
   let end = 0;
-  while (end < before.length - start && end < after.length - start && before[before.length - 1 - end] === after[after.length - 1 - end]) end++;
+  while (
+    end < before.length - start &&
+    end < after.length - start &&
+    before[before.length - 1 - end] === after[after.length - 1 - end]
+  )
+    end++;
   return [{ from: start, to: before.length - end, insert: after.slice(start, after.length - end) }];
 }

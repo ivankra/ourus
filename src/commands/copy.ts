@@ -8,7 +8,16 @@ import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { composeChanges, lineOf, mapPos, trimMd, type ChangeSpec } from '../text/index.ts';
 import type { OurusView } from '../view/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
-import { oneRun, operandsRefused, pastPrefixAt, runsOf, selectionEnds, selectionRoots, wholeBlocksSelection, withinOneText } from './util.ts';
+import {
+  oneRun,
+  operandsRefused,
+  pastPrefixAt,
+  runsOf,
+  selectionEnds,
+  selectionRoots,
+  wholeBlocksSelection,
+  withinOneText,
+} from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusSuccess } from './types.ts';
 
@@ -30,7 +39,9 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
     const whole = wholeBlocksSelection(ctx);
     if (whole) {
       const result = copyOrCutCommand(new CommandContext(ctx.view.withSelection(whole)), type);
-      return type === 'copy' && result instanceof OurusSuccess ? new OurusSuccess({ ...result, view: ctx.view }) : result;
+      return type === 'copy' && result instanceof OurusSuccess
+        ? new OurusSuccess({ ...result, view: ctx.view })
+        : result;
     }
   }
   const doc = ctx.doc;
@@ -51,8 +62,12 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
     // its children), the host's where it has none
     if (config.copyAtCaret === 'text') {
       const at = pastPrefixAt(ctx, from);
-      if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusProse) || at.text.empty) return new OurusDeferred('host-default');
-      const over = view.withSelection({ anchor: doc.posOf(at.node, textStart(at.text), 1), head: doc.posOf(at.node, textEnd(at.text), -1) });
+      if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusProse) || at.text.empty)
+        return new OurusDeferred('host-default');
+      const over = view.withSelection({
+        anchor: doc.posOf(at.node, textStart(at.text), 1),
+        head: doc.posOf(at.node, textEnd(at.text), -1),
+      });
       const result = copyOrCutCommand(new CommandContext(over), type);
       return type === 'copy' && result instanceof OurusSuccess ? new OurusSuccess({ ...result, view }) : result;
     }
@@ -84,15 +99,29 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
     // copy's, as a cut takes it)
     // (or within one text, from its line's prefix, `«> q»uote`: from the text, as a cut takes it)
     const at = view.locate(from);
-    const start = (at.zone === 'marker' && at.part === 'padding') || withinOneText(ctx, from, to) ? pastPrefixAt(ctx, from) : null;
+    const start =
+      (at.zone === 'marker' && at.part === 'padding') || withinOneText(ctx, from, to) ? pastPrefixAt(ctx, from) : null;
     // (and one ending before a later line's text, in its indentation, its marker or at its start: at
     // that line's start, none of its prefix the copy's)
     const line = doc.lineAt(to);
     const end = pastPrefixAt(ctx, to);
-    const before = line.index > doc.lineAt(from).index && to > line.from && end.zone === 'text' && end.offset <= textStart(end.text) && doc.lineAt(doc.posOf(end.node, end.offset, 1)).index === line.index;
-    markdown = doc.markdownOf(start?.zone === 'text' ? doc.posOf(start.node, start.offset, 1) : from, before ? line.from : to);
+    const before =
+      line.index > doc.lineAt(from).index &&
+      to > line.from &&
+      end.zone === 'text' &&
+      end.offset <= textStart(end.text) &&
+      doc.lineAt(doc.posOf(end.node, end.offset, 1)).index === line.index;
+    markdown = doc.markdownOf(
+      start?.zone === 'text' ? doc.posOf(start.node, start.offset, 1) : from,
+      before ? line.from : to,
+    );
   }
-  const clipboard = clipboardOf(markdown, ctx.doc, nodes ? null : selectionEnds(ctx, from, to), !nodes && !withinOneText(ctx, from, to));
+  const clipboard = clipboardOf(
+    markdown,
+    ctx.doc,
+    nodes ? null : selectionEnds(ctx, from, to),
+    !nodes && !withinOneText(ctx, from, to),
+  );
   if (type === 'copy') return new OurusSuccess({ view: ctx.view, changes: [], clipboard });
   const deleted = nodes ? deleteSubtreeCommand(ctx, undefined, true) : deleteSelected(ctx);
   // the text deleted as the host deletes it, where ourus doesn't: the clipboard is still ourus's
@@ -112,15 +141,30 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
 export function deleteSelected(ctx: CommandContext): OurusResult | null {
   const deleted = deleteContentBackwardCommand(ctx);
   // (an end in a marker or a prefix: from that line's text, as Backspace takes it)
-  const [a, b] = [pastPrefixAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head)), pastPrefixAt(ctx, Math.max(ctx.selection.anchor, ctx.selection.head))];
-  if (!(deleted instanceof OurusDeferred) || a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusProse) || a.node.persistentNode !== b.node.persistentNode) return deleted;
+  const [a, b] = [
+    pastPrefixAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head)),
+    pastPrefixAt(ctx, Math.max(ctx.selection.anchor, ctx.selection.head)),
+  ];
+  if (
+    !(deleted instanceof OurusDeferred) ||
+    a.zone !== 'text' ||
+    b.zone !== 'text' ||
+    !(a.text instanceof OurusProse) ||
+    a.node.persistentNode !== b.node.persistentNode
+  )
+    return deleted;
   const s = a.text.text;
   let [from, end] = [a.offset, b.offset];
   const lineStart = s.lastIndexOf('\n', from - 1) + 1;
   const lineEnd = s.indexOf('\n', end) < 0 ? s.length : s.indexOf('\n', end);
-  if (from <= Math.max(lineStart, a.text.textStart(lineOf(s, from)))) while (end < lineEnd && (s[end] === ' ' || s[end] === '\t')) end++;
+  if (from <= Math.max(lineStart, a.text.textStart(lineOf(s, from))))
+    while (end < lineEnd && (s[end] === ' ' || s[end] === '\t')) end++;
   // (a line emptied: its line break with it, the one after it, or on the last line the one before)
-  if (trimMd(s.slice(lineStart, from)) === '' && trimMd(s.slice(end, lineEnd)) === '' && (lineStart > 0 || lineEnd < s.length)) {
+  if (
+    trimMd(s.slice(lineStart, from)) === '' &&
+    trimMd(s.slice(end, lineEnd)) === '' &&
+    (lineStart > 0 || lineEnd < s.length)
+  ) {
     if (lineEnd < s.length) [from, end] = [lineStart, lineEnd + 1];
     else [from, end] = [lineStart - 1, lineEnd];
   }
@@ -145,7 +189,10 @@ function nodesOnLines(ctx: CommandContext, from: number, to: number): number {
  * host's where `then` is (the host replaces the selection), refused where either is. Null (unsupported)
  * where either is.
  */
-export function afterDeleting(ctx: CommandContext, then: (ctx: CommandContext) => OurusResult | null): OurusResult | null {
+export function afterDeleting(
+  ctx: CommandContext,
+  then: (ctx: CommandContext) => OurusResult | null,
+): OurusResult | null {
   const from = Math.min(ctx.selection.anchor, ctx.selection.head);
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
   // within one text, what `then` puts in one line of it: the other way round, `then` at the
@@ -162,7 +209,12 @@ export function afterDeleting(ctx: CommandContext, then: (ctx: CommandContext) =
   const next = then(new CommandContext(deleted.view));
   if (!next || !(next instanceof OurusSuccess)) return next;
   const changes = composeChanges(ctx.doc.text, deleted.changes, next.changes);
-  return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([deleted, next]), view: withRaisedLines(ctx, next.view, changes), changes });
+  return new OurusSuccess({
+    ...next,
+    ...blockIdsDeclaredBy([deleted, next]),
+    view: withRaisedLines(ctx, next.view, changes),
+    changes,
+  });
 }
 
 /**
@@ -181,10 +233,18 @@ export function withRaisedLines(ctx: CommandContext, view: OurusView, changes: r
     let head = 0;
     while (head < old.length && head < insert.length && old[head] === insert[head]) head++;
     let tail = 0;
-    while (tail < old.length - head && tail < insert.length - head && old[old.length - 1 - tail] === insert[insert.length - 1 - tail]) tail++;
+    while (
+      tail < old.length - head &&
+      tail < insert.length - head &&
+      old[old.length - 1 - tail] === insert[insert.length - 1 - tail]
+    )
+      tail++;
     return { from: c.from + head, to: c.from + old.length - tail, insert: insert.slice(head, insert.length - tail) };
   });
-  const back = before.marks.auto.filter((p) => (before.text[p] === '\n' || before.text[p] === '\r') && !net.some((c) => c.from <= p && p < c.to)).map((p) => mapPos(net, p, 1)).filter((q) => !doc.marks.auto.includes(q) && validAuto(doc.text, q));
+  const back = before.marks.auto
+    .filter((p) => (before.text[p] === '\n' || before.text[p] === '\r') && !net.some((c) => c.from <= p && p < c.to))
+    .map((p) => mapPos(net, p, 1))
+    .filter((q) => !doc.marks.auto.includes(q) && validAuto(doc.text, q));
   if (!back.length) return view;
   const next = doc.update({ marks: { placeholders: doc.marks.placeholders, auto: [...doc.marks.auto, ...back] } });
   return view.withDoc(next, []).withSelection(view.selection);
@@ -193,7 +253,8 @@ export function withRaisedLines(ctx: CommandContext, view: OurusView, changes: r
 /** Whether the selection is all of one text that a block id ends (`a b⏎^x`, `a b ^x`, `a b` selected). */
 export function takesTextWithBlockIds(ctx: CommandContext): boolean {
   const { from, to } = ctx;
-  if (from.zone !== 'text' || to.zone !== 'text' || from.node !== to.node || !(from.text instanceof OurusProse)) return false;
+  if (from.zone !== 'text' || to.zone !== 'text' || from.node !== to.node || !(from.text instanceof OurusProse))
+    return false;
   return blockIdsOf(from.text).length > 0 && from.offset <= textStart(from.text) && to.offset >= textEnd(from.text);
 }
 
@@ -202,7 +263,13 @@ export function takesTextWithBlockIds(ctx: CommandContext): boolean {
  * `then` puts text in the line `to` is on. Null where `then` changes the text before `to` (or another
  * line, `inline`), or the deletion isn't applied.
  */
-function thenDeleting(ctx: CommandContext, from: number, to: number, then: (ctx: CommandContext) => OurusResult | null, inline: boolean): OurusResult | null {
+function thenDeleting(
+  ctx: CommandContext,
+  from: number,
+  to: number,
+  then: (ctx: CommandContext) => OurusResult | null,
+  inline: boolean,
+): OurusResult | null {
   const first = then(ctx.at(to));
   if (!first || !(first instanceof OurusSuccess)) return null;
   // (but the escapes of ours before it taken out, no longer needed, the text before it else as it was:
@@ -214,11 +281,27 @@ function thenDeleting(ctx: CommandContext, from: number, to: number, then: (ctx:
     if (!ours.length || !first.view.doc.text.startsWith(kept)) return null;
     gone = ours.length;
   }
-  if (inline && first.changes.some((c) => /[\r\n]/.test(c.insert ?? '') || /[\r\n]/.test(ctx.doc.text.slice(c.from, c.to ?? c.from)))) return null;
-  const deleted = deleteSelected(new CommandContext(first.view.withSelection({ anchor: from - gone, head: to - gone })));
+  if (
+    inline &&
+    first.changes.some(
+      (c) => /[\r\n]/.test(c.insert ?? '') || /[\r\n]/.test(ctx.doc.text.slice(c.from, c.to ?? c.from)),
+    )
+  )
+    return null;
+  const deleted = deleteSelected(
+    new CommandContext(first.view.withSelection({ anchor: from - gone, head: to - gone })),
+  );
   if (!deleted || !(deleted instanceof OurusSuccess)) return null;
   const map = (pos: number): number => mapPos(deleted.changes, pos, 1);
-  const view = deleted.view.withSelection({ anchor: map(first.view.selection.anchor), head: map(first.view.selection.head) });
+  const view = deleted.view.withSelection({
+    anchor: map(first.view.selection.anchor),
+    head: map(first.view.selection.head),
+  });
   const changes = composeChanges(ctx.doc.text, first.changes, deleted.changes);
-  return new OurusSuccess({ ...deleted, ...blockIdsDeclaredBy([first, deleted]), view: withRaisedLines(ctx, view, changes), changes });
+  return new OurusSuccess({
+    ...deleted,
+    ...blockIdsDeclaredBy([first, deleted]),
+    view: withRaisedLines(ctx, view, changes),
+    changes,
+  });
 }

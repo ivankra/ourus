@@ -109,5 +109,6 @@ export function atxHeadingText(tree: MdTree, leaf: MdBlockAt): MdInlineText {
 
 export const coreInlineText = {
   paragraph: (tree: MdTree, leaf: MdBlockAt): MdInlineText => paragraphText(tree, leaf),
-  heading: (tree: MdTree, leaf: MdBlockAt): MdInlineText => (leaf.block.attrs.setext ? paragraphText(tree, leaf, leaf.lastLine - 1) : atxHeadingText(tree, leaf)),
+  heading: (tree: MdTree, leaf: MdBlockAt): MdInlineText =>
+    leaf.block.attrs.setext ? paragraphText(tree, leaf, leaf.lastLine - 1) : atxHeadingText(tree, leaf),
 };

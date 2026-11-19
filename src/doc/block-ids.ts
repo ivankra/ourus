@@ -113,12 +113,25 @@ function ofNode(doc: OurusDoc, node: OurusNode, strays: Map<OurusNode, Reading>)
   const base = { syntax: 'caret', owner: node, implicit: false } as const;
   // a paragraph of nothing but a block id is one that didn't attach (one with text under it is one
   // paragraph, and no block id to Obsidian)
-  const lone = node.kind === 'paragraph' && text instanceof OurusProse && text.type === 'paragraph' ? reLoneBlockId.exec(text.text) : null;
+  const lone =
+    node.kind === 'paragraph' && text instanceof OurusProse && text.type === 'paragraph'
+      ? reLoneBlockId.exec(text.text)
+      : null;
   if (lone) {
     const reading = strayReading(doc, node, lone[2]!.length > 0, strays);
     strays.set(node, reading);
     const from = doc.posOf(node, 0);
-    out.push({ ...base, name: lone[1]!, from, to: from + 1 + lone[1]!.length, partFrom: node.startLine > 0 ? doc.mdTree.line(node.startLine - 1).to : from, partTo: doc.posOf(node, text.text.length), ownLine: true, carried: false, ...reading });
+    out.push({
+      ...base,
+      name: lone[1]!,
+      from,
+      to: from + 1 + lone[1]!.length,
+      partFrom: node.startLine > 0 ? doc.mdTree.line(node.startLine - 1).to : from,
+      partTo: doc.posOf(node, text.text.length),
+      ownLine: true,
+      carried: false,
+      ...reading,
+    });
     return out;
   }
   let line: number = node.textLastLine;
@@ -130,7 +143,18 @@ function ofNode(doc: OurusDoc, node: OurusNode, strays: Map<OurusNode, Reading>)
       const target = text instanceof OurusProse || b.partTo === text.text.length ? blockIdTargetOf(node) : null;
       // (on a line of its own under a block inside an item, which it looks written for: it names the item)
       const stray = ownLine && target && target !== node && target.kind === 'item' ? 'item' : null;
-      out.push({ ...base, name: b.name, from: doc.posOf(node, b.from), to: doc.posOf(node, b.to), partFrom: doc.posOf(node, b.partFrom, -1), partTo: doc.posOf(node, b.partTo), ownLine, carried: false, target, stray });
+      out.push({
+        ...base,
+        name: b.name,
+        from: doc.posOf(node, b.from),
+        to: doc.posOf(node, b.to),
+        partFrom: doc.posOf(node, b.partFrom, -1),
+        partTo: doc.posOf(node, b.partTo),
+        ownLine,
+        carried: false,
+        target,
+        stray,
+      });
       continue;
     }
     // a carried line, after its blank lines
@@ -139,13 +163,29 @@ function ofNode(doc: OurusDoc, node: OurusNode, strays: Map<OurusNode, Reading>)
     line += carried.blankLines + 1;
     const at = doc.mdTree.line(line);
     const from = at.to - carried.line.length;
-    out.push({ ...base, name: b.name, from, to: from + 1 + b.name.length, partFrom: before.to, partTo: at.to, ownLine: true, carried: true, target: blockIdTargetOf(node), stray: null });
+    out.push({
+      ...base,
+      name: b.name,
+      from,
+      to: from + 1 + b.name.length,
+      partFrom: before.to,
+      partTo: at.to,
+      ownLine: true,
+      carried: true,
+      target: blockIdTargetOf(node),
+      stray: null,
+    });
   }
   return out;
 }
 
 /** What Obsidian reads a block-id paragraph that didn't attach as (`BlockId.stray`), and names by it. */
-function strayReading(doc: OurusDoc, node: OurusNode, spaced: boolean, strays: ReadonlyMap<OurusNode, Reading>): Reading {
+function strayReading(
+  doc: OurusDoc,
+  node: OurusNode,
+  spaced: boolean,
+  strays: ReadonlyMap<OurusNode, Reading>,
+): Reading {
   if (spaced) return { stray: 'trailing-space', target: null };
   const tree = doc.mdTree;
   const line = tree.line(node.startLine);
@@ -161,7 +201,12 @@ function strayReading(doc: OurusDoc, node: OurusNode, spaced: boolean, strays: R
   if (!prev || prev.block.type === 'frontmatter') return { stray: 'nothing-above', target: null };
   // (a line under it in its container, or opening another there, `>`)
   const below = node.startLine + 1 < tree.lineCount ? tree.line(node.startLine + 1) : null;
-  if (below && below.containers.length >= line.containers.length && (!below.empty || below.containers.length > line.containers.length)) return { stray: 'block-below', target: null };
+  if (
+    below &&
+    below.containers.length >= line.containers.length &&
+    (!below.empty || below.containers.length > line.containers.length)
+  )
+    return { stray: 'block-below', target: null };
   if (prev.block.type === 'list') {
     const first = doc.nodeAtLine(prev.child(0).line);
     return { stray: 'whole-list', target: first ? { list: first } : null };

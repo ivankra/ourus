@@ -21,7 +21,21 @@
 import { join, resolve } from 'node:path';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { CASES_PER_GROUP, CLIPS, corpusHash, generatedStarts, htmlFailures, noteFailure, pasteFailures, readBaseline, recordUntriaged, staleBaseline, writeBaseline, type Found, type UntriagedCase } from './lib/index.ts';
+import {
+  CASES_PER_GROUP,
+  CLIPS,
+  corpusHash,
+  generatedStarts,
+  htmlFailures,
+  noteFailure,
+  pasteFailures,
+  readBaseline,
+  recordUntriaged,
+  staleBaseline,
+  writeBaseline,
+  type Found,
+  type UntriagedCase,
+} from './lib/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const examples = Number(process.env.CONSERVE_EXAMPLES ?? 2);
@@ -45,14 +59,20 @@ for (const s of starts) {
   // ---- html
   runs++;
   try {
-    note(htmlFailures(s.text, s.config), JSON.stringify(s.text), (group) => ({ check: 'html', group, text: s.text, config: s.config }));
+    note(htmlFailures(s.text, s.config), JSON.stringify(s.text), (group) => ({
+      check: 'html',
+      group,
+      text: s.text,
+      config: s.config,
+    }));
   } catch (e) {
     fails.push(`html threw: ${JSON.stringify(s.text)}: ${(e as Error).message.split('\n')[0]}`);
   }
   // ---- paste
   const view = OurusView.of(OurusDoc.parse(s.text, { config: s.config }));
   const carets = new Set<number>([0, s.text.length]);
-  for (let i = 0; i < s.text.length; i++) if (s.text[i] === '\n' || s.text[i - 1] === '\n' || i % 7 === 0) carets.add(i);
+  for (let i = 0; i < s.text.length; i++)
+    if (s.text[i] === '\n' || s.text[i - 1] === '\n' || i % 7 === 0) carets.add(i);
   for (const clip of Object.keys(CLIPS)) {
     for (const from of carets) {
       for (const over of [0, 5]) {
@@ -60,7 +80,15 @@ for (const s of starts) {
         runs++;
         const where = `${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${from}${over ? `-${to}` : ''}`;
         try {
-          note(pasteFailures(view, clip, from, to), where, (group) => ({ check: 'paste', group, text: s.text, config: s.config, clip, from, to }));
+          note(pasteFailures(view, clip, from, to), where, (group) => ({
+            check: 'paste',
+            group,
+            text: s.text,
+            config: s.config,
+            clip,
+            from,
+            to,
+          }));
         } catch (e) {
           fails.push(`paste ${clip} threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
         }
@@ -84,11 +112,14 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].runs - x[1].runs || (
 }
 for (const failure of fails) console.log(`FAIL ${failure}`);
 if (rose.length) console.log(`\nmore failures than the baseline: ${rose.join('; ')}`);
-if (baseline && !sameCorpus && !counted) console.log('\nthe corpus changed since the baseline: its counts are not held to it; CONSERVE_UPDATE=1 records them');
+if (baseline && !sameCorpus && !counted)
+  console.log('\nthe corpus changed since the baseline: its counts are not held to it; CONSERVE_UPDATE=1 records them');
 const stale = updating ? [] : staleBaseline(baseline, corpus, groups, counted, 'CONSERVE_UPDATE');
 for (const line of stale) console.log(`\n${line}`);
 if (updating) {
   writeBaseline(baselineFile, corpus, groups);
-  console.log(`baseline updated: ${baselineFile}; ${recordUntriaged('conserve', cases)} cases kept untriaged (test/bugs-untriaged.json)`);
+  console.log(
+    `baseline updated: ${baselineFile}; ${recordUntriaged('conserve', cases)} cases kept untriaged (test/bugs-untriaged.json)`,
+  );
 }
 process.exitCode = fails.length === 0 && rose.length === 0 && stale.length === 0 ? 0 : 1;

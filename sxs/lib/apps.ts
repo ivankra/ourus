@@ -15,7 +15,14 @@ export const appDirs = (): string[] =>
 
 /** Every app's driver, by its directory. */
 export async function drivers(): Promise<Map<string, Driver>> {
-  return new Map(await Promise.all(appDirs().map(async (dir) => [dir, ((await import(new URL(`${dir}/driver.ts`, here).href)) as { driver: Driver }).driver] as const)));
+  return new Map(
+    await Promise.all(
+      appDirs().map(
+        async (dir) =>
+          [dir, ((await import(new URL(`${dir}/driver.ts`, here).href)) as { driver: Driver }).driver] as const,
+      ),
+    ),
+  );
 }
 
 /** What a group stands for: the block apps, the text apps, the block apps without paragraphs (outliners), those with them. */
@@ -41,11 +48,18 @@ export async function resolveApps(spec: string): Promise<{ apps: string[]; ourus
     byName.set(d.shortId.toLowerCase(), [dir]);
   }
   byName.set('all', [...all.keys()]);
-  for (const [group, has] of Object.entries(GROUPS)) byName.set(group, [...all].filter(([, d]) => has(d)).map(([dir]) => dir));
+  for (const [group, has] of Object.entries(GROUPS))
+    byName.set(
+      group,
+      [...all].filter(([, d]) => has(d)).map(([dir]) => dir),
+    );
   const picked = new Set<string>();
   const unknown: string[] = [];
   let ourus = false;
-  for (const raw of spec.split(',').map((s) => s.trim()).filter(Boolean)) {
+  for (const raw of spec
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     const out = raw.startsWith('-');
     const name = (out ? raw.slice(1) : raw).toLowerCase();
     if (OURUS.has(name)) {

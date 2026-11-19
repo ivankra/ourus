@@ -24,7 +24,8 @@ export function clipboardHtml(markdown: string, flavor: OurusConfig['flavor']): 
   const text = clipboardSource(lines, { flavor }).join('\n');
   const tree = MdTree.parse(text, MdFlavor.named(flavor));
   if (tree.root.children.every((b) => b.type === 'paragraph')) return null;
-  const noElement = (b: MdBlock): boolean => ['math_block', 'comment_block', 'frontmatter'].includes(b.type) || !!b.attrs.callout || b.children.some(noElement);
+  const noElement = (b: MdBlock): boolean =>
+    ['math_block', 'comment_block', 'frontmatter'].includes(b.type) || !!b.attrs.callout || b.children.some(noElement);
   if (noElement(tree.root)) return null;
   const html = tree.renderHtml().trim();
   return html === '' ? null : html;

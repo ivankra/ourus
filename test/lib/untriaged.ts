@@ -11,10 +11,21 @@ import type { OurusCommand } from '../../src/commands/index.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
 import { allNodes } from './drawn-states.ts';
-import { commandFailures, copyPasteFailures, cutPasteFailures, htmlFailures, pasteFailures, sessionFailures } from './report-checks.ts';
+import {
+  commandFailures,
+  copyPasteFailures,
+  cutPasteFailures,
+  htmlFailures,
+  pasteFailures,
+  sessionFailures,
+} from './report-checks.ts';
 
 /** A case kept untriaged: the note, its config, what was played on it, and the group it failed in. */
-export type UntriagedCase = { readonly group: string; readonly text: string; readonly config: Record<string, unknown> } & (
+export type UntriagedCase = {
+  readonly group: string;
+  readonly text: string;
+  readonly config: Record<string, unknown>;
+} & (
   | { readonly check: 'session'; readonly caret: number; readonly actions: readonly string[] }
   | { readonly check: 'command'; readonly pos: number; readonly command: OurusCommand }
   /** `node`: the node's index in document order (`allNodes`). */
@@ -42,7 +53,11 @@ const BUGS = join(import.meta.dirname, '..', 'bugs.ts');
 /** `value` as JSON with every object's keys sorted: the same case, the same string. */
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${canonical((value as Record<string, unknown>)[k])}`).join(',')}}`;
+  if (value && typeof value === 'object')
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical((value as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
   return JSON.stringify(value);
 }
 
@@ -101,7 +116,11 @@ export function readUntriaged(): UntriagedCase[] {
   } catch {
     return [];
   }
-  return Object.values(file).flatMap((groups) => Object.entries(groups).flatMap(([group, cases]) => cases.map(({ id: _, ...c }: Record<string, unknown>) => ({ ...c, group }) as UntriagedCase)));
+  return Object.values(file).flatMap((groups) =>
+    Object.entries(groups).flatMap(([group, cases]) =>
+      cases.map(({ id: _, ...c }: Record<string, unknown>) => ({ ...c, group }) as UntriagedCase),
+    ),
+  );
 }
 
 /**
@@ -119,7 +138,13 @@ export function writeUntriaged(cases: readonly UntriagedCase[]): void {
   }
   const sorted = <T>(m: Map<string, T>): [string, T][] => [...m].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   const reports = sorted(byReport).map(([report, groups]) => {
-    const inner = sorted(groups).map(([group, lines]) => `    ${JSON.stringify(group)}: [\n${[...lines].sort().map((l) => `      ${l}`).join(',\n')}\n    ]`);
+    const inner = sorted(groups).map(
+      ([group, lines]) =>
+        `    ${JSON.stringify(group)}: [\n${[...lines]
+          .sort()
+          .map((l) => `      ${l}`)
+          .join(',\n')}\n    ]`,
+    );
     return `  ${JSON.stringify(report)}: {\n${inner.join(',\n')}\n  }`;
   });
   writeFileSync(FILE, reports.length ? `{\n${reports.join(',\n')}\n}\n` : '{}\n');
@@ -134,7 +159,9 @@ export function recordUntriaged(report: string, found: readonly UntriagedCase[])
   const all = readUntriaged();
   const filed = filedCases();
   const others = all.filter((c) => REPORT_OF[c.check] !== report);
-  const kept = all.filter((c) => REPORT_OF[c.check] === report && !filed.has(caseId(c)) && untriagedFailures(c).includes(c.group));
+  const kept = all.filter(
+    (c) => REPORT_OF[c.check] === report && !filed.has(caseId(c)) && untriagedFailures(c).includes(c.group),
+  );
   const seen = new Set(kept.map((c) => JSON.stringify(c)));
   const per = new Map<string, number>();
   for (const c of kept) per.set(c.group, (per.get(c.group) ?? 0) + 1);

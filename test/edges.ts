@@ -25,7 +25,13 @@ interface Kind {
   readonly list?: string;
 }
 
-const kind = (name: string, text: string, startAt: string, list?: string, endAt?: string): Kind => ({ name, text, start: text.indexOf(startAt), end: endAt ? text.indexOf(endAt) + endAt.length : text.length, ...(list && { list }) });
+const kind = (name: string, text: string, startAt: string, list?: string, endAt?: string): Kind => ({
+  name,
+  text,
+  start: text.indexOf(startAt),
+  end: endAt ? text.indexOf(endAt) + endAt.length : text.length,
+  ...(list && { list }),
+});
 
 export const KINDS: readonly Kind[] = [
   kind('paragraph', 'para', 'para'),
@@ -63,7 +69,8 @@ function pair(a: Kind, b: Kind): { text: string; deleteAt: number; backspaceAt: 
   return { text, deleteAt: a.end, backspaceAt: a.text.length + sep.length + b.start };
 }
 
-const caretDraw = (text: string, at: number): string => `${text.slice(0, at)}┃${text.slice(at)}`.replace(/\n$/, '').replace(/\n/g, '⏎');
+const caretDraw = (text: string, at: number): string =>
+  `${text.slice(0, at)}┃${text.slice(at)}`.replace(/\n$/, '').replace(/\n/g, '⏎');
 
 function outcome(text: string, a: Kind, b: Kind, result: unknown): Outcome {
   if (result instanceof OurusRejected) return { kind: 'refused', detail: result.detail ?? result.reason };
@@ -86,7 +93,8 @@ function outcome(text: string, a: Kind, b: Kind, result: unknown): Outcome {
   if (out.length === text.length - 1 && text.replace(/\n\n/, '\n') === out) return { kind: 'blank', text: drawn };
   // the lower block's markup gone, its text where it was
   const count = (t: string, of: string): number => t.split(of).length - 1;
-  if (out.includes(lower) && count(out, b.text) < count(text, b.text) && out.length < text.length) return { kind: 'peel', text: drawn };
+  if (out.includes(lower) && count(out, b.text) < count(text, b.text) && out.length < text.length)
+    return { kind: 'peel', text: drawn };
   return { kind: 'other', text: drawn };
 }
 
@@ -100,15 +108,33 @@ export function survey(config: Record<string, unknown> = {}): Cell[] {
       const d = outcome(text, a, b, del);
       const k = outcome(text, a, b, back);
       const textOf = (r: unknown): string | null => (r instanceof OurusSuccess ? r.view.doc.text : null);
-      const symmetric = d.kind === k.kind && (d.kind === 'refused' || d.kind === 'host' || d.kind === 'caret' || d.kind === 'failed' ? true : textOf(del) === textOf(back));
-      cells.push({ above: a.name, below: b.name, start: text.replace(/\n$/, '').replace(/\n/g, '⏎'), delete: d, backspace: k, symmetric });
+      const symmetric =
+        d.kind === k.kind &&
+        (d.kind === 'refused' || d.kind === 'host' || d.kind === 'caret' || d.kind === 'failed'
+          ? true
+          : textOf(del) === textOf(back));
+      cells.push({
+        above: a.name,
+        below: b.name,
+        start: text.replace(/\n$/, '').replace(/\n/g, '⏎'),
+        delete: d,
+        backspace: k,
+        symmetric,
+      });
     }
   }
   return cells;
 }
 
 const show = (o: Outcome): string => {
-  const what = o.kind === 'refused' ? `refused (${o.detail})` : o.kind === 'host' ? `host (${o.detail})` : o.kind === 'failed' ? `**fails to write**` : o.kind;
+  const what =
+    o.kind === 'refused'
+      ? `refused (${o.detail})`
+      : o.kind === 'host'
+        ? `host (${o.detail})`
+        : o.kind === 'failed'
+          ? `**fails to write**`
+          : o.kind;
   return o.text !== undefined ? `${what}: \`${o.text}\`` : what;
 };
 
@@ -124,20 +150,39 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const probes = args.find((a) => a.startsWith('--probes='))?.slice('--probes='.length);
   if (probes) {
     const block = (s: string): string => '```markdown\n' + s.replace(/⏎/g, '\n') + '\n```';
-    const yaml = '```yaml\ntags: common' + Object.entries(config).map(([k, v]) => `\n${k}: ${v}`).join('') + '\n```';
-    const out = cells.filter((c) => !c.symmetric).flatMap((c, i) => {
-      const a = KINDS.find((k) => k.name === c.above)!;
-      const b = KINDS.find((k) => k.name === c.below)!;
-      const { text, deleteAt, backspaceAt } = pair(a, b);
-      const draw = (at: number): string => block(caretDraw(text, at));
-      return [`## E${i + 1}d\n\n${c.above} / ${c.below}: Delete\n\n${yaml}\n\n${draw(deleteAt)}\n\n> deleteContentForward\n`, `## E${i + 1}b\n\n${c.above} / ${c.below}: Backspace\n\n${yaml}\n\n${draw(backspaceAt)}\n\n> deleteContentBackward\n`];
-    });
+    const yaml =
+      '```yaml\ntags: common' +
+      Object.entries(config)
+        .map(([k, v]) => `\n${k}: ${v}`)
+        .join('') +
+      '\n```';
+    const out = cells
+      .filter((c) => !c.symmetric)
+      .flatMap((c, i) => {
+        const a = KINDS.find((k) => k.name === c.above)!;
+        const b = KINDS.find((k) => k.name === c.below)!;
+        const { text, deleteAt, backspaceAt } = pair(a, b);
+        const draw = (at: number): string => block(caretDraw(text, at));
+        return [
+          `## E${i + 1}d\n\n${c.above} / ${c.below}: Delete\n\n${yaml}\n\n${draw(deleteAt)}\n\n> deleteContentForward\n`,
+          `## E${i + 1}b\n\n${c.above} / ${c.below}: Backspace\n\n${yaml}\n\n${draw(backspaceAt)}\n\n> deleteContentBackward\n`,
+        ];
+      });
     writeFileSync(probes, `# Boundary probes\n\n${out.join('\n')}`);
     console.log(`${out.length} probes written to ${probes}`);
   } else if (args.includes('--json')) console.log(JSON.stringify(shown, null, 1));
   else if (args.includes('--matrix')) {
     // a row an upper kind, a column a lower kind; a cell `Delete / Backspace`, bold where they differ
-    const short: Record<Outcome['kind'], string> = { join: 'join', peel: 'peel', blank: 'blank line', caret: 'caret', refused: 'refuse', host: 'host', failed: 'FAIL', other: 'other' };
+    const short: Record<Outcome['kind'], string> = {
+      join: 'join',
+      peel: 'peel',
+      blank: 'blank line',
+      caret: 'caret',
+      refused: 'refuse',
+      host: 'host',
+      failed: 'FAIL',
+      other: 'other',
+    };
     const cellOf = (c: Cell): string => {
       const d = short[c.delete.kind];
       const b = short[c.backspace.kind];
@@ -145,12 +190,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     };
     console.log(`| above ↓ below → | ${KINDS.map((k) => k.name).join(' | ')} |`);
     console.log(`|---|${KINDS.map(() => '---').join('|')}|`);
-    for (const a of KINDS) console.log(`| **${a.name}** | ${KINDS.map((b) => cellOf(cells.find((c) => c.above === a.name && c.below === b.name)!)).join(' | ')} |`);
-  }
-  else {
-    console.log(`${cells.length} pairs, ${cells.filter((c) => !c.symmetric).length} asymmetric${Object.keys(config).length ? ` (${Object.entries(config).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''}\n`);
-    console.log('| Above | Below | Start | Delete at the upper\'s end | Backspace at the lower\'s start | Same |');
+    for (const a of KINDS)
+      console.log(
+        `| **${a.name}** | ${KINDS.map((b) => cellOf(cells.find((c) => c.above === a.name && c.below === b.name)!)).join(' | ')} |`,
+      );
+  } else {
+    console.log(
+      `${cells.length} pairs, ${cells.filter((c) => !c.symmetric).length} asymmetric${
+        Object.keys(config).length
+          ? ` (${Object.entries(config)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(', ')})`
+          : ''
+      }\n`,
+    );
+    console.log("| Above | Below | Start | Delete at the upper's end | Backspace at the lower's start | Same |");
     console.log('|---|---|---|---|---|---|');
-    for (const c of shown) console.log(`| ${c.above} | ${c.below} | \`${c.start}\` | ${show(c.delete)} | ${show(c.backspace)} | ${c.symmetric ? 'yes' : '**no**'} |`);
+    for (const c of shown)
+      console.log(
+        `| ${c.above} | ${c.below} | \`${c.start}\` | ${show(c.delete)} | ${show(c.backspace)} | ${c.symmetric ? 'yes' : '**no**'} |`,
+      );
   }
 }

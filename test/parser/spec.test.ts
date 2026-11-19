@@ -18,14 +18,25 @@ interface Example {
   html: string;
 }
 
-const load = (name: string): Example[] => JSON.parse(readFileSync(new URL(`../fixtures/${name}.json`, import.meta.url), 'utf8'));
+const load = (name: string): Example[] =>
+  JSON.parse(readFileSync(new URL(`../fixtures/${name}.json`, import.meta.url), 'utf8'));
 
 const gfmExtensions: Record<string, MdExtension> = { table, strikethrough, autolink, tagfilter, footnotes, tasklist };
 const flavors = new Map<string, MdFlavor>();
 function gfmWith(names: readonly string[]): MdFlavor {
   const key = [...new Set(names)].sort().join(' ');
   let f = flavors.get(key);
-  if (!f) flavors.set(key, (f = defineFlavor(`gfm (${key})`, [gfmCore, ...key.split(' ').filter(Boolean).map((n) => gfmExtensions[n]!)])));
+  if (!f)
+    flavors.set(
+      key,
+      (f = defineFlavor(`gfm (${key})`, [
+        gfmCore,
+        ...key
+          .split(' ')
+          .filter(Boolean)
+          .map((n) => gfmExtensions[n]!),
+      ])),
+    );
   return f;
 }
 
@@ -47,8 +58,16 @@ function run(examples: readonly Example[], flavorOf: (ex: Example) => MdFlavor):
     } catch (e) {
       got = `threw ${(e as Error).stack}`;
     }
-    const ok = ex.html.trim() === '<IGNORE>' ? !got.startsWith('threw') : disabled ? normalize(got) === normalize(ex.html) : got === ex.html;
-    if (!ok) failures.push(`#${ex.example} (${ex.section}) ${JSON.stringify(ex.markdown)}\n  want ${JSON.stringify(ex.html)}\n  got  ${JSON.stringify(got)}`);
+    const ok =
+      ex.html.trim() === '<IGNORE>'
+        ? !got.startsWith('threw')
+        : disabled
+          ? normalize(got) === normalize(ex.html)
+          : got === ex.html;
+    if (!ok)
+      failures.push(
+        `#${ex.example} (${ex.section}) ${JSON.stringify(ex.markdown)}\n  want ${JSON.stringify(ex.html)}\n  got  ${JSON.stringify(got)}`,
+      );
   }
   return failures;
 }
@@ -56,7 +75,11 @@ function run(examples: readonly Example[], flavorOf: (ex: Example) => MdFlavor):
 function check(name: string, examples: readonly Example[], flavorOf: (ex: Example) => MdFlavor): void {
   test(`${name}: ${examples.length} examples`, () => {
     const failures = run(examples, flavorOf);
-    assert.equal(failures.length, 0, `${failures.length} of ${examples.length} fail:\n${failures.slice(0, 10).join('\n')}`);
+    assert.equal(
+      failures.length,
+      0,
+      `${failures.length} of ${examples.length} fail:\n${failures.slice(0, 10).join('\n')}`,
+    );
   });
 }
 

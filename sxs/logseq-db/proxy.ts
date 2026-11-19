@@ -14,10 +14,16 @@ import { withBody, type ProxyRequest, type ProxyResponse, type ProxyRules } from
 
 /** The bundle with the statement added, or null if what it is found by isn't there. */
 export function expose(js: string): string | null {
-  const invoke = /([\w$]+)=function\(a,b\)\{try\{return \$APP\.[\w$]+\.V\([\w$]+,a,b\)\}catch\(c\)\{a=c;if\(\$APP\.[\w$]+\.F\("db-worker has not been initialized"/.exec(js);
-  const keyword = /([\w$]+)=new \$APP\.F\("thread-api","undo-redo-clear-history","thread-api\/undo-redo-clear-history"/.exec(js)?.[1];
+  const invoke =
+    /([\w$]+)=function\(a,b\)\{try\{return \$APP\.[\w$]+\.V\([\w$]+,a,b\)\}catch\(c\)\{a=c;if\(\$APP\.[\w$]+\.F\("db-worker has not been initialized"/.exec(
+      js,
+    );
+  const keyword =
+    /([\w$]+)=new \$APP\.F\("thread-api","undo-redo-clear-history","thread-api\/undo-redo-clear-history"/.exec(js)?.[1];
   if (!invoke || !keyword) return null;
-  const call = new RegExp(`${invoke[1]!.replace(/\$/g, '\\$')}\\(${keyword.replace(/\$/g, '\\$')},\\$APP\\.([\\w$]+)\\(\\[e\\],0\\)\\)`).exec(js);
+  const call = new RegExp(
+    `${invoke[1]!.replace(/\$/g, '\\$')}\\(${keyword.replace(/\$/g, '\\$')},\\$APP\\.([\\w$]+)\\(\\[e\\],0\\)\\)`,
+  ).exec(js);
   if (!call) return null;
   const statement = `globalThis.__ourusLogseq={clearHistory:(r)=>${invoke[1]}(${keyword},$APP.${call[1]}([r],0))};`;
   return js.slice(0, invoke.index) + statement + js.slice(invoke.index);

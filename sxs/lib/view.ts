@@ -46,7 +46,10 @@ const FOOTER = /\n⟦folded (none|\d+(?: \d+)*); zoom (none|\d+)⟧$/;
  * makes rows (a text's line is its row; `byLine`: a block drawing maps them once it has read its
  * blocks), or a stored run's last line, rows already.
  */
-export function splitView(drawn: string, rowOf: (line: number) => number = (line) => line): { drawn: string; view?: RowView; byLine?: true } {
+export function splitView(
+  drawn: string,
+  rowOf: (line: number) => number = (line) => line,
+): { drawn: string; view?: RowView; byLine?: true } {
   const m = FOOTER.exec(drawn);
   if (m) {
     const folded = m[1] === 'none' ? [] : m[1]!.split(' ').map((n) => Number(n) - 1);
@@ -65,10 +68,15 @@ export function splitView(drawn: string, rowOf: (line: number) => number = (line
     return line + selected;
   });
   if (!folded.length && zoom === null) return { drawn };
-  return { drawn: lines.join('\n'), view: { folded: folded.map(rowOf).sort((a, b) => a - b), zoom: zoom === null ? null : rowOf(zoom) }, byLine: true };
+  return {
+    drawn: lines.join('\n'),
+    view: { folded: folded.map(rowOf).sort((a, b) => a - b), zoom: zoom === null ? null : rowOf(zoom) },
+    byLine: true,
+  };
 }
 
-export const sameView = (a: RowView | undefined, b: RowView | undefined): boolean => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+export const sameView = (a: RowView | undefined, b: RowView | undefined): boolean =>
+  JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 /**
  * A block app's view as its reader sees it (ourus's `zoomFolded`, by blocks): the folded blocks with
@@ -76,8 +84,12 @@ export const sameView = (a: RowView | undefined, b: RowView | undefined): boolea
  * its ancestors, hides nothing), and the zoom.
  */
 export function shownInBlocks(blocks: readonly { readonly depth: number }[], v: RowView): RowView {
-  const inside = (i: number, z: number): boolean => i > z && blocks.slice(z + 1, i + 1).every((b) => b.depth > blocks[z]!.depth);
-  const folded = [...new Set(v.folded)].filter((i) => i < blocks.length && (blocks[i + 1]?.depth ?? -1) > blocks[i]!.depth && (v.zoom === null || inside(i, v.zoom)));
+  const inside = (i: number, z: number): boolean =>
+    i > z && blocks.slice(z + 1, i + 1).every((b) => b.depth > blocks[z]!.depth);
+  const folded = [...new Set(v.folded)].filter(
+    (i) =>
+      i < blocks.length && (blocks[i + 1]?.depth ?? -1) > blocks[i]!.depth && (v.zoom === null || inside(i, v.zoom)),
+  );
   return { folded: folded.sort((a, b) => a - b), zoom: v.zoom };
 }
 

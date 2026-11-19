@@ -16,12 +16,15 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
   const now = next.node(zoom);
   if (!now && !removed) return 'the zoom root went';
   if (now && !removed) {
-    if ((now.parent?.id ?? null) !== (root.parent?.id ?? null) || now.index !== root.index) return 'the zoom root moved';
+    if ((now.parent?.id ?? null) !== (root.parent?.id ?? null) || now.index !== root.index)
+      return 'the zoom root moved';
   }
   const inside = root.subtreeIds();
   const insideNow = now ? now.subtreeIds() : new Set<number>();
   const textless = new Set<number>();
-  if (removed) for (let p = root.parent; p && p.kind !== 'root' && !doc.textOf(p) && !next.node(p.id); p = p.parent) textless.add(p.id);
+  if (removed)
+    for (let p = root.parent; p && p.kind !== 'root' && !doc.textOf(p) && !next.node(p.id); p = p.parent)
+      textless.add(p.id);
   let escape: string | null = null;
   // (side by side: under a node and its counterpart, the children both hold as they were, the same
   // persistent nodes in the same places from either end, are the same nodes, ids, kinds and texts: not
@@ -41,8 +44,10 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
     if (escape) return;
     if (n.kind !== 'root' && !inside.has(n.id) && !textless.has(n.id)) {
       if (!m) escape = `node ${n.id}, outside the zoom, went`;
-      else if ((m.parent?.id ?? null) !== (n.parent?.id ?? null)) escape = `node ${n.id}, outside the zoom, has another parent`;
-      else if (m.kind !== n.kind || next.textOf(m)?.text !== doc.textOf(n)?.text) escape = `node ${n.id}, outside the zoom, changed`;
+      else if ((m.parent?.id ?? null) !== (n.parent?.id ?? null))
+        escape = `node ${n.id}, outside the zoom, has another parent`;
+      else if (m.kind !== n.kind || next.textOf(m)?.text !== doc.textOf(n)?.text)
+        escape = `node ${n.id}, outside the zoom, changed`;
     } else if (inside.has(n.id) && m && !insideNow.has(n.id)) escape = `node ${n.id} left the zoom`;
     const [from, to] = middle(n, m);
     // (the children outside, in the changed middle, in the order they were: none swapped)
@@ -56,9 +61,11 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
         return ids;
       };
       const tail = n.persistentNode.children.length - to;
-      if (kept(n, from, to).join() !== kept(m, from, m.persistentNode.children.length - tail).join()) escape = `the nodes under node ${n.id}, outside the zoom, changed order`;
+      if (kept(n, from, to).join() !== kept(m, from, m.persistentNode.children.length - tail).join())
+        escape = `the nodes under node ${n.id}, outside the zoom, changed order`;
     }
-    for (let k = from; k < to && !escape; k++) visit(n.child(k), counterpart(next, m, k, n.persistentNode.children[k]!.id));
+    for (let k = from; k < to && !escape; k++)
+      visit(n.child(k), counterpart(next, m, k, n.persistentNode.children[k]!.id));
   };
   visit(doc.rootNode, next.rootNode);
   if (escape) return escape;
@@ -75,8 +82,10 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
   const outside = made(next.rootNode, doc.rootNode);
   if (outside) return outside;
   if (removed || !now) return null;
-  if (doc.text.slice(0, doc.markdownStart(root)) !== next.text.slice(0, next.markdownStart(now))) return 'the text before the zoom root changed';
-  if (doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!) !== next.text.slice(next.mdTree.ends[next.coverEnd(now)]!)) return 'the text after the zoom changed';
+  if (doc.text.slice(0, doc.markdownStart(root)) !== next.text.slice(0, next.markdownStart(now)))
+    return 'the text before the zoom root changed';
+  if (doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!) !== next.text.slice(next.mdTree.ends[next.coverEnd(now)]!))
+    return 'the text after the zoom changed';
   // (a node that is no item is alone, as in a list of its own: made one, the root or an ancestor
   // mustn't join its neighbours' list, nor one leave its list by becoming none)
   // (by its count and its first and last items: every node outside the root keeps its id and parent,
@@ -93,10 +102,20 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
     };
     return [list.children.length, at(0), at(list.children.length - 1)];
   };
-  for (let a: OurusNode | null = root, b: OurusNode | null = now; a && b && a.kind !== 'root'; a = a.parent, b = b.parent) {
+  for (
+    let a: OurusNode | null = root, b: OurusNode | null = now;
+    a && b && a.kind !== 'root';
+    a = a.parent, b = b.parent
+  ) {
     const [itemsA, itemsB] = [items(doc, a), items(next, b)];
     if (itemsA.join() !== itemsB.join()) return `the list node ${a.id} is an item of changed its items`;
-    if (a.kind === 'item' && b.kind === 'item' && itemsA[0]! > 1 && doc.listOf(a)?.block.attrs.tight !== next.listOf(b)?.block.attrs.tight) return `the list node ${a.id} is an item of changed its tightness`;
+    if (
+      a.kind === 'item' &&
+      b.kind === 'item' &&
+      itemsA[0]! > 1 &&
+      doc.listOf(a)?.block.attrs.tight !== next.listOf(b)?.block.attrs.tight
+    )
+      return `the list node ${a.id} is an item of changed its tightness`;
   }
   return null;
 }

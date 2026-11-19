@@ -60,7 +60,8 @@ interface Item {
 const FENCE = /^(`{3,}|~{3,})([^`\n]*)\n([\s\S]*)\n\1$/;
 
 /** The fence a code rem reads back with (it keeps none): Markdown's, the shortest run of backticks, three or more, longer than any in the code. */
-const fenceFor = (code: string): string => '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
+const fenceFor = (code: string): string =>
+  '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
 
 /**
  * A block's canonical text as a rem, and how many characters of it the rem's attributes took; a number
@@ -68,7 +69,18 @@ const fenceFor = (code: string): string => '`'.repeat(Math.max(3, ...[...code.ma
  */
 function toItem(depth: number, text: string, free = false): Item & { prefix: number; cut?: number } {
   const code = FENCE.exec(text);
-  if (code) return { depth, content: code[3]!, todo: false, done: false, heading: 0, numbered: false, code: true, free, prefix: code[1]!.length + code[2]!.length + 1 };
+  if (code)
+    return {
+      depth,
+      content: code[3]!,
+      todo: false,
+      done: false,
+      heading: 0,
+      numbered: false,
+      code: true,
+      free,
+      prefix: code[1]!.length + code[2]!.length + 1,
+    };
   const numbered = /^\d{1,9}\. /.exec(text);
   const after = numbered ? text.slice(numbered[0].length) : text;
   const task = /^\[([ xX])\](?: |$)/.exec(after);
@@ -83,7 +95,18 @@ function toItem(depth: number, text: string, free = false): Item & { prefix: num
   const hash = !literal && prefix === (numbered?.[0].length ?? 0) && /^\\#/.test(content);
   if (hash) content = content.slice(1);
   const cut = literal ? prefix + literal[1]!.length : hash ? prefix : undefined;
-  return { depth, content, todo: !!task, done: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, code: false, free, prefix, ...(cut !== undefined && { cut }) };
+  return {
+    depth,
+    content,
+    todo: !!task,
+    done: !!task && task[1] !== ' ',
+    heading: heading?.[1]!.length ?? 0,
+    numbered: !!numbered,
+    code: false,
+    free,
+    prefix,
+    ...(cut !== undefined && { cut }),
+  };
 }
 
 /** A rem's canonical text, and the length of the prefix its attributes stand for: its number `number` where it is numbered. */
@@ -92,12 +115,19 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
     const fence = fenceFor(it.content);
     return { text: `${fence}\n${it.content}\n${fence}`, prefix: fence.length + 1 };
   }
-  const prefix = (number !== null ? `${number}. ` : '') + (it.todo ? (it.done ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
+  const prefix =
+    (number !== null ? `${number}. ` : '') +
+    (it.todo ? (it.done ? '[x] ' : '[ ] ') : '') +
+    (it.heading ? '#'.repeat(it.heading) + ' ' : '');
   const plain = !prefix || prefix === `${number}. `;
   const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
   // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
   const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.content);
-  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : hash ? '\\' + it.content : it.content;
+  const content = literal
+    ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length)
+    : hash
+      ? '\\' + it.content
+      : it.content;
   const cut = literal ? literal[0].length : hash ? 0 : undefined;
   return { text: prefix + content, prefix: prefix.length, ...(cut !== undefined && { cut }) };
 }
@@ -112,7 +142,8 @@ export interface Setup {
 }
 
 /** A free block's heading level, if it is a heading (0: a paragraph or an atom). */
-const freeLevel = (b: Block): number => (b.free ? (/^(?:\d{1,9}\. )?(?:\[[ xX]\] )?(#{1,6}) /.exec(b.text)?.[1]!.length ?? 0) : 0);
+const freeLevel = (b: Block): number =>
+  b.free ? (/^(?:\d{1,9}\. )?(?:\[[ xX]\] )?(#{1,6}) /.exec(b.text)?.[1]!.length ?? 0) : 0;
 
 /**
  * An outline as a document without bullets holds it: what a free block owns in ourus's outline (a
@@ -156,7 +187,10 @@ export function own(o: Outline, listParent: OurusConfig['listParent'] = 'paragra
       const depth = b.depth + headings.length;
       if (level) headings.push(level);
       // (an atom owns no list: a code block, a thematic break; but under `block`; and nothing under `container`)
-      else paragraph = listParent === 'block' || (listParent === 'paragraph' && !FENCE.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text));
+      else
+        paragraph =
+          listParent === 'block' ||
+          (listParent === 'paragraph' && !FENCE.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text));
       return depth === b.depth ? b : { ...b, depth };
     }
     const depth = b.depth + headings.length + (paragraph ? 1 : 0);
@@ -173,11 +207,13 @@ export function own(o: Outline, listParent: OurusConfig['listParent'] = 'paragra
 export function bulletless(outline: Outline): string | undefined {
   // a heading with no text, `#` alone, is a rem whose text is `#` (a font size needs a heading's text):
   // it owns no section, and what its section holds is the document's (Regression168)
-  if (outline.blocks.some((b) => b.free && /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), a rem of that text, owning no section';
+  if (outline.blocks.some((b) => b.free && /^#{1,6}$/.test(b.text)))
+    return 'heading with no text (# alone), a rem of that text, owning no section';
   const o = lift(outline);
   for (const [i, b] of o.blocks.entries()) {
     if (b.free && b.depth > 0) return 'paragraph inside an item (a rem there shows a bullet)';
-    if (b.free && (o.blocks[i + 1]?.depth ?? -1) > b.depth) return 'free block with children (a rem with children shows a bullet)';
+    if (b.free && (o.blocks[i + 1]?.depth ?? -1) > b.depth)
+      return 'free block with children (a rem with children shows a bullet)';
   }
   return undefined;
 }
@@ -234,7 +270,12 @@ export function remnoteDriver(setup: Setup): Driver {
       pastePlain: 'Control+Shift+v',
       undo: 'Control+z',
       redo: 'Control+y',
-      ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+      ...Object.fromEntries(
+        Object.entries(MOTIONS).flatMap(([m, k]) => [
+          [`cursor${m}`, k],
+          [`select${m}`, `Shift+${k}`],
+        ]),
+      ),
     },
     emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'deleteSubtree'],
     // headings and to-dos are a rem's attributes, with no boundary in its text; a code rem's fences are
@@ -286,41 +327,56 @@ export function remnoteDriver(setup: Setup): Driver {
       // without bullets a document is a flat run of rems, a paragraph one, each item one: a list after a
       // paragraph is no rem's, a move passes one rem (Lists1, Lists5, Lists9)
       // and a heading is one rem, owning nothing: it moves alone (MoveUp3)
-      ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const, headings: 'block' as const } : {}),
+      ...(setup.bulletless
+        ? {
+            enterOnEmptyItem: 'exit' as const,
+            listParent: 'container' as const,
+            listMoves: 'item' as const,
+            headings: 'block' as const,
+          }
+        : {}),
     },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
     drops: ['moveSubtree'],
     holds(doc) {
       const o = doc as Outline;
       // (blocks are selected by Shift-Down from the first, which takes the parent in past a deeper one)
-      if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1) return 'blocks selected at two depths: Shift-Down takes their parent in';
+      if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1)
+        return 'blocks selected at two depths: Shift-Down takes their parent in';
       if (setup.bulletless) {
         const no = bulletless(o);
         if (no) return no;
       }
       // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
-      if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which RemNote holds as the text #';
+      if (o.blocks.some((b) => /^#{1,6}$/.test(b.text)))
+        return 'heading with no text (# alone), which RemNote holds as the text #';
       // a checkbox alone, `[x]` with nothing after it, is no task in Markdown: RemNote holds it as a done to-do, `[x] ` (Regression242)
-      if (o.blocks.some((b) => /^\[[ xX]\]$/.test(b.text))) return 'text of a checkbox alone ([x]), which RemNote holds as an empty to-do';
+      if (o.blocks.some((b) => /^\[[ xX]\]$/.test(b.text)))
+        return 'text of a checkbox alone ([x]), which RemNote holds as an empty to-do';
       // zoomed, the root is the page's title, which the editor tree doesn't focus as a rem of its own;
       // and a rem without a bullet doesn't keep a collapse
-      if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return 'the caret in the zoom root, the page\'s title';
-      if (o.view && o.view.zoom !== null && o.selected?.includes(o.view.zoom)) return 'the zoom root selected as a block, the page\'s title';
+      if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom)
+        return "the caret in the zoom root, the page's title";
+      if (o.view && o.view.zoom !== null && o.selected?.includes(o.view.zoom))
+        return "the zoom root selected as a block, the page's title";
       if (o.view?.folded.some((i) => o.blocks[i]!.free)) return 'a fold on a rem without a bullet';
       // (without bullets, what a free block owns is beside it: zoomed into, it shows none of it)
-      if (setup.bulletless && o.view && o.view.zoom !== null && o.blocks[o.view.zoom]!.free) return 'a zoom into a rem without a bullet, what it owns its siblings';
+      if (setup.bulletless && o.view && o.view.zoom !== null && o.blocks[o.view.zoom]!.free)
+        return 'a zoom into a rem without a bullet, what it owns its siblings';
       const fenced = o.blocks.map((b) => /^(`{3,}|~{3,})/.test(b.text) && b.text.includes('\n'));
       if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "code block's fences that don't match";
       const fences = o.blocks.map((b) => FENCE.exec(b.text));
       if (fences.some((f) => f?.[2])) return "code block's language";
-      if (fences.some((f) => f && f[1] !== fenceFor(f[3]!))) return "code block's fences other than the shortest backticks that hold its code, which a code rem reads back with (it keeps no fences)";
+      if (fences.some((f) => f && f[1] !== fenceFor(f[3]!)))
+        return "code block's fences other than the shortest backticks that hold its code, which a code rem reads back with (it keeps no fences)";
       if (o.sel) {
         const b = o.blocks[o.sel.block]!.text;
         const it = toItem(0, b);
         const [from, to] = [Math.min(o.sel.anchor, o.sel.head), Math.max(o.sel.anchor, o.sel.head)];
         // a to-do's checkbox, a heading's level, a code rem's fences are attributes: no caret goes there
         // (a code rem's closing fence: the fence and the newline before it)
-        if (from < it.prefix || (it.code && to > b.length - FENCE.exec(b)![1]!.length - 1)) return "caret in a task's checkbox, a heading's #s or a code block's fences";
+        if (from < it.prefix || (it.code && to > b.length - FENCE.exec(b)![1]!.length - 1))
+          return "caret in a task's checkbox, a heading's #s or a code block's fences";
       }
       // numbered siblings count 1, 2, ... in a run
       const count: number[] = [];
@@ -341,23 +397,47 @@ export function remnoteDriver(setup: Setup): Driver {
         localStorage.setItem('isPlaywrightServerless', 'true');
       });
       await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-      await page.waitForFunction(() => typeof (window as any).waitForPlaywrightToLoad === 'function' && typeof (window as any).writeGuarantee === 'function', null, { timeout: 120000 });
+      await page.waitForFunction(
+        () =>
+          typeof (window as any).waitForPlaywrightToLoad === 'function' &&
+          typeof (window as any).writeGuarantee === 'function',
+        null,
+        { timeout: 120000 },
+      );
       const env = await page.evaluate(async () => {
         const w = window as any;
         // its trackers up; a window that never came up in test mode never resolves this (a run of every app
         // once waited on one for good): a minute, then the worker gives up
-        const up = await Promise.race([w.waitForPlaywrightToLoad().then(() => true), new Promise((r) => setTimeout(() => r(false), 60000))]);
+        const up = await Promise.race([
+          w.waitForPlaywrightToLoad().then(() => true),
+          new Promise((r) => setTimeout(() => r(false), 60000)),
+        ]);
         if (!up) return null;
-        return { playwright: w.Env.app.isPlaywright, serverless: w.Env.playwright.isPlaywrightServerless, kb: w.currentKnowledgeBaseId(), version: w.__builtinWebRelease?.version };
+        return {
+          playwright: w.Env.app.isPlaywright,
+          serverless: w.Env.playwright.isPlaywrightServerless,
+          kb: w.currentKnowledgeBaseId(),
+          version: w.__builtinWebRelease?.version,
+        };
       });
       if (!env) throw new Error("RemNote's test mode didn't come up in a minute (waitForPlaywrightToLoad)");
       if (!env.playwright || !env.serverless) throw new Error("RemNote didn't start in its serverless test mode");
-      if (env.kb !== 'null') throw new Error(`RemNote is signed in to a knowledge base (${env.kb}), not a guest: its window's browser context is the pool's, made for it`);
+      if (env.kb !== 'null')
+        throw new Error(
+          `RemNote is signed in to a knowledge base (${env.kb}), not a guest: its window's browser context is the pool's, made for it`,
+        );
       // ready once a key does what it should: Tab indents
-      const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+      const idle = () =>
+        page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
       let ready = false;
       for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-        await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+        await this.load(page, {
+          blocks: [
+            { depth: 0, text: 'a' },
+            { depth: 0, text: 'b' },
+          ],
+          sel: { block: 1, anchor: 1, head: 1 },
+        });
         await idle();
         await page.keyboard.press('Tab');
         await idle();
@@ -371,18 +451,26 @@ export function remnoteDriver(setup: Setup): Driver {
     async load(page: Page, doc) {
       // (a page RemNote reloaded since, after a write it took for a database error: its globals not up
       // yet, or the tab not in test mode; brought up again as `open` does, else every load after it fails)
-      if (!(await page.evaluate(() => typeof (window as any).writeGuarantee === 'function').catch(() => false))) await this.open(page);
+      if (!(await page.evaluate(() => typeof (window as any).writeGuarantee === 'function').catch(() => false)))
+        await this.open(page);
       // (what the last test left open closed first: a key typed on a selection of rems, after a drop,
       // is a shortcut of the selection's, and a menu it opens takes the caret this load places)
       await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
       const o = setup.bulletless ? lift(doc as Outline) : (doc as Outline);
       const items = o.blocks.map((b) => toItem(b.depth, b.text, !!b.free));
-      const local = (p: number, it: (typeof items)[number]): number => p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
+      const local = (p: number, it: (typeof items)[number]): number =>
+        p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
       // a selection of rems: the caret at the first one's start, then Shift+Down past the last one's
       // subtree, ourus's (without bullets, its rems are the last one's siblings) (`selectsBlocks`)
       const selected = !o.sel && o.selected?.length ? o.selected : null;
-      const sel = o.sel ? { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+      const sel = o.sel
+        ? {
+            block: o.sel.block,
+            anchor: local(o.sel.anchor, items[o.sel.block]!),
+            head: local(o.sel.head, items[o.sel.block]!),
+          }
+        : selected && { block: selected[0]!, anchor: 0, head: 0 };
       await page.evaluate(
         async ({ items, sel, bulletless, view }) => {
           const w = window as any;
@@ -431,7 +519,9 @@ export function remnoteDriver(setup: Setup): Driver {
           let req: any;
           w.rspackChunk_remnote_client.push([[Symbol('ourus')], {}, (r: unknown) => (req = r)]);
           w.__ourusSxsTrees ??= (() => {
-            const recorder = Object.keys(req.m).find((id) => String(req.m[id]).includes('playwrightShiftFocusedRemRelative'))!;
+            const recorder = Object.keys(req.m).find((id) =>
+              String(req.m[id]).includes('playwrightShiftFocusedRemRelative'),
+            )!;
             const src = String(req.m[recorder]);
             const v = /(\w+)\.\w+\?\.controller/.exec(src)![1];
             return req(new RegExp(`\\b${v}=\\w\\((\\d+)\\)`).exec(src)![1]);
@@ -439,8 +529,13 @@ export function remnoteDriver(setup: Setup): Driver {
           const trees = w.__ourusSxsTrees;
           // the editor tree of the rem the page shows: the document, or the rem zoomed into
           let root: string = docRem._id;
-          const controller = (): any => [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === root);
-          const rendered = (ids: string[]) => controller() && ids.every((id) => document.querySelector(`[data-rem-id="${id}"]`));
+          const controller = (): any =>
+            [...Object.values(trees)]
+              .flatMap((t: any) => (Array.isArray(t) ? t : [t]))
+              .map((t: any) => t?.controller)
+              .find((c: any) => c?.rootRem?._id === root);
+          const rendered = (ids: string[]) =>
+            controller() && ids.every((id) => document.querySelector(`[data-rem-id="${id}"]`));
           for (let i = 0; i < 400 && !rendered(made); i++) await sleep(10);
           if (!rendered(made)) throw new Error("the test's rems didn't render");
           // its view, every rem on screen: the zoom root's page shown, then the folded rems collapsed in
@@ -449,7 +544,11 @@ export function remnoteDriver(setup: Setup): Driver {
             if (view.zoom !== null) {
               root = made[view.zoom]!;
               w.FlowRouter.go(`/w/null/${root}`);
-              const inside = made.filter((_, k) => k > view.zoom! && items.slice(view.zoom! + 1, k + 1).every((it) => it.depth > items[view.zoom!]!.depth));
+              const inside = made.filter(
+                (_, k) =>
+                  k > view.zoom! &&
+                  items.slice(view.zoom! + 1, k + 1).every((it) => it.depth > items[view.zoom!]!.depth),
+              );
               for (let i = 0; i < 400 && !rendered(inside); i++) await sleep(10);
               if (!rendered(inside)) throw new Error("the zoom root's rems didn't render");
             }
@@ -462,11 +561,17 @@ export function remnoteDriver(setup: Setup): Driver {
           const id = made[sel.block]!;
           c.focusOnChild(c.rootRem._id, id, true);
           for (let i = 0; i < 200 && c.currentlyFocusedRemId() !== id; i++) await sleep(10);
-          if (c.currentlyFocusedRemId() !== id) throw new Error(`the rem didn't take the focus (focused: ${c.currentlyFocusedRemId()})`);
+          if (c.currentlyFocusedRemId() !== id)
+            throw new Error(`the rem didn't take the focus (focused: ${c.currentlyFocusedRemId()})`);
           w.setFocusedElementProps({ type: 'text', anchor: sel.anchor, focus: sel.head });
           const placed = () => {
             const p = w.getFocusProps();
-            return p?.type === 'text' && p.anchor === sel.anchor && p.focus === sel.head && document.activeElement?.closest(`[data-rem-id="${id}"]`);
+            return (
+              p?.type === 'text' &&
+              p.anchor === sel.anchor &&
+              p.focus === sel.head &&
+              document.activeElement?.closest(`[data-rem-id="${id}"]`)
+            );
           };
           for (let i = 0; i < 200 && !placed(); i++) await sleep(10);
           if (!placed()) throw new Error(`the caret didn't land: ${JSON.stringify(w.getFocusProps())}`);
@@ -482,7 +587,12 @@ export function remnoteDriver(setup: Setup): Driver {
         const got = (await this.read(page)) as Outline;
         return Math.max(-1, ...(got.selected ?? []).map((i) => subtreeEnd(got.blocks, i)));
       };
-      for (let k = 0; k <= nested.length + nested[selected[0]!]!.text.split('\n').length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+      for (
+        let k = 0;
+        k <= nested.length + nested[selected[0]!]!.text.split('\n').length && (await reached()) < last;
+        k++
+      )
+        await page.keyboard.press('Shift+ArrowDown');
     },
 
     async read(page: Page) {
@@ -490,22 +600,50 @@ export function remnoteDriver(setup: Setup): Driver {
         const w = window as any;
         const KB = w.CURRENT_KNOWLEDGE_BASE;
         // rich text as plain text: a formatted run its text, anything else (a reference, an image) a mark
-        const plain = (rt: unknown[]): string => (rt ?? []).map((e: any) => (typeof e === 'string' ? e : typeof e?.text === 'string' ? e.text : '￼')).join('');
+        const plain = (rt: unknown[]): string =>
+          (rt ?? []).map((e: any) => (typeof e === 'string' ? e : typeof e?.text === 'string' ? e.text : '￼')).join('');
         // and as runs, each with its formatting (`b` bold, `l` italic, `q` code, `str` struck, `iUrl` a
         // link's target), the placeholders out
         const runs = (rt: unknown[]): Run[] =>
           (rt ?? []).map((e: any): Run => {
             if (typeof e === 'string') return { text: e.replace(/\ufeff/g, '') };
             if (typeof e?.text !== 'string') return { text: '￼' };
-            return { text: e.text.replace(/\ufeff/g, ''), bold: !!e.b, italic: !!e.l, code: !!e.q, strike: !!e.str, ...(typeof e.iUrl === 'string' && { href: e.iUrl }) };
+            return {
+              text: e.text.replace(/\ufeff/g, ''),
+              bold: !!e.b,
+              italic: !!e.l,
+              code: !!e.q,
+              strike: !!e.str,
+              ...(typeof e.iUrl === 'string' && { href: e.iUrl }),
+            };
           });
         const trees = w.__ourusSxsTrees;
         // the rem the page shows: the document, or one zoomed into (its id last in the route, after a
         // slug of its text where RemNote puts one: `/w/null/ourus-sxs-<id>`)
-        const root: string = /\/w\/null\/(?:[^/?#]*-)?([A-Za-z0-9]+)(?:[/?#]|$)/.exec(w.FlowRouter.current().path)?.[1] ?? w.__ourusSxsDoc;
-        const c = trees && [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === root);
+        const root: string =
+          /\/w\/null\/(?:[^/?#]*-)?([A-Za-z0-9]+)(?:[/?#]|$)/.exec(w.FlowRouter.current().path)?.[1] ?? w.__ourusSxsDoc;
+        const c =
+          trees &&
+          [...Object.values(trees)]
+            .flatMap((t: any) => (Array.isArray(t) ? t : [t]))
+            .map((t: any) => t?.controller)
+            .find((c: any) => c?.rootRem?._id === root);
         const focused = c?.currentlyFocusedRemId?.();
-        const flat: { depth: number; content: string; runs: Run[]; placeholders: number[]; todo: boolean; done: boolean; heading: number; numbered: boolean; code: boolean; free: boolean; number: number | null; id: string; collapsed: boolean }[] = [];
+        const flat: {
+          depth: number;
+          content: string;
+          runs: Run[];
+          placeholders: number[];
+          todo: boolean;
+          done: boolean;
+          heading: number;
+          numbered: boolean;
+          code: boolean;
+          free: boolean;
+          number: number | null;
+          id: string;
+          collapsed: boolean;
+        }[] = [];
         // (`under`: the portal a rem shows in, the root the page shows where it is in it)
         const walk = async (rem: any, depth: number, under = w.__ourusSxsDoc) => {
           for (const r of await rem.childrenRemAsync()) {
@@ -513,13 +651,30 @@ export function remnoteDriver(setup: Setup): Driver {
             // the rem being edited: its editor's text, which the caret (getFocusProps) is an offset in; the
             // text cache and the model can hold less (Shift+Enter at a rem's start: `\none` in the editor,
             // `one` in both)
-            const editing = r._id === focused ? (w.editor?.text ?? c.currentFocusedRemTextCache?.()?.getCurrentRichText?.()) : undefined;
+            const editing =
+              r._id === focused
+                ? (w.editor?.text ?? c.currentFocusedRemTextCache?.()?.getCurrentRichText?.())
+                : undefined;
             const font = /^H(\d)$/.exec(r.getFontSize?.() ?? '');
             const numbered = !!r.getIsListItem();
             // (a rem shows no bullet only in a document without bullets)
             const free = !!r.portalContext(w.__ourusSxsDoc).renderAsNoBullet();
             // (the editor keeps an empty line with a zero-width placeholder, U+FEFF, no text of the rem's)
-            flat.push({ depth, content: plain(editing ?? r.key).replace(/\ufeff/g, ''), runs: runs(editing ?? r.key), placeholders: editing ? [...plain(editing).matchAll(/\ufeff/g)].map((m) => m.index!) : [], todo: !!r.getIsTodo(), done: r.getTodoStatus() === 'Finished', heading: font ? Number(font[1]) : 0, numbered, code: !!r.getIsCode(), free, number: numbered ? r.getListItemIndex() : null, id: r._id, collapsed: viewed && !!r.portalContext(portal).getIsCollapsed() });
+            flat.push({
+              depth,
+              content: plain(editing ?? r.key).replace(/\ufeff/g, ''),
+              runs: runs(editing ?? r.key),
+              placeholders: editing ? [...plain(editing).matchAll(/\ufeff/g)].map((m) => m.index!) : [],
+              todo: !!r.getIsTodo(),
+              done: r.getTodoStatus() === 'Finished',
+              heading: font ? Number(font[1]) : 0,
+              numbered,
+              code: !!r.getIsCode(),
+              free,
+              number: numbered ? r.getListItemIndex() : null,
+              id: r._id,
+              collapsed: viewed && !!r.portalContext(portal).getIsCollapsed(),
+            });
             await walk(r, depth + 1, portal);
           }
         };
@@ -534,14 +689,23 @@ export function remnoteDriver(setup: Setup): Driver {
         const selected = range.map((id) => flat.findIndex((f) => f.id === id)).filter((i) => i >= 0);
         // the view: the collapsed rems, and the rem zoomed into, if one of the test's (the document: none)
         const zoom = flat.findIndex((f) => f.id === root);
-        const view = viewed ? { folded: flat.flatMap((f, k) => (f.collapsed && (flat[k + 1]?.depth ?? -1) > f.depth ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+        const view = viewed
+          ? {
+              folded: flat.flatMap((f, k) => (f.collapsed && (flat[k + 1]?.depth ?? -1) > f.depth ? [k] : [])),
+              zoom: zoom >= 0 ? zoom : null,
+            }
+          : undefined;
         return { flat, sel, selected, focusType: p?.type, view };
       }, viewed(page).on);
       // a rem's text as Markdown, its formatting in markup (a code rem's as it is), and where an offset
       // in its text is in it
       const mds = raw.flat.map((f) => (f.code ? { text: f.content, at: (p: number) => p } : runsAsMarkdown(f.runs)));
       const texts = raw.flat.map((f, i) => fromItem({ ...f, content: mds[i]!.text }, f.number));
-      const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text, ...(setup.bulletless && f.free && { free: true as const }) }));
+      const blocks = raw.flat.map((f, i) => ({
+        depth: f.depth,
+        text: texts[i]!.text,
+        ...(setup.bulletless && f.free && { free: true as const }),
+      }));
       let sel: Outline['sel'] = null;
       if (raw.sel) {
         const { prefix, cut } = texts[raw.sel.block]!;
@@ -549,11 +713,18 @@ export function remnoteDriver(setup: Setup): Driver {
         const at = (p: number): number => prefix + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0);
         sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
       }
-      const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
+      const got: Outline = {
+        blocks,
+        sel,
+        ...(raw.selected.length && { selected: raw.selected }),
+        ...(raw.view && { view: raw.view }),
+      };
       if (!setup.bulletless) return got;
       // (without bullets, a selection's rems the topmost of ourus's nesting)
       const owned = own(got, this.behaves?.listParent);
-      const selected = owned.selected?.filter((i) => !owned.selected!.some((j) => j < i && subtreeEnd(owned.blocks, j) >= i));
+      const selected = owned.selected?.filter(
+        (i) => !owned.selected!.some((j) => j < i && subtreeEnd(owned.blocks, j) >= i),
+      );
       return { ...owned, ...(selected && { selected }) };
     },
 
@@ -561,7 +732,9 @@ export function remnoteDriver(setup: Setup): Driver {
       // deleting a subtree: "Delete Bullet" on the rem being edited; rems selected, Backspace (the
       // shortcut leaves a selection as it is)
       if (action === 'deleteSubtree') {
-        await page.keyboard.press(((await this.read(page)) as Outline).selected?.length ? 'Backspace' : 'Control+Shift+Alt+Backspace');
+        await page.keyboard.press(
+          ((await this.read(page)) as Outline).selected?.length ? 'Backspace' : 'Control+Shift+Alt+Backspace',
+        );
         return settle();
       }
       // RemNote has no key for the document's ends: Up (Down) until the caret is on the first rem's first
@@ -573,7 +746,9 @@ export function remnoteDriver(setup: Setup): Driver {
       const there = (o: Outline): boolean => {
         if (!o.sel) return false;
         const text = o.blocks[o.sel.block]!.text;
-        return up ? o.sel.block === 0 && !text.slice(0, o.sel.head).includes('\n') : o.sel.block === o.blocks.length - 1 && !text.slice(o.sel.head).includes('\n');
+        return up
+          ? o.sel.block === 0 && !text.slice(0, o.sel.head).includes('\n')
+          : o.sel.block === o.blocks.length - 1 && !text.slice(o.sel.head).includes('\n');
       };
       let last = '';
       for (let i = 0; i < 200; i++) {
@@ -596,7 +771,12 @@ export function remnoteDriver(setup: Setup): Driver {
 }
 
 // documents without bullets, RemNote's free form; with bullets, ../remnote-bl/
-export const driver = remnoteDriver({ shortId: 'RN', longId: 'remnote', displayName: 'RemNote (nbl)', bulletless: true });
+export const driver = remnoteDriver({
+  shortId: 'RN',
+  longId: 'remnote',
+  displayName: 'RemNote (nbl)',
+  bulletless: true,
+});
 
 /** Where RemNote's drop regions for a rem are (`getRectsInfoForDropRegion`), aimed at: each null where the rem has none. */
 interface Regions {
@@ -626,7 +806,10 @@ async function remnoteDrop(page: Page, drop: Drop, settle: () => Promise<void>, 
   const press = drop.press ?? drop.rows[0]!;
   const rems = await page.evaluate(async () => {
     const w = window as any;
-    const c = [...Object.values(w.__ourusSxsTrees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === w.__ourusSxsDoc);
+    const c = [...Object.values(w.__ourusSxsTrees)]
+      .flatMap((t: any) => (Array.isArray(t) ? t : [t]))
+      .map((t: any) => t?.controller)
+      .find((c: any) => c?.rootRem?._id === w.__ourusSxsDoc);
     const m = c.hierarchyEditor.mounterModule;
     // the rems in document order, as `read` walks them
     const all: { rem: any; depth: number }[] = [];
@@ -664,13 +847,14 @@ async function remnoteDrop(page: Page, drop: Drop, settle: () => Promise<void>, 
     });
   });
   const { blocks } = outline;
-  if (rems.length !== blocks.length) throw new Error(`the page has ${rems.length} rems, its outline ${blocks.length} blocks`);
+  if (rems.length !== blocks.length)
+    throw new Error(`the page has ${rems.length} rems, its outline ${blocks.length} blocks`);
   const regions = rems.map((r, i) => {
     if (!r) throw new Error(`rem ${i} isn't on screen`);
     return r;
   });
   const pressed = regions[press]!;
-  if (!pressed.bullet) throw new Unsupported("the pressed rem has no bullet: RemNote drags a rem by its bullet");
+  if (!pressed.bullet) throw new Unsupported('the pressed rem has no bullet: RemNote drags a rem by its bullet');
   // (past a block's subtree, in an outline's depths; a block's parent)
   const end = (i: number, depth: (j: number) => number): number => {
     let j = i + 1;

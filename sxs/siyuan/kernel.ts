@@ -17,7 +17,15 @@
 
 import { execFileSync, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, createReadStream, createWriteStream, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { arch } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -48,7 +56,14 @@ export interface Kernel {
 
 export function kernelOf(n: number): Kernel {
   const dir = join(kernels, String(n));
-  return { n, dir, workspace: join(dir, 'workspace'), log: join(dir, 'kernel.log'), port: BASE_PORT + n, origin: `http://127.0.0.1:${BASE_PORT + n}` };
+  return {
+    n,
+    dir,
+    workspace: join(dir, 'workspace'),
+    log: join(dir, 'kernel.log'),
+    port: BASE_PORT + n,
+    origin: `http://127.0.0.1:${BASE_PORT + n}`,
+  };
 }
 
 /** The kernel serving a page of SiYuan's UI: by its port. */
@@ -59,7 +74,11 @@ const NOWHERE = 'http://127.0.0.1:9';
 
 /** A call of a kernel's API (at `origin`): its `data`, or an error with its message. */
 export async function api<T = unknown>(origin: string, path: string, body: unknown = {}): Promise<T> {
-  const res = await fetch(`${origin}/api/${path}`, { method: 'POST', body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+  const res = await fetch(`${origin}/api/${path}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
   const j = (await res.json()) as { code: number; msg: string; data: T };
   if (j.code !== 0) throw new Error(`SiYuan's /api/${path}: ${j.msg || `code ${j.code}`}`);
   return j.data;
@@ -85,7 +104,9 @@ async function resources(say: (line: string) => void): Promise<string> {
   const tgz = join(files, `${name}.tar.gz`);
   mkdirSync(files, { recursive: true });
   say(`downloading SiYuan ${VERSION} (${name}.tar.gz, from GitHub) ...`);
-  const sums = await fetch(`${base}/SHA256SUMS.txt`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`SHA256SUMS.txt: ${r.status}`))));
+  const sums = await fetch(`${base}/SHA256SUMS.txt`).then((r) =>
+    r.ok ? r.text() : Promise.reject(new Error(`SHA256SUMS.txt: ${r.status}`)),
+  );
   const want = sums
     .split('\n')
     .map((l) => l.trim().split(/\s+/))
@@ -114,7 +135,8 @@ const pluginDir = (workspace: string): string => join(workspace, 'data', 'plugin
 function installPlugin(workspace: string): void {
   const dir = pluginDir(workspace);
   mkdirSync(dir, { recursive: true });
-  for (const f of ['plugin.json', 'index.js']) copyFileSync(fileURLToPath(new URL(`./plugin/${f}`, import.meta.url)), join(dir, f));
+  for (const f of ['plugin.json', 'index.js'])
+    copyFileSync(fileURLToPath(new URL(`./plugin/${f}`, import.meta.url)), join(dir, f));
   const petal = join(workspace, 'data', 'storage', 'petal');
   mkdirSync(petal, { recursive: true });
   writeFileSync(join(petal, 'petals.json'), JSON.stringify([{ name: PLUGIN, enabled: true }]));
@@ -127,16 +149,31 @@ export type SpawnChild = (cmd: string, args: string[], opts: { log: string; env?
  * Starts kernel `k` of `VERSION` (for the pool, which owns it: `spawnChild`), booted, with the driver's
  * plugin installed and trusted; `wipe` starts it on a new workspace.
  */
-export async function startKernel(k: Kernel, spawnChild: SpawnChild, say: (line: string) => void, wipe = false): Promise<ChildProcess> {
+export async function startKernel(
+  k: Kernel,
+  spawnChild: SpawnChild,
+  say: (line: string) => void,
+  wipe = false,
+): Promise<ChildProcess> {
   const { origin, workspace, port, log: kernelLog } = k;
-  if (await running(origin)) throw new Error(`something answers as a SiYuan kernel on 127.0.0.1:${port}, not the pool's: stop it`);
+  if (await running(origin))
+    throw new Error(`something answers as a SiYuan kernel on 127.0.0.1:${port}, not the pool's: stop it`);
   // the release downloaded and unpacked once, kernels starting at once taking turns
   const unlock = await takeLock(record(`${files}.lock`), true, "SiYuan's download");
   const res = await resources(say).finally(unlock);
   if (wipe) rmSync(workspace, { recursive: true, force: true });
   mkdirSync(workspace, { recursive: true });
   installPlugin(workspace);
-  const env = { ...process.env, SIYUAN_ACCESS_AUTH_CODE_BYPASS: 'true', HTTP_PROXY: NOWHERE, HTTPS_PROXY: NOWHERE, http_proxy: NOWHERE, https_proxy: NOWHERE, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost' };
+  const env = {
+    ...process.env,
+    SIYUAN_ACCESS_AUTH_CODE_BYPASS: 'true',
+    HTTP_PROXY: NOWHERE,
+    HTTPS_PROXY: NOWHERE,
+    http_proxy: NOWHERE,
+    https_proxy: NOWHERE,
+    NO_PROXY: '127.0.0.1,localhost',
+    no_proxy: '127.0.0.1,localhost',
+  };
   const args = ['serve', `--workspace=${workspace}`, `--port=${port}`, `--wd=${res}`, '--lang=en'];
   const child = spawnChild(join(res, 'kernel', 'SiYuan-Kernel'), args, { log: kernelLog, env });
   try {
@@ -148,13 +185,16 @@ export async function startKernel(k: Kernel, spawnChild: SpawnChild, say: (line:
       if (boot?.progress === 100) break;
     }
     const conf = await api<{ conf: { system: { networkServe: boolean } } }>(origin, 'system/getConf');
-    if (conf.conf.system.networkServe) throw new Error("SiYuan's workspace serves the network (system.networkServe), with no auth code: refusing");
+    if (conf.conf.system.networkServe)
+      throw new Error("SiYuan's workspace serves the network (system.networkServe), with no auth code: refusing");
     // plugins trusted in the workspace (a fresh one doesn't), so that the UI loads the driver's
     await api(origin, 'setting/setBazaar', { trust: true, petalDisabled: false });
   } catch (e) {
     child.kill('SIGKILL');
     throw e;
   }
-  say(`started SiYuan's kernel ${k.n}, ${VERSION}, on 127.0.0.1:${port}${wipe ? ', on a new workspace' : ''} (pid ${child.pid}, log ${kernelLog})`);
+  say(
+    `started SiYuan's kernel ${k.n}, ${VERSION}, on 127.0.0.1:${port}${wipe ? ', on a new workspace' : ''} (pid ${child.pid}, log ${kernelLog})`,
+  );
   return child;
 }

@@ -8,7 +8,9 @@ import { OurusConfig } from '../src/config.ts';
 const source = readFileSync(new URL('../src/config.ts', import.meta.url), 'utf8');
 
 test('the options are declared in the order of their values', () => {
-  const declared = [...source.slice(source.indexOf('export interface OurusConfig {')).matchAll(/^ {2}readonly (\w+)\??:/gm)].map((m) => m[1]!);
+  const declared = [
+    ...source.slice(source.indexOf('export interface OurusConfig {')).matchAll(/^ {2}readonly (\w+)\??:/gm),
+  ].map((m) => m[1]!);
   // (a list option, `OurusConfig.lists`, where it reads best: its elements are no values to order)
   const ordered = declared.filter((key) => !(key in OurusConfig.lists));
   assert.deepEqual(ordered.slice(0, Object.keys(OurusConfig.values).length), Object.keys(OurusConfig.values));
@@ -19,7 +21,8 @@ test("a list option's doc names each element and its default", () => {
   for (const key of Object.keys(OurusConfig.lists)) {
     const doc = docs.get(key);
     assert.ok(doc, `${key} has a doc`);
-    for (const element of OurusConfig.lists[key as keyof typeof OurusConfig.lists].elements) assert.ok(doc.includes(element), `${key}: its doc names ${element}`);
+    for (const element of OurusConfig.lists[key as keyof typeof OurusConfig.lists].elements)
+      assert.ok(doc.includes(element), `${key}: its doc names ${element}`);
     assert.ok(doc.includes('the default'), `${key}: its doc says its default`);
   }
 });
@@ -31,8 +34,14 @@ test("each option's doc lists its values, the default first", () => {
     assert.ok(doc, `${key} has a doc`);
     // a bullet list (`- \`value\``), or the values inline (`\`-\` (the default), \`*\` or \`+\``)
     const bullets = [...doc.matchAll(/^\s*\*\s+- `([^`]+)`/gm)].map((m) => m[1]!);
-    const named = (bullets.length ? bullets : [...doc.matchAll(/`([^`]+)`/g)].map((m) => m[1]!)).filter((v) => values.map(String).includes(v));
-    assert.equal(named[0], String(OurusConfig.defaults[key as keyof typeof OurusConfig.defaults]), `${key}: the default first`);
+    const named = (bullets.length ? bullets : [...doc.matchAll(/`([^`]+)`/g)].map((m) => m[1]!)).filter((v) =>
+      values.map(String).includes(v),
+    );
+    assert.equal(
+      named[0],
+      String(OurusConfig.defaults[key as keyof typeof OurusConfig.defaults]),
+      `${key}: the default first`,
+    );
     for (const value of values) assert.ok(named.includes(String(value)), `${key}: its doc names \`${String(value)}\``);
   }
 });

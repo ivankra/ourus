@@ -3,7 +3,15 @@
 // becomes; `done()` keeps a fence's runs past the code, or refuses what would unmake the block.
 
 import { OurusProse, OurusAtom, blockIdsOf, type Located, type OurusNode, type OurusText } from '../doc/index.ts';
-import { composeChanges, dominantEnding, lineOf, MarkSet, trimMd, type ChangeSpec, type NodeId } from '../text/index.ts';
+import {
+  composeChanges,
+  dominantEnding,
+  lineOf,
+  MarkSet,
+  trimMd,
+  type ChangeSpec,
+  type NodeId,
+} from '../text/index.ts';
 import { AUTO_WRAPS, type AutoCloseOpener, type AutoWrapper } from '../config.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { CommandContext } from './context.ts';
@@ -27,14 +35,20 @@ export function insertTextCommand(ctx: CommandContext, typed: string): OurusResu
     // over part of a closed block's fence run, any character breaks the fence (rule 5)
     if (overFence(ctx)) return breaksFence(ctx, 'the fence would break');
     // over a selection in code, what it leaves may make a fence (`X```` → ```` ``` ````)
-    if (code) return (typed in WRAPS_ANYWHERE && wraps(ctx, typed) ? wrapInPair(ctx, typed) : null) ?? editInCode(ctx, code, code.offset, code.to, typed);
+    if (code)
+      return (
+        (typed in WRAPS_ANYWHERE && wraps(ctx, typed) ? wrapInPair(ctx, typed) : null) ??
+        editInCode(ctx, code, code.offset, code.to, typed)
+      );
     // over a selection in one line of text, the host's but for a character `autoWrap` lists: a
     // backtick makes it code, any other wraps it in itself and its closer
-    if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return new OurusDeferred('host-default');
+    if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index)
+      return new OurusDeferred('host-default');
     // (a bracket wraps it anywhere, as an editor's closeBrackets does; the others in prose; a backtick
     // in code, math or a comment, verbatim, is the host's)
     if (typed !== '`' && wraps(ctx, typed)) return wrapInPair(ctx, typed) ?? new OurusDeferred('host-default');
-    if (ctx.doc.verbatimSpanAt(Math.min(ctx.selection.anchor, ctx.selection.head))) return new OurusDeferred('host-default');
+    if (ctx.doc.verbatimSpanAt(Math.min(ctx.selection.anchor, ctx.selection.head)))
+      return new OurusDeferred('host-default');
     if (!wraps(ctx, '`') || !typed.includes('`')) return new OurusDeferred('host-default');
     return typed === '`' ? wrapInCode(ctx) : null;
   }
@@ -42,19 +56,36 @@ export function insertTextCommand(ctx: CommandContext, typed: string): OurusResu
   // a closer's character typed before one of ours in a block, not a fence's (`<!--┃-->`, a comment
   // auto-closed alone on its line, an atom): it steps over it, as in a text
   const at = ctx.from;
-  if (at.zone === 'text' && at.text instanceof OurusAtom && (at.text.type !== 'fenced_code' || ')]}'.includes(typed)) && at.text.text[at.offset] === typed && at.text.marks.hasAutoAt(at.offset)) {
+  if (
+    at.zone === 'text' &&
+    at.text instanceof OurusAtom &&
+    (at.text.type !== 'fenced_code' || ')]}'.includes(typed)) &&
+    at.text.text[at.offset] === typed &&
+    at.text.marks.hasAutoAt(at.offset)
+  ) {
     const over = at.text.withMarks({ auto: at.text.marks.auto.filter((pos) => pos !== at.offset) });
-    return ctx.apply(ctx.draft().setText(at.node, over).setCaret(at.node, at.offset + 1, 1));
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(at.node, over)
+        .setCaret(at.node, at.offset + 1, 1),
+    );
   }
   // in code, the host's where it keeps the block (a line break in a container's code is ourus's, the
   // containers' prefix with it), a fence's character a fence's
   // (a line break at a block's opening delimiter's start: a blank line above it, as Enter there)
   const above = code ? lineBreakAtOpening(ctx, code, typed) : undefined;
-  if (above !== undefined) return above ?? new OurusDeferred('host-default', 'a line break before the block: the host types it');
-  if (code && (!fenceChar || code.text.type !== 'fenced_code')) return bracketTyped(ctx, typed) ?? editInCode(ctx, code, code.offset, code.offset, typed);
+  if (above !== undefined)
+    return above ?? new OurusDeferred('host-default', 'a line break before the block: the host types it');
+  if (code && (!fenceChar || code.text.type !== 'fenced_code'))
+    return bracketTyped(ctx, typed) ?? editInCode(ctx, code, code.offset, code.offset, typed);
   const placed = placedText(ctx, typed);
   if (placed) return placed;
-  const bracket = bracketTyped(ctx, typed) ?? delimiterTyped(ctx, typed) ?? bracketOnBlankLine(ctx, typed) ?? typedInEscapedPair(ctx, typed);
+  const bracket =
+    bracketTyped(ctx, typed) ??
+    delimiterTyped(ctx, typed) ??
+    bracketOnBlankLine(ctx, typed) ??
+    typedInEscapedPair(ctx, typed);
   if (bracket) return bracket;
   if (typed !== '`' && typed !== '~') return new OurusDeferred('host-default');
   // in a container's prefix or a marker (before a fence's indentation): not done yet
@@ -69,7 +100,8 @@ export function insertTextCommand(ctx: CommandContext, typed: string): OurusResu
 }
 
 /** `text` with the closer at `offset` stepped over: typed by the author, so theirs, no auto mark on it. */
-const typedOver = <T extends OurusProse | OurusAtom>(text: T, offset: number): T => text.withMarks({ auto: text.marks.auto.filter((pos) => pos !== offset) }) as T;
+const typedOver = <T extends OurusProse | OurusAtom>(text: T, offset: number): T =>
+  text.withMarks({ auto: text.marks.auto.filter((pos) => pos !== offset) }) as T;
 
 /**
  * Where brackets pair (`autoClose`): a text, prose, a quote atom's or code's (math and comments too),
@@ -88,8 +120,10 @@ export interface PairPlace {
 export function pairPlace(ctx: CommandContext, at: Located): PairPlace | null {
   if (at.zone !== 'text') return null;
   const { node, text } = at;
-  if (text instanceof OurusProse) return { node, text, prose: true, markup: (o) => o < text.textStart(lineOf(text.text, o)) };
-  if (text.type === 'blockquote') return { node, text, prose: false, markup: (o) => o < quoteLineTextFrom(ctx, node, text, o) };
+  if (text instanceof OurusProse)
+    return { node, text, prose: true, markup: (o) => o < text.textStart(lineOf(text.text, o)) };
+  if (text.type === 'blockquote')
+    return { node, text, prose: false, markup: (o) => o < quoteLineTextFrom(ctx, node, text, o) };
   if (CODE.has(text.type)) return { node, text, prose: false, markup: (o) => onDelimiterLine(text, o) };
   return null;
 }
@@ -98,7 +132,8 @@ export function pairPlace(ctx: CommandContext, at: Located): PairPlace | null {
 const BRACKETS: Readonly<Record<string, string>> = { '(': ')', '[': ']', '{': '}', $: '$' };
 
 /** Whether `autoWrap` lists `typed`, a character. */
-const wraps = (ctx: CommandContext, typed: string): boolean => (ctx.config.autoWrap as readonly string[]).includes(typed);
+const wraps = (ctx: CommandContext, typed: string): boolean =>
+  (ctx.config.autoWrap as readonly string[]).includes(typed);
 
 /** The wrappers that wrap in any text that pairs, code too, as an editor's closeBrackets has them; the others in prose only. */
 const WRAPS_ANYWHERE: Readonly<Record<string, true>> = { '(': true, '[': true, '{': true };
@@ -124,26 +159,57 @@ function bracketTyped(ctx: CommandContext, typed: string): OurusResult | null {
   // (stepped over, typed by the author: theirs now)
   // (a `$`, its own closer: in an empty pair of ours, `$┃$`, the double, as a bracket's is, below)
   const emptyMath = prose && typed === '$' && s[offset - 1] === '$' && s[offset] === '$';
-  if ((prose ? ')]}$' : ')]}').includes(typed) && s[offset] === typed && text.marks.hasAutoAt(offset) && !emptyMath) return ctx.apply(ctx.draft().setText(node, typedOver(text, offset)).setCaret(node, offset + 1, 1));
+  if ((prose ? ')]}$' : ')]}').includes(typed) && s[offset] === typed && text.marks.hasAutoAt(offset) && !emptyMath)
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, typedOver(text, offset))
+        .setCaret(node, offset + 1, 1),
+    );
   const closer = BRACKETS[typed];
   // (`$` math's in prose alone: in code it is a character, in a quote atom its lines' text)
   if (!closer || (!prose && typed === '$')) return null;
   // (a `$` where `$` itself is listed, and as it opens, at a word boundary: one after text closes
   // math, `$x┃`; `$$`, without it, the delimiter's, in the flavor that reads math)
-  if (typed === '$' && (!closes(ctx, '$') || !(emptyMath || atBoundary(s[offset - 1] === '\n' ? '' : (s[offset - 1] ?? ''), '([{<\'"')))) return null;
+  if (
+    typed === '$' &&
+    (!closes(ctx, '$') || !(emptyMath || atBoundary(s[offset - 1] === '\n' ? '' : (s[offset - 1] ?? ''), '([{<\'"')))
+  )
+    return null;
   const single = closes(ctx, typed as AutoCloseOpener);
   const double = !single && closes(ctx, (typed + typed) as AutoCloseOpener) && s[offset - 1] === typed;
   if (!single && !double) return null;
   if (place.markup(offset)) return null;
   const after = s[offset];
-  if (after !== undefined && after !== '\n' && after !== ' ' && after !== '\t' && !')]}'.includes(after) && !(emptyMath && after === '$')) return null;
+  if (
+    after !== undefined &&
+    after !== '\n' &&
+    after !== ' ' &&
+    after !== '\t' &&
+    !')]}'.includes(after) &&
+    !(emptyMath && after === '$')
+  )
+    return null;
   const close = double ? closer + closer : closer;
   const paired = text.splice(offset, offset, typed + close);
   // (a closer that would end a callout's type, `> [!note┃ Title`: a quote's paragraph made a callout's
   // title, which no keystroke here means; the host's, the bracket alone)
   const callout = /^\[![^\]\n]*\]/;
-  if (prose && ctx.doc.config.flavor === 'obsidian' && node.parent?.kind === 'quote' && node.index === 0 && callout.test(paired.text) && !callout.test(s)) return null;
-  return ctx.apply(ctx.draft().setText(node, paired.withMarks({ auto: [...paired.marks.auto, ...[...close].map((_, k) => offset + 1 + k)] })).setCaret(node, offset + 1, -1));
+  if (
+    prose &&
+    ctx.doc.config.flavor === 'obsidian' &&
+    node.parent?.kind === 'quote' &&
+    node.index === 0 &&
+    callout.test(paired.text) &&
+    !callout.test(s)
+  )
+    return null;
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(node, paired.withMarks({ auto: [...paired.marks.auto, ...[...close].map((_, k) => offset + 1 + k)] }))
+      .setCaret(node, offset + 1, -1),
+  );
 }
 
 /**
@@ -154,12 +220,20 @@ function bracketTyped(ctx: CommandContext, typed: string): OurusResult | null {
 function bracketOnBlankLine(ctx: CommandContext, typed: string): OurusResult | null {
   const { zone } = ctx.from;
   const closer = BRACKETS[typed];
-  if (!ctx.collapsed || (zone !== 'gap' && zone !== 'none') || !closer || typed === '$' || !closes(ctx, typed as AutoCloseOpener)) return null;
+  if (
+    !ctx.collapsed ||
+    (zone !== 'gap' && zone !== 'none') ||
+    !closer ||
+    typed === '$' ||
+    !closes(ctx, typed as AutoCloseOpener)
+  )
+    return null;
   const head = ctx.selection.head;
   const line = ctx.doc.lineAt(head);
   if (trimMd(ctx.doc.text.slice(line.from, line.to)) !== '') return null;
   const paired = typed + closer;
-  const after = (offsets: readonly number[]): number[] => offsets.map((pos) => (pos < head ? pos : pos + paired.length));
+  const after = (offsets: readonly number[]): number[] =>
+    offsets.map((pos) => (pos < head ? pos : pos + paired.length));
   const changes = [{ from: head, to: head, insert: paired }];
   const marks = { placeholders: after(ctx.doc.marks.placeholders), auto: [...after(ctx.doc.marks.auto), head + 1] };
   const caret = head + 1;
@@ -173,12 +247,21 @@ function bracketOnBlankLine(ctx: CommandContext, typed: string): OurusResult | n
  */
 function typedInEscapedPair(ctx: CommandContext, typed: string): OurusResult | null {
   const at = ctx.from;
-  if (!ctx.collapsed || at.zone !== 'text' || !(at.text instanceof OurusProse) || typed === '$' || trimMd(typed) === '') return null;
+  if (!ctx.collapsed || at.zone !== 'text' || !(at.text instanceof OurusProse) || typed === '$' || trimMd(typed) === '')
+    return null;
   const { node, text, offset } = at;
-  const ours = text.text.slice(offset - 2, offset + 1) === '\\$$' && text.marks.hasAutoAt(offset - 2) && text.marks.hasAutoAt(offset);
+  const ours =
+    text.text.slice(offset - 2, offset + 1) === '\\$$' &&
+    text.marks.hasAutoAt(offset - 2) &&
+    text.marks.hasAutoAt(offset);
   if (!ours) return null;
   const filled = text.splice(offset, offset, typed).splice(offset - 2, offset - 1);
-  return ctx.apply(ctx.draft().setText(node, filled).setCaret(node, offset - 1 + typed.length, -1));
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(node, filled)
+      .setCaret(node, offset - 1 + typed.length, -1),
+  );
 }
 
 /**
@@ -190,7 +273,14 @@ function typedInEscapedPair(ctx: CommandContext, typed: string): OurusResult | n
 function wrapInPair(ctx: CommandContext, opener: string): OurusResult | null {
   const [a, b] = [ctx.from, ctx.to];
   const place = pairPlace(ctx, a);
-  if (!place || a.zone !== 'text' || b.zone !== 'text' || a.node.persistentNode !== b.node.persistentNode || (!place.prose && !(opener in WRAPS_ANYWHERE))) return null;
+  if (
+    !place ||
+    a.zone !== 'text' ||
+    b.zone !== 'text' ||
+    a.node.persistentNode !== b.node.persistentNode ||
+    (!place.prose && !(opener in WRAPS_ANYWHERE))
+  )
+    return null;
   const from = Math.min(a.offset, b.offset);
   const to = Math.max(a.offset, b.offset);
   if (place.markup(from) || place.markup(to)) return null;
@@ -201,8 +291,16 @@ function wrapInPair(ctx: CommandContext, opener: string): OurusResult | null {
   const ours = opener in BRACKETS;
   const wrapped = ours ? spliced.withMarks({ auto: [...spliced.marks.auto, to + 1] }) : spliced;
   const forward = ctx.selection.anchor <= ctx.selection.head;
-  const [start, end] = [{ ref: a.node, offset: from + 1, assoc: 1 as const }, { ref: a.node, offset: to + 1, assoc: -1 as const }];
-  return ctx.apply(ctx.draft().setText(a.node, wrapped).select(forward ? start : end, forward ? end : start));
+  const [start, end] = [
+    { ref: a.node, offset: from + 1, assoc: 1 as const },
+    { ref: a.node, offset: to + 1, assoc: -1 as const },
+  ];
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(a.node, wrapped)
+      .select(forward ? start : end, forward ? end : start),
+  );
 }
 
 /**
@@ -225,10 +323,23 @@ function afterBlockIdLine(ctx: CommandContext, typed: string): OurusResult | nul
   const part = text instanceof OurusProse ? text.frame.find((p) => p.part === 'blockId') : undefined;
   // (a text with more than the block id: one that is only one, `- ^x`, has nothing to go on with)
   const more = text instanceof OurusProse && !!part && trimMd(text.text.slice(text.textStart(0), part.from)) !== '';
-  if (part && more && !ids[0]!.carried && text instanceof OurusProse && doc.atTextColumn(head, owner) && !text.blockIdLines.length) {
+  if (
+    part &&
+    more &&
+    !ids[0]!.carried &&
+    text instanceof OurusProse &&
+    doc.atTextColumn(head, owner) &&
+    !text.blockIdLines.length
+  ) {
     const id = text.text.slice(text.text.indexOf('^', part.from), part.to);
     // (the line typed on the text's now, the blank lines after it one fewer)
-    return ctx.apply(ctx.draft().setText(owner, text.splice(part.from, part.to, `\n${typed} ${id}`)).gap(owner, Math.max(0, owner.gap - 1)).setCaret(owner, part.from + 1 + typed.length, -1));
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(owner, text.splice(part.from, part.to, `\n${typed} ${id}`))
+        .gap(owner, Math.max(0, owner.gap - 1))
+        .setCaret(owner, part.from + 1 + typed.length, -1),
+    );
   }
   // (a paragraph of its own: the line as written up to the caret, its prefix, again after a blank
   // line, the note's line ending)
@@ -249,15 +360,32 @@ export function placedText(ctx: CommandContext, typed: string): OurusResult | nu
   // right before a block id with nothing before it (a text that is only one, `- ┃^x`): what is typed
   // goes before it with a blank between, or it would end in it, no block id any more
   const glued = gluedBlockId(ctx);
-  if (glued && !/[ \t]$/.test(typed)) return ctx.apply(ctx.draft().setText(glued.node, glued.text.splice(glued.offset, glued.offset, `${typed} `) as OurusText).setCaret(glued.node, glued.offset + typed.length, -1));
+  if (glued && !/[ \t]$/.test(typed))
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(glued.node, glued.text.splice(glued.offset, glued.offset, `${typed} `) as OurusText)
+        .setCaret(glued.node, glued.offset + typed.length, -1),
+    );
   // on the blank line right after one that ends with a block id, which what is typed would join
   const after = afterBlockIdLine(ctx, typed);
   if (after) return after;
   // at the end of a marker's line, an item's text starting below it (`-┃⏎  a`): on that line, after a
   // space, the text's first line (typed right after the marker, it would be no item: `-z`)
   const at = ctx.from;
-  if (at.zone === 'frame' && at.offset === 0 && at.text instanceof OurusProse && at.text.frame[0]?.part === 'below' && trimMd(typed.slice(0, 1)) !== '') {
-    return ctx.apply(ctx.draft().setText(at.node, at.text.splice(0, 0, typed) as OurusText).setCaret(at.node, typed.length, -1));
+  if (
+    at.zone === 'frame' &&
+    at.offset === 0 &&
+    at.text instanceof OurusProse &&
+    at.text.frame[0]?.part === 'below' &&
+    trimMd(typed.slice(0, 1)) !== ''
+  ) {
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(at.node, at.text.splice(0, 0, typed) as OurusText)
+        .setCaret(at.node, typed.length, -1),
+    );
   }
   return null;
 }
@@ -288,7 +416,8 @@ function typedOneByOne(ctx: CommandContext, typed: string): OurusResult | null {
     if (!result) return null;
     if (result instanceof OurusRejected || result instanceof OurusFailed) return result;
     const head = view.selection.head;
-    const step: readonly ChangeSpec[] = result instanceof OurusSuccess ? result.changes : [{ from: head, to: head, insert: char }];
+    const step: readonly ChangeSpec[] =
+      result instanceof OurusSuccess ? result.changes : [{ from: head, to: head, insert: char }];
     if (result instanceof OurusSuccess) {
       ours = true;
       view = result.view;
@@ -302,7 +431,8 @@ function typedOneByOne(ctx: CommandContext, typed: string): OurusResult | null {
 }
 
 /** Where a backtick may pair: next to nothing, a space or a tab, or the punctuation that opens (`before`) or closes (`after`) a phrase. */
-const atBoundary = (c: string, punctuation: string): boolean => c === '' || c === ' ' || c === '\t' || punctuation.includes(c);
+const atBoundary = (c: string, punctuation: string): boolean =>
+  c === '' || c === ' ' || c === '\t' || punctuation.includes(c);
 
 /** Whether the caret is between the two backticks of an empty pair in a text (`` `┃` ``). */
 function inEmptyPair(ctx: CommandContext): boolean {
@@ -340,12 +470,16 @@ function inlinePair(ctx: CommandContext): OurusResult | null {
   const span = ctx.doc.codeSpanAt(pos);
   const emptyPair = emptyPairAt(ctx, s, offset);
   const draft = ctx.draft();
-  if (after === '`' && (span ? pos >= span.closer && pos < span.to : emptyPair)) return ctx.apply(draft.setText(node, typedOver(text, offset)).setCaret(node, offset + 1, 1));
+  if (after === '`' && (span ? pos >= span.closer && pos < span.to : emptyPair))
+    return ctx.apply(draft.setText(node, typedOver(text, offset)).setCaret(node, offset + 1, 1));
   // (in math or a comment, verbatim as code is: the host's)
-  if (span || ctx.doc.verbatimSpanAt(pos) || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return new OurusDeferred('host-default');
+  if (span || ctx.doc.verbatimSpanAt(pos) || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"'))
+    return new OurusDeferred('host-default');
   // (the closing backtick ours: Backspace in the empty pair takes both)
   const paired = text.splice(offset, offset, '``');
-  return ctx.apply(draft.setText(node, paired.withMarks({ auto: [...paired.marks.auto, offset + 1] })).setCaret(node, offset + 1, -1));
+  return ctx.apply(
+    draft.setText(node, paired.withMarks({ auto: [...paired.marks.auto, offset + 1] })).setCaret(node, offset + 1, -1),
+  );
 }
 
 /**
@@ -359,22 +493,46 @@ export function deleteEmptyPair(ctx: CommandContext, place: PairPlace, offset: n
   const s = text.text;
   // (with `$` listed, `$$┃$$` is a level of `$`'s, as a bracket's double: `$┃$`)
   const open = s[offset - 1]!;
-  if (prose && open === '$' && s[offset] === '$' && closes(ctx, '$') && !place.markup(offset - 1)) return ctx.apply(ctx.draft().setText(node, text.splice(offset - 1, offset + 1)).setCaret(node, offset - 1, -1));
+  if (prose && open === '$' && s[offset] === '$' && closes(ctx, '$') && !place.markup(offset - 1))
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, text.splice(offset - 1, offset + 1))
+        .setCaret(node, offset - 1, -1),
+    );
   // a delimiter's (`$$┃$$`): its last character and the closer, as the keystroke typed them
   // (one the flavor reads: elsewhere its characters are text, typed one at a time, as `delimiterTyped` has it)
   for (const { opener, closer, extension } of prose ? DELIMITERS : []) {
-    if (!closes(ctx, opener) || (extension && !ctx.doc.mdTree.flavor.has(extension)) || s.slice(offset - opener.length, offset) !== opener || s.slice(offset, offset + closer.length) !== closer) continue;
-    return ctx.apply(ctx.draft().setText(node, text.splice(offset - 1, offset + closer.length)).setCaret(node, offset - 1, -1));
+    if (
+      !closes(ctx, opener) ||
+      (extension && !ctx.doc.mdTree.flavor.has(extension)) ||
+      s.slice(offset - opener.length, offset) !== opener ||
+      s.slice(offset, offset + closer.length) !== closer
+    )
+      continue;
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, text.splice(offset - 1, offset + closer.length))
+        .setCaret(node, offset - 1, -1),
+    );
   }
   // (a bracket's where its single is listed: with the double alone, WorkFlowy's, Backspace takes one)
   // (a closer after the caret: at the text's end none, `undefined` no bracket's closer)
-  const listed = s[offset] === '`' ? prose && closes(ctx, '`') && emptyPairAt(ctx, s, offset) : offset < s.length && BRACKETS[open] === s[offset] && open !== '$' && closes(ctx, open as AutoCloseOpener);
+  const listed =
+    s[offset] === '`'
+      ? prose && closes(ctx, '`') && emptyPairAt(ctx, s, offset)
+      : offset < s.length && BRACKETS[open] === s[offset] && open !== '$' && closes(ctx, open as AutoCloseOpener);
   // (in what isn't prose, a pair ours alone: there the author's brackets are characters)
   if (!listed || (!prose && !text.marks.hasAutoAt(offset))) return null;
   if (place.markup(offset - 1)) return null;
-  return ctx.apply(ctx.draft().setText(node, text.splice(offset - 1, offset + 1)).setCaret(node, offset - 1, -1));
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(node, text.splice(offset - 1, offset + 1))
+      .setCaret(node, offset - 1, -1),
+  );
 }
-
 
 /**
  * A backtick `autoWrap` lists, over a selection in one line of a node's text: the selection
@@ -383,32 +541,59 @@ export function deleteEmptyPair(ctx: CommandContext, place: PairPlace, offset: n
  */
 function wrapInCode(ctx: CommandContext): OurusResult | null {
   const [a, b] = [ctx.from, ctx.to];
-  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusProse) || a.node.persistentNode !== b.node.persistentNode) return new OurusDeferred('host-default');
+  if (
+    a.zone !== 'text' ||
+    b.zone !== 'text' ||
+    !(a.text instanceof OurusProse) ||
+    a.node.persistentNode !== b.node.persistentNode
+  )
+    return new OurusDeferred('host-default');
   const text = a.text;
   if (a.offset < text.textStart(lineOf(text.text, a.offset))) return new OurusDeferred('host-default');
   const selected = text.text.slice(a.offset, b.offset);
   const fence = '`'.repeat((selected.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0) + 1);
   // (a space each side where a backtick ends it, or where it starts and ends with a space, which a code
   // span would strip, one each side: ` b ` written `  b  `)
-  const pad = selected.startsWith('`') || selected.endsWith('`') || (/^[ \n][^]*[ \n]$/.test(selected) && /[^ \n]/.test(selected)) ? ' ' : '';
+  const pad =
+    selected.startsWith('`') || selected.endsWith('`') || (/^[ \n][^]*[ \n]$/.test(selected) && /[^ \n]/.test(selected))
+      ? ' '
+      : '';
   const open = fence + pad;
   const wrapped = text.splice(b.offset, b.offset, pad + fence).splice(a.offset, a.offset, open);
   const forward = ctx.selection.anchor <= ctx.selection.head;
-  const [from, to] = [{ ref: a.node, offset: a.offset + open.length, assoc: 1 as const }, { ref: a.node, offset: b.offset + open.length, assoc: -1 as const }];
-  return ctx.apply(ctx.draft().setText(a.node, wrapped).select(forward ? from : to, forward ? to : from));
+  const [from, to] = [
+    { ref: a.node, offset: a.offset + open.length, assoc: 1 as const },
+    { ref: a.node, offset: b.offset + open.length, assoc: -1 as const },
+  ];
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(a.node, wrapped)
+      .select(forward ? from : to, forward ? to : from),
+  );
 }
 
 /** Whether the selection takes part of a closed fenced block's run, but not the whole block. */
 function overFence(ctx: CommandContext): boolean {
   const ends = [ctx.from, ctx.to] as const;
   return ends.some((at, k) => {
-    if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusAtom) || at.text.type !== 'fenced_code') return false;
+    if (
+      (at.zone !== 'text' && at.zone !== 'frame') ||
+      !(at.text instanceof OurusAtom) ||
+      at.text.type !== 'fenced_code'
+    )
+      return false;
     const runs = at.text.delimiters;
     if (!runs?.close) return false;
     // what of this block's text the selection takes: from its start, or to its end, where the other end is outside it
     const other = ends[1 - k]!;
-    const same = (other.zone === 'text' || other.zone === 'frame') && other.node.persistentNode === at.node.persistentNode;
-    const [from, to] = same ? [(ctx.from as { offset: number }).offset, (ctx.to as { offset: number }).offset] : k === 0 ? [at.offset, at.text.text.length] : [0, at.offset];
+    const same =
+      (other.zone === 'text' || other.zone === 'frame') && other.node.persistentNode === at.node.persistentNode;
+    const [from, to] = same
+      ? [(ctx.from as { offset: number }).offset, (ctx.to as { offset: number }).offset]
+      : k === 0
+        ? [at.offset, at.text.text.length]
+        : [0, at.offset];
     // (the whole block, its fences with it, breaks none)
     if (from === 0 && to === at.text.text.length) return false;
     return [runs.open, runs.close].some((r) => from < r.to && to > r.from);
@@ -439,14 +624,15 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): OurusRe
   if (onOpen || onClose) {
     const run = onOpen ? runs.open : runs.close!;
     if (s[run.from] === char && offset >= run.from && offset <= run.to) {
-      if (!runs.close) return new OurusDeferred('in-markup', 'an unclosed block\'s fence: the host\'s');
+      if (!runs.close) return new OurusDeferred('in-markup', "an unclosed block's fence: the host's");
       // (the other fence's character ours: the closing one's where the opening one was typed in, and back)
       const spliced = text.splice(runs.close.to, runs.close.to, char).splice(runs.open.to, runs.open.to, char);
       const grown = spliced.withMarks({ auto: [...spliced.marks.auto, onOpen ? runs.close.to + 1 : runs.open.to] });
       // where the host draws the fence, not in it: from the closing one at the code's end, from inside
       // the opening one at its start (after it, the info string, is text)
       let caret = offset + (onOpen ? 1 : 2);
-      if (fenceDrawn(ctx, grown) && (onClose || caret <= runs.open.to)) caret = onClose ? textEnd(grown) : textStart(grown);
+      if (fenceDrawn(ctx, grown) && (onClose || caret <= runs.open.to))
+        caret = onClose ? textEnd(grown) : textStart(grown);
       return ctx.apply(draft.setText(node, grown).setCaret(node, caret, -1));
     }
     // the host's where the fence stays one, closed as it was
@@ -461,7 +647,10 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): OurusRe
     const retyped = typed.splice(lineTo + 1, s.length + 1);
     const close = retyped.delimiters?.close;
     // the caret after it, but where the host draws the fence: at the code's end
-    if (close && ctx.doc.readsAs(retyped)) return ctx.apply(draft.setText(node, retyped).setCaret(node, fenceDrawn(ctx, retyped) ? textEnd(retyped) : close.to, -1));
+    if (close && ctx.doc.readsAs(retyped))
+      return ctx.apply(
+        draft.setText(node, retyped).setCaret(node, fenceDrawn(ctx, retyped) ? textEnd(retyped) : close.to, -1),
+      );
   }
   return ctx.apply(draft.setText(node, typed).setCaret(node, offset + 1, -1));
 }
@@ -476,7 +665,8 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): OurusRe
  */
 function openFence(ctx: CommandContext, char: string): OurusResult | null | undefined {
   const at = ctx.from;
-  if (at.zone !== 'text' || !(at.text instanceof OurusProse) || at.text.type !== 'paragraph' || at.text.frame.length) return undefined;
+  if (at.zone !== 'text' || !(at.text instanceof OurusProse) || at.text.type !== 'paragraph' || at.text.frame.length)
+    return undefined;
   const { node, text, offset } = at;
   if (node.kind !== 'paragraph' && node.kind !== 'item') return undefined;
   const s = text.text;
@@ -492,7 +682,11 @@ function openFence(ctx: CommandContext, char: string): OurusResult | null | unde
   if (!run || line[run.from] !== char || before.length > run.to - 1) return undefined;
   // (the closing fence ours, every character of its run)
   const closing = line.slice(run.from, run.to);
-  const code = new OurusAtom('fenced_code', node.kind === 'item' && lineFrom === 0, MarkSet.of(`${line}\n${closing}`, { auto: [...closing].map((_, k) => line.length + 1 + k) }));
+  const code = new OurusAtom(
+    'fenced_code',
+    node.kind === 'item' && lineFrom === 0,
+    MarkSet.of(`${line}\n${closing}`, { auto: [...closing].map((_, k) => line.length + 1 + k) }),
+  );
   if (!ctx.doc.readsAs(code)) return undefined;
   if (!closes(ctx, char === '`' ? '```' : '~~~')) return new OurusDeferred('host-default');
   return ctx.apply(lineToBlock(ctx, node, s, lineFrom, lineTo, code, run.to));
@@ -510,14 +704,26 @@ function openFenceInQuote(ctx: CommandContext, char: string): OurusResult | null
   const { node, text, offset } = at;
   const prefix = text.frame[0];
   if (node.kind !== 'paragraph' && node.kind !== 'item') return undefined;
-  if (text.frame.length !== 1 || prefix?.part !== 'quote' || prefix.from !== 0 || text.text.includes('\n') || text.blockIdLines.length || offset < prefix.to) return undefined;
+  if (
+    text.frame.length !== 1 ||
+    prefix?.part !== 'quote' ||
+    prefix.from !== 0 ||
+    text.text.includes('\n') ||
+    text.blockIdLines.length ||
+    offset < prefix.to
+  )
+    return undefined;
   const s = text.text;
   const before = s.slice(prefix.to, offset);
   const line = before + char + s.slice(offset);
   const run = new OurusAtom('fenced_code', false, line).delimiters?.open;
   if (!run || line[run.from] !== char || before.length > run.to - 1) return undefined;
   const closing = line.slice(run.from, run.to);
-  const code = new OurusAtom('fenced_code', false, MarkSet.of(`${line}\n${closing}`, { auto: [...closing].map((_, k) => line.length + 1 + k) }));
+  const code = new OurusAtom(
+    'fenced_code',
+    false,
+    MarkSet.of(`${line}\n${closing}`, { auto: [...closing].map((_, k) => line.length + 1 + k) }),
+  );
   if (!closes(ctx, char === '`' ? '```' : '~~~')) return new OurusDeferred('host-default');
   const draft = ctx.draft();
   const block = draft.create('atom', code);
@@ -541,16 +747,35 @@ function openFenceInQuote(ctx: CommandContext, char: string): OurusResult | null
  * their own, its children following them (an item's: its first child, as the block is, where the item
  * keeps text above it). A paragraph's list, where no lines below took it, goes after the block.
  */
-export function lineToBlock(ctx: CommandContext, node: OurusNode, s: string, lineFrom: number, lineTo: number, atom: OurusAtom, caret: number): OurusDraft {
+export function lineToBlock(
+  ctx: CommandContext,
+  node: OurusNode,
+  s: string,
+  lineFrom: number,
+  lineTo: number,
+  atom: OurusAtom,
+  caret: number,
+): OurusDraft {
   const draft = ctx.draft();
   const container = node.kind === 'item';
   // the lines below, a paragraph of their own
-  if (lineTo < s.length) draft.split(node, lineTo, { to: lineTo + 1, kind: 'paragraph', children: container ? 'stay' : 'follow', into: container ? 'child' : 'sibling' });
+  if (lineTo < s.length)
+    draft.split(node, lineTo, {
+      to: lineTo + 1,
+      kind: 'paragraph',
+      children: container ? 'stay' : 'follow',
+      into: container ? 'child' : 'sibling',
+    });
   let block: OurusNode | NodeId = node;
   const last = lineTo >= s.length;
   if (lineFrom > 0) {
     // the lines above stay the node's text, the block after them
-    const [, rest] = draft.split(node, lineFrom - 1, { to: lineFrom, kind: 'paragraph', children: !container && last ? 'follow' : 'stay', into: container ? 'child' : 'sibling' });
+    const [, rest] = draft.split(node, lineFrom - 1, {
+      to: lineFrom,
+      kind: 'paragraph',
+      children: !container && last ? 'follow' : 'stay',
+      into: container ? 'child' : 'sibling',
+    });
     block = rest;
   }
   if (block !== node || node.kind !== 'item') draft.convert(block, 'atom');
@@ -560,7 +785,13 @@ export function lineToBlock(ctx: CommandContext, node: OurusNode, s: string, lin
 }
 
 /** The delimiters `autoClose` types as a pair on the caret's line, each with its closer, the extension of the flavor that reads it (none: every flavor), and the block it makes spread over lines. */
-const DELIMITERS: readonly { readonly opener: AutoCloseOpener; readonly closer: string; readonly extension?: string; readonly block: string; readonly lineBlock?: true }[] = [
+const DELIMITERS: readonly {
+  readonly opener: AutoCloseOpener;
+  readonly closer: string;
+  readonly extension?: string;
+  readonly block: string;
+  readonly lineBlock?: true;
+}[] = [
   { opener: '$$', closer: '$$', extension: 'mathBlocks', block: 'math_block' },
   { opener: '%%', closer: '%%', extension: 'commentBlocks', block: 'comment_block' },
   // (on a line alone a block even closed on it, as HTML is: `<!--┃-->` at a line's start)
@@ -578,12 +809,24 @@ function delimiterTyped(ctx: CommandContext, typed: string): OurusResult | null 
   if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return null;
   const { node, text, offset } = at;
   const s = text.text;
-  if ('$%->'.includes(typed) && s[offset] === typed && text.marks.hasAutoAt(offset)) return ctx.apply(ctx.draft().setText(node, typedOver(text, offset)).setCaret(node, offset + 1, 1));
+  if ('$%->'.includes(typed) && s[offset] === typed && text.marks.hasAutoAt(offset))
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, typedOver(text, offset))
+        .setCaret(node, offset + 1, 1),
+    );
   for (const { opener, closer, extension, block, lineBlock } of DELIMITERS) {
-    if (typed !== opener.at(-1) || !closes(ctx, opener) || (extension && !ctx.doc.mdTree.flavor.has(extension))) continue;
+    if (typed !== opener.at(-1) || !closes(ctx, opener) || (extension && !ctx.doc.mdTree.flavor.has(extension)))
+      continue;
     const from = offset - opener.length + 1;
     // (the rest of it typed before, no longer run of it: `$$$`)
-    if (from < text.textStart(lineOf(s, offset)) || s.slice(from, offset) !== opener.slice(0, -1) || s[from - 1] === opener[0]) continue;
+    if (
+      from < text.textStart(lineOf(s, offset)) ||
+      s.slice(from, offset) !== opener.slice(0, -1) ||
+      s[from - 1] === opener[0]
+    )
+      continue;
     const after = s[offset];
     if (after !== undefined && after !== '\n' && after !== ' ' && after !== '\t') continue;
     let slashes = 0;
@@ -592,13 +835,29 @@ function delimiterTyped(ctx: CommandContext, typed: string): OurusResult | null 
     // a line alone that is a block, its first: the line that block, as a fence typed makes one
     const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
     const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
-    if (lineBlock && from === lineFrom && lineTo === offset && text.type === 'paragraph' && !text.frame.length && (node.kind === 'paragraph' || node.kind === 'item')) {
-      const atom = new OurusAtom(block, node.kind === 'item' && lineFrom === 0, MarkSet.of(opener + closer, { auto: [...closer].map((_, k) => opener.length + k) }));
+    if (
+      lineBlock &&
+      from === lineFrom &&
+      lineTo === offset &&
+      text.type === 'paragraph' &&
+      !text.frame.length &&
+      (node.kind === 'paragraph' || node.kind === 'item')
+    ) {
+      const atom = new OurusAtom(
+        block,
+        node.kind === 'item' && lineFrom === 0,
+        MarkSet.of(opener + closer, { auto: [...closer].map((_, k) => opener.length + k) }),
+      );
       if (!ctx.doc.readsAs(atom)) continue;
       return ctx.apply(lineToBlock(ctx, node, s, lineFrom, lineTo, atom, opener.length));
     }
     const paired = text.splice(offset, offset, typed + closer);
-    return ctx.apply(ctx.draft().setText(node, paired.withMarks({ auto: [...paired.marks.auto, ...[...closer].map((_, k) => offset + 1 + k)] })).setCaret(node, offset + 1, -1));
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, paired.withMarks({ auto: [...paired.marks.auto, ...[...closer].map((_, k) => offset + 1 + k)] }))
+        .setCaret(node, offset + 1, -1),
+    );
   }
   return null;
 }
@@ -617,8 +876,20 @@ export function enterInPair(ctx: CommandContext): OurusResult | null {
     for (const { opener, closer, block } of DELIMITERS) {
       if (text.type !== block || text.text !== opener + closer || offset !== opener.length) continue;
       if (![...closer].every((_, k) => text.marks.hasAutoAt(offset + k))) return null;
-      const spread = new OurusAtom(block, text.item, MarkSet.of(`${opener}\n\n${closer}`, { auto: [...closer].map((_, k) => opener.length + 2 + k) }), text.blockIdLines);
-      return ctx.doc.readsAs(spread) ? ctx.apply(ctx.draft().setText(node, spread).setCaret(node, opener.length + 1, -1)) : null;
+      const spread = new OurusAtom(
+        block,
+        text.item,
+        MarkSet.of(`${opener}\n\n${closer}`, { auto: [...closer].map((_, k) => opener.length + 2 + k) }),
+        text.blockIdLines,
+      );
+      return ctx.doc.readsAs(spread)
+        ? ctx.apply(
+            ctx
+              .draft()
+              .setText(node, spread)
+              .setCaret(node, opener.length + 1, -1),
+          )
+        : null;
     }
     return null;
   }
@@ -632,7 +903,11 @@ export function enterInPair(ctx: CommandContext): OurusResult | null {
     if (s.slice(lineFrom, offset) !== opener || s.slice(offset, lineTo) !== closer) continue;
     if (![...closer].every((_, k) => text.marks.hasAutoAt(offset + k))) continue;
     const lines = `${opener}\n\n${closer}`;
-    const atom = new OurusAtom(block, node.kind === 'item' && lineFrom === 0, MarkSet.of(lines, { auto: [...closer].map((_, k) => opener.length + 2 + k) }));
+    const atom = new OurusAtom(
+      block,
+      node.kind === 'item' && lineFrom === 0,
+      MarkSet.of(lines, { auto: [...closer].map((_, k) => opener.length + 2 + k) }),
+    );
     if (!ctx.doc.readsAs(atom)) return null;
     return ctx.apply(lineToBlock(ctx, node, s, lineFrom, lineTo, atom, opener.length + 1));
   }

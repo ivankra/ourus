@@ -143,7 +143,10 @@ export class MarkSet {
     if (inserted.isEmpty()) return moved;
     const add = (offsets: readonly number[], own: readonly number[]): readonly number[] => {
       if (!own.length) return offsets;
-      return merge(offsets, own.map((pos) => pos + from));
+      return merge(
+        offsets,
+        own.map((pos) => pos + from),
+      );
     };
     const placeholders = add(moved.placeholders, inserted.placeholders);
     const auto = add(moved.auto, inserted.auto);

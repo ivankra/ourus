@@ -63,7 +63,8 @@ function align(raw: string, display: string): number[] {
  * A displayed offset in the raw text, as Moo.do puts a caret there: past the markup between two
  * characters (`**b**┃c`, `` `┃x` ``), before it at the text's start (`┃**b**`), past it at the end.
  */
-const toRaw = (pos: readonly number[], p: number, rawLength: number): number => (p <= 0 ? 0 : p >= pos.length ? rawLength : pos[p]!);
+const toRaw = (pos: readonly number[], p: number, rawLength: number): number =>
+  p <= 0 ? 0 : p >= pos.length ? rawLength : pos[p]!;
 
 /** A raw offset as a displayed one: the displayed characters before it. */
 const toDisplay = (pos: readonly number[], r: number): number => pos.filter((x) => x < r).length;
@@ -124,14 +125,21 @@ const CONFIRMING = `!!document.querySelector('.fancyModalButtons')`;
  * reloads itself once after its first load (its service worker, installed, takes over the page).
  */
 async function appReady(page: Page): Promise<void> {
-  const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, frames: false }));
+  const idle = () =>
+    page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, frames: false }),
+    );
   for (let attempt = 0; ; attempt++) {
     try {
-      await page.waitForFunction((modules) => {
-        if (!(window as any).webpackChunkLegend || !document.querySelector('.itemInPaneText')) return false;
-        const m = (0, eval)(modules);
-        return !!(m.items && m.history && m.selection && m.selected && m.changeType && m.batcher && m.doc);
-      }, MODULES, { timeout: 120000 });
+      await page.waitForFunction(
+        (modules) => {
+          if (!(window as any).webpackChunkLegend || !document.querySelector('.itemInPaneText')) return false;
+          const m = (0, eval)(modules);
+          return !!(m.items && m.history && m.selection && m.selected && m.changeType && m.batcher && m.doc);
+        },
+        MODULES,
+        { timeout: 120000 },
+      );
       await idle();
       await page.waitForTimeout(1000);
       await idle();
@@ -153,7 +161,11 @@ async function loadMoodo(page: Page, doc: Doc): Promise<void> {
   }
   const o = doc as Outline;
   const items = o.blocks.map((b) => ({ depth: b.depth, ...toMoodo(b.text) }));
-  const sel = o.sel && { block: o.sel.block, anchor: Math.max(0, o.sel.anchor - items[o.sel.block]!.canon), head: Math.max(0, o.sel.head - items[o.sel.block]!.canon) };
+  const sel = o.sel && {
+    block: o.sel.block,
+    anchor: Math.max(0, o.sel.anchor - items[o.sel.block]!.canon),
+    head: Math.max(0, o.sel.head - items[o.sel.block]!.canon),
+  };
   const placed = await page.evaluate(
     async ({ items, sel, modules, alignSrc, toDisplaySrc }) => {
       const m = (0, eval)(modules);
@@ -175,7 +187,10 @@ async function loadMoodo(page: Page, doc: Doc): Promise<void> {
       const count: number[] = [0];
       for (const it of items) {
         const parent = parents[it.depth];
-        const item = R.createVMLI({ id: R.generateID(), text: it.raw }, { documentOwner: doc, parent, changeType: CT.Local });
+        const item = R.createVMLI(
+          { id: R.generateID(), text: it.raw },
+          { documentOwner: doc, parent, changeType: CT.Local },
+        );
         parent.insertItem(item, count[it.depth]!);
         count[it.depth] = (count[it.depth] ?? 0) + 1;
         if (it.done) item.setComplete(true, CT.Local);
@@ -212,7 +227,9 @@ async function loadMoodo(page: Page, doc: Doc): Promise<void> {
       (document.querySelector('.paneHiddenInput') as HTMLElement | null)?.focus();
       S.updateHiddenInput?.();
       await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000, frames: false });
-      return (document.activeElement as HTMLElement | null)?.classList.contains('paneHiddenInput') ? 'placed' : 'the hidden input lost the focus';
+      return (document.activeElement as HTMLElement | null)?.classList.contains('paneHiddenInput')
+        ? 'placed'
+        : 'the hidden input lost the focus';
     },
     { items, sel, modules: MODULES, alignSrc: align.toString(), toDisplaySrc: toDisplay.toString() },
   );
@@ -245,14 +262,29 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+V',
     undo: 'Control+z',
     redo: 'Control+y',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'cut', 'deleteSubtree'],
   // framer-motion's frame loop never stops in Moo.do (an animation repeating, drawing nothing): a frame
   // pending is no work of a key's
   idle: { frames: false },
   // an item's text is one line of Markdown, with Moo.do's prefixes; no Markdown block but a heading
-  refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'quote'],
+  refuses: [
+    'code block',
+    'html',
+    'table',
+    'math',
+    'thematic break',
+    'link reference definition',
+    'comment',
+    'footnote',
+    'quote',
+  ],
   ordered: true,
   // `# ` starting an item's raw text is its header's prefix (a text `#` escaped in it, `\# x`)
   headingBlocks: true,
@@ -290,14 +322,16 @@ export const driver: Driver = {
       // a code span of two backticks or more, which Moo.do writes with one (`` ``x`` `` becomes `` `x` ``)
       if (/(^|[^`])``+[^`]/.test(b.text)) return 'code span of more than one backtick (Moo.do writes it with one)';
       // text Moo.do would read as a prefix (a bullet's, a task's), or a Markdown escape it has none of
-      if (/^(- |\* |\+ |\[ (?!\] )|\\)/.test(b.text.replace(/^\[[ xX]\] /, ''))) return 'text Moo.do reads as a prefix, or an escape';
+      if (/^(- |\* |\+ |\[ (?!\] )|\\)/.test(b.text.replace(/^\[[ xX]\] /, '')))
+        return 'text Moo.do reads as a prefix, or an escape';
     }
     // Moo.do numbers a run of numbered siblings from 1, whatever the text says
     const run: number[] = [];
     for (const b of o.blocks) {
       run.length = b.depth + 1;
       const n = /^(\d{1,9})\. /.exec(b.text);
-      if (n && Number(n[1]) !== (run[b.depth] ?? 0) + 1) return 'numbered list not counting from 1 (Moo.do numbers a run of numbered items from 1)';
+      if (n && Number(n[1]) !== (run[b.depth] ?? 0) + 1)
+        return 'numbered list not counting from 1 (Moo.do numbers a run of numbered items from 1)';
       run[b.depth] = n ? Number(n[1]) : 0;
     }
     // a done task is hidden from the demo's pane (its filter shows what isn't completed)
@@ -307,11 +341,13 @@ export const driver: Driver = {
       // Shift+Left takes it back from the right (measured: from `ab┃`, `a«b»`, then `a┃b`)
       if (o.sel.head < o.sel.anchor) return "backward selection (Moo.do's selection has no direction)";
       const at = toMoodo(o.blocks[o.sel.block]!.text);
-      if (Math.min(o.sel.anchor, o.sel.head) < at.canon) return "caret in a task's checkbox, a heading's #s or an item's number";
+      if (Math.min(o.sel.anchor, o.sel.head) < at.canon)
+        return "caret in a task's checkbox, a heading's #s or an item's number";
       // inside a run of emphasis markers (`**bold*┃*`): Moo.do draws them as formatting, and its caret
       // goes past them (Regression237)
       const t = o.blocks[o.sel.block]!.text;
-      if ([o.sel.anchor, o.sel.head].some((k) => /[*_]/.test(t[k - 1] ?? '') && t[k - 1] === t[k])) return 'caret inside a run of emphasis markers, which Moo.do draws as formatting';
+      if ([o.sel.anchor, o.sel.head].some((k) => /[*_]/.test(t[k - 1] ?? '') && t[k - 1] === t[k]))
+        return 'caret inside a run of emphasis markers, which Moo.do draws as formatting';
     }
     return undefined;
   },
@@ -322,15 +358,26 @@ export const driver: Driver = {
     // its reload of itself, as its service worker takes over (in a new context, every open), waited for
     // here: on a machine busy with other runs it came after `open`, in the first tests' loads (run E)
     if (!(await page.evaluate(() => !!navigator.serviceWorker?.controller).catch(() => false))) {
-      await page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 30000 }).catch(() => {});
+      await page
+        .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 30000 })
+        .catch(() => {});
       await appReady(page);
     }
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, frames: false }));
+    const idle = () =>
+      page.evaluate(() =>
+        (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, frames: false }),
+      );
     // ready once a key does what it should: Tab indents
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
       try {
-        await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+        await this.load(page, {
+          blocks: [
+            { depth: 0, text: 'a' },
+            { depth: 0, text: 'b' },
+          ],
+          sel: { block: 1, anchor: 1, head: 1 },
+        });
         await idle();
         await page.keyboard.press('Tab');
         await idle();
@@ -362,7 +409,6 @@ export const driver: Driver = {
     }
   },
 
-
   async read(page: Page) {
     const raw = await page.evaluate(
       ({ modules }) => {
@@ -376,8 +422,19 @@ export const driver: Driver = {
             const r: string = c.getRawText();
             // a numbered item's number as Moo.do draws it: it counts a run of numbered siblings from 1,
             // whatever number the raw text has
-            const drawn = /^\d+\. /.test(r) ? /(?:^|\n)(\d+)\.(?:\n|$)/.exec((document.querySelector(`[data-id="${c.id}"]`) as HTMLElement | null)?.innerText ?? '')?.[1] : undefined;
-            flat.push({ depth, raw: drawn ? r.replace(/^\d+/, drawn) : r, body, display: c.getUnstyledText().slice(r.length - body.length), done: !!c._cachedFlagProps?.isComplete, id: c.id });
+            const drawn = /^\d+\. /.test(r)
+              ? /(?:^|\n)(\d+)\.(?:\n|$)/.exec(
+                  (document.querySelector(`[data-id="${c.id}"]`) as HTMLElement | null)?.innerText ?? '',
+                )?.[1]
+              : undefined;
+            flat.push({
+              depth,
+              raw: drawn ? r.replace(/^\d+/, drawn) : r,
+              body,
+              display: c.getUnstyledText().slice(r.length - body.length),
+              done: !!c._cachedFlagProps?.isComplete,
+              id: c.id,
+            });
             walk(c, depth + 1);
           });
         walk(doc._rootItem, 0);
@@ -392,7 +449,8 @@ export const driver: Driver = {
           if (s >= 0 && s === e) {
             // (no direction: from its start to its end)
             sel = { block: s, anchor: S.getStartOffset(true), head: S.getEndOffset(true) };
-          } else if (s >= 0 && e >= 0) selected = flat.map((_, i) => i).filter((i) => i >= Math.min(s, e) && i <= Math.max(s, e));
+          } else if (s >= 0 && e >= 0)
+            selected = flat.map((_, i) => i).filter((i) => i >= Math.min(s, e) && i <= Math.max(s, e));
         }
         return { flat, sel, selected };
       },

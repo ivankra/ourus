@@ -17,7 +17,19 @@ import { goneWithTextlessParents, textEnd, textStart } from './util.ts';
 import { OurusDeferred, OurusSuccess } from './types.ts';
 
 /** The commands routed over a subtree selection. */
-const ROUTED: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'deleteByDrag', 'cut', 'copy', 'insertText', 'enter', 'shiftEnter', 'paste', 'pastePlain']);
+const ROUTED: ReadonlySet<OurusCommand['type']> = new Set([
+  'deleteContentBackward',
+  'deleteContentForward',
+  'deleteSoftLineBackward',
+  'deleteByDrag',
+  'cut',
+  'copy',
+  'insertText',
+  'enter',
+  'shiftEnter',
+  'paste',
+  'pastePlain',
+]);
 
 /**
  * `command` over the subtree selection `ctx.selection` is (a command given `nodes` acts on those, not
@@ -29,9 +41,16 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
   if (!roots) return undefined;
   // typing over the whole document (a select all) replaces it as text, as every text editor does,
   // rather than keeping the first node's prefix (`- x`, `# x`)
-  const all = ctx.doc.wholeText(Math.min(ctx.selection.anchor, ctx.selection.head), Math.max(ctx.selection.anchor, ctx.selection.head));
+  const all = ctx.doc.wholeText(
+    Math.min(ctx.selection.anchor, ctx.selection.head),
+    Math.max(ctx.selection.anchor, ctx.selection.head),
+  );
   // (but a plain paste where nothing is pasted over nodes, `pasteOverNodes: nothing`, the whole document's too: Regression177)
-  if (all && (command.type === 'insertText' || (command.type === 'pastePlain' && ctx.config.pasteOverNodes !== 'nothing'))) return undefined;
+  if (
+    all &&
+    (command.type === 'insertText' || (command.type === 'pastePlain' && ctx.config.pasteOverNodes !== 'nothing'))
+  )
+    return undefined;
   switch (command.type) {
     case 'deleteContentBackward':
     case 'deleteContentForward':
@@ -103,7 +122,12 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
  * (a quote without a title, an item whose first block is on its marker's line) is its first child's
  * prefix: that child is the node, the rest of the root's subtree gone.
  */
-function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: CommandContext) => OurusResult | null, typed: string): OurusResult | null {
+function inPlace(
+  ctx: CommandContext,
+  roots: readonly OurusNode[],
+  then: (ctx: CommandContext) => OurusResult | null,
+  typed: string,
+): OurusResult | null {
   const doc = ctx.doc;
   const others: OurusNode[] = [...roots.slice(1)];
   let first = roots[0]!;
@@ -116,8 +140,13 @@ function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: C
   const draft = ctx.draft();
   const gone = goneWithTextlessParents(doc, [...others, ...first.children]);
   if (gone.length) draft.remove(gone);
-  if (text instanceof OurusAtom) draft.convert(first, 'paragraph').setText(first, new OurusProse('paragraph', false, '')).setCaret(first, 0, -1);
-  else draft.select({ ref: first, offset: textStart(text), assoc: 1 }, { ref: first, offset: textEnd(text), assoc: -1 });
+  if (text instanceof OurusAtom)
+    draft
+      .convert(first, 'paragraph')
+      .setText(first, new OurusProse('paragraph', false, ''))
+      .setCaret(first, 0, -1);
+  else
+    draft.select({ ref: first, offset: textStart(text), assoc: 1 }, { ref: first, offset: textEnd(text), assoc: -1 });
   return composed(ctx, ctx.apply(draft), then, typed);
 }
 
@@ -126,7 +155,12 @@ function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: C
  * is. Where `then` is the host's, its default done here, on the document `first` left (the host has
  * only this one's): the selection replaced by `typed`, the caret after it; without `typed`, the host's.
  */
-function composed(ctx: CommandContext, first: OurusResult | null, then: (ctx: CommandContext) => OurusResult | null, typed?: string): OurusResult | null {
+function composed(
+  ctx: CommandContext,
+  first: OurusResult | null,
+  then: (ctx: CommandContext) => OurusResult | null,
+  typed?: string,
+): OurusResult | null {
   if (!first || !(first instanceof OurusSuccess)) return first;
   let next = then(new CommandContext(first.view));
   if (next instanceof OurusDeferred && typed !== undefined) {
@@ -138,5 +172,10 @@ function composed(ctx: CommandContext, first: OurusResult | null, then: (ctx: Co
   }
   if (!next || !(next instanceof OurusSuccess)) return next instanceof OurusDeferred ? null : next;
   const changes = composeChanges(ctx.doc.text, first.changes, next.changes);
-  return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([first, next]), view: withRaisedLines(ctx, next.view, changes), changes });
+  return new OurusSuccess({
+    ...next,
+    ...blockIdsDeclaredBy([first, next]),
+    view: withRaisedLines(ctx, next.view, changes),
+    changes,
+  });
 }

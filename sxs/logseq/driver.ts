@@ -138,7 +138,14 @@ export const OG: LogseqFlavor = {
     const n = /^\d{1,9}\. /.exec(text);
     const rest = n ? text.slice(n[0].length) : text;
     const task = swapPrefix(rest, TO_OG);
-    return { content: n ? `${task.text}\n${NUMBERED}` : task.text, props: {}, edit: task.text, from: (n?.[0].length ?? 0) + task.from, to: task.to, numbered: !!n };
+    return {
+      content: n ? `${task.text}\n${NUMBERED}` : task.text,
+      props: {},
+      edit: task.text,
+      from: (n?.[0].length ?? 0) + task.from,
+      to: task.to,
+      numbered: !!n,
+    };
   },
   // the property of a numbered one taken off and its number put before its text; a number that is
   // text escaped (`1\. x`, also after a numbered block's own number: `2. 2\. x`); a task's marker as its checkbox
@@ -146,17 +153,28 @@ export const OG: LogseqFlavor = {
     const task = swapPrefix(raw.content.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, ''), FROM_OG);
     const pre = number !== null ? `${number}. ` : '';
     const literal = LITERAL_NUMBER.exec(task.text);
-    const text = literal ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length) : task.text;
-    return { text: pre + text, from: task.from, to: task.to + pre.length, ...(literal && { cut: task.to + pre.length + literal[0].length }) };
+    const text = literal
+      ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length)
+      : task.text;
+    return {
+      text: pre + text,
+      from: task.from,
+      to: task.to + pre.length,
+      ...(literal && { cut: task.to + pre.length + literal[0].length }),
+    };
   },
   // (the property as the API names it: `logseq.orderListType`, which a paste leaves on a block whose
   // content it took the property's line from, the block still numbered on screen: PasteListForm2)
   numbered: (raw) =>
     /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(raw.stored ?? raw.content) ||
-    Object.entries(raw.properties ?? {}).some(([k, v]) => k.replace(/[^a-z]/gi, '').toLowerCase() === 'logseqorderlisttype' && v === 'number'),
+    Object.entries(raw.properties ?? {}).some(
+      ([k, v]) => k.replace(/[^a-z]/gi, '').toLowerCase() === 'logseqorderlisttype' && v === 'number',
+    ),
   holds(doc) {
     // Logseq trims a stored block's text; only the block being edited (its textarea) keeps it as is
-    const trimmed = doc.blocks.findIndex((b, i) => i !== doc.sel?.block && /^\s|\s$/.test(swapPrefix(b.text.replace(/^\d{1,9}\. /, ''), TO_OG).text));
+    const trimmed = doc.blocks.findIndex(
+      (b, i) => i !== doc.sel?.block && /^\s|\s$/.test(swapPrefix(b.text.replace(/^\d{1,9}\. /, ''), TO_OG).text),
+    );
     if (trimmed >= 0) return 'whitespace at the edge of a block not being edited';
     return undefined;
   },
@@ -179,7 +197,8 @@ function numberedFromOne(doc: Outline): Outline {
     changed = true;
     const marker = `${run[b.depth]}. `;
     // (a caret after the number moves with the text, as the number's digits change)
-    const moved = (p: number): number => (p >= n[0].length ? p - n[0].length + marker.length : Math.min(p, marker.length));
+    const moved = (p: number): number =>
+      p >= n[0].length ? p - n[0].length + marker.length : Math.min(p, marker.length);
     if (sel?.block === i) sel = { ...sel, anchor: moved(sel.anchor), head: moved(sel.head) };
     return { ...b, text: marker + b.text.slice(n[0].length) };
   });
@@ -240,7 +259,12 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       pastePlain: 'Control+Shift+v',
       undo: 'Control+z',
       redo: 'Control+Shift+z',
-      ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+      ...Object.fromEntries(
+        Object.entries(MOTIONS).flatMap(([m, k]) => [
+          [`cursor${m}`, k],
+          [`select${m}`, `Shift+${k}`],
+        ]),
+      ),
     },
     emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
     // a quote of one paragraph is a block's text (`> q`), others and callouts are skipped for every
@@ -258,9 +282,13 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
       // what a character typed over a selection wraps it in (probed 2026-11-18): `$` too in the DB version
-      autoWrap: flavor.db ? ['`', '*', '_', '~', '=', '^', '(', '[', '{', '$'] : ['`', '*', '_', '~', '=', '^', '(', '[', '{'],
+      autoWrap: flavor.db
+        ? ['`', '*', '_', '~', '=', '^', '(', '[', '{', '$']
+        : ['`', '*', '_', '~', '=', '^', '(', '[', '{'],
       // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
-      decorations: flavor.db ? ['bullet', 'number', 'checkbox', 'heading', 'setext', 'fence', 'math'] : ['bullet', 'number'],
+      decorations: flavor.db
+        ? ['bullet', 'number', 'checkbox', 'heading', 'setext', 'fence', 'math']
+        : ['bullet', 'number'],
       // Enter trims the spaces at the split from both halves, as the block is stored (Enter44)
       enterSplitSpace: 'trim',
       // a space a deleted first character leaves at a block's start goes as the block is stored, as
@@ -315,22 +343,36 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       // what proxy.ts adds to it (`__ourusLogseq`), which the browser's own cache may hold unpatched
       const loaded = async (): Promise<boolean> => {
         await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-        await page.waitForFunction(() => (window as any).logseq?.api?.create_page && document.querySelector('#main-content-container .ls-block'), null, { timeout: 120000 });
+        await page.waitForFunction(
+          () => (window as any).logseq?.api?.create_page && document.querySelector('#main-content-container .ls-block'),
+          null,
+          { timeout: 120000 },
+        );
         return page.evaluate(() => !!(window as any).__ourusLogseq);
       };
       if (!(await loaded())) {
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Network.clearBrowserCache');
         await cdp.detach();
-        if (!(await loaded())) throw new Error(`Logseq's bundle came without what ${flavor.longId}/proxy.ts adds to it (its names not found in it?)`);
+        if (!(await loaded()))
+          throw new Error(
+            `Logseq's bundle came without what ${flavor.longId}/proxy.ts adds to it (its names not found in it?)`,
+          );
       }
-      const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+      const idle = () =>
+        page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
       // Logseq installs its global keys (Tab among them) through `shortcut/refresh!`, debounced by a
       // second after startup; until then Tab moves the focus out of the editor and the key is lost. So
       // the app is ready once Tab indents a block.
       let ready = false;
       for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-        await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+        await this.load(page, {
+          blocks: [
+            { depth: 0, text: 'a' },
+            { depth: 0, text: 'b' },
+          ],
+          sel: { block: 1, anchor: 1, head: 1 },
+        });
         await idle();
         await page.keyboard.press('Tab');
         await idle();
@@ -341,7 +383,8 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       // OG: undo only on the page being edited (its "page only" history, a setting of its right
       // sidebar), so undo can't reach into an earlier test; the DB version's history, graph-wide, is
       // emptied at every load anyway
-      if (!db) await page.evaluate(() => (window as any).logseq.api.set_state_from_store('history/page-only-mode?', true));
+      if (!db)
+        await page.evaluate(() => (window as any).logseq.api.set_state_from_store('history/page-only-mode?', true));
       // the build: the bundle's ETag stands in for it, after the DB version's own version
       return page.evaluate(async (db) => {
         const res = await fetch('/js/main.js', { method: 'HEAD' });
@@ -356,7 +399,13 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       const swapped = doc.sel && blocks[doc.sel.block]!;
       // (blocks selected whole: the first opened, at its start, to select from with the keys below)
       const selected = doc.selected?.length ? doc.selected : null;
-      const sel = doc.sel ? { block: doc.sel.block, anchor: shiftOffset(doc.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(doc.sel.head, swapped!.from, swapped!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+      const sel = doc.sel
+        ? {
+            block: doc.sel.block,
+            anchor: shiftOffset(doc.sel.anchor, swapped!.from, swapped!.to),
+            head: shiftOffset(doc.sel.head, swapped!.from, swapped!.to),
+          }
+        : selected && { block: selected[0]!, anchor: 0, head: 0 };
       pageState(page).current = await page.evaluate(
         async ({ blocks, sel, previous, db, view }) => {
           const api = (window as any).logseq.api;
@@ -367,7 +416,11 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           // the last test's page goes first (deleting a page takes OG to its home page; the DB version
           // keeps it in its recycle bin, from which it goes for good); a run's first test sweeps up what
           // earlier runs left
-          const stale = previous ? [previous] : ((await api.get_all_pages()) ?? []).map((p: any) => p.name ?? p['original-name']).filter((n: string) => /^spec-/.test(n ?? ''));
+          const stale = previous
+            ? [previous]
+            : ((await api.get_all_pages()) ?? [])
+                .map((p: any) => p.name ?? p['original-name'])
+                .filter((n: string) => /^spec-/.test(n ?? ''));
           for (const name of stale) {
             const gone = db ? (await api.get_page(name))?.uuid : null;
             await api.delete_page(name).catch(() => {});
@@ -402,14 +455,16 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
             // a batch insert drops a line's leading whitespace (code loses its indentation); a single
             // update keeps it. The DB version makes a fenced block a code block, its content the code,
             // which its editor's text is, and a `$$` block a math block likewise
-            const display = db && (flat[i][':logseq.property.node/display-type'] ?? flat[i]['logseq.property.node/display-type']);
+            const display =
+              db && (flat[i][':logseq.property.node/display-type'] ?? flat[i]['logseq.property.node/display-type']);
             const content = display === 'code' || display === 'math' ? blocks[i]!.edit : blocks[i]!.content;
             if (flat[i].content !== content) await api.update_block(flat[i].uuid, content);
             for (const [k, v] of Object.entries(blocks[i]!.props)) await api.upsert_block_property(flat[i].uuid, k, v);
           }
           if (db) api.push_state('page', { name });
           // the page renders after the redirect, and a block can be edited once it is on screen
-          const rendered = () => flat.every((b) => document.querySelector(`#main-content-container .ls-block[blockid="${b.uuid}"]`));
+          const rendered = () =>
+            flat.every((b) => document.querySelector(`#main-content-container .ls-block[blockid="${b.uuid}"]`));
           for (let i = 0; i < 300 && !rendered(); i++) await new Promise((r) => setTimeout(r, 10));
           if (!rendered()) throw new Error(`the test page didn't render (at ${location.hash})`);
           // inserting opens a block for editing, later: let that pass before choosing the block
@@ -421,7 +476,9 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
             if (view.zoom !== null) {
               const root = flat[view.zoom].uuid;
               api.push_state('page', { name: root });
-              const shown = () => location.hash.includes(root) && !!document.querySelector(`#main-content-container .ls-block[blockid="${root}"]`);
+              const shown = () =>
+                location.hash.includes(root) &&
+                !!document.querySelector(`#main-content-container .ls-block[blockid="${root}"]`);
               for (let i = 0; i < 300 && !shown(); i++) await new Promise((r) => setTimeout(r, 10));
               if (!shown()) throw new Error(`the zoom root's page didn't render (at ${location.hash})`);
             }
@@ -436,9 +493,14 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
             // editing a moment later, so the focus can move to another block's after the target's opened
             const own = (): HTMLTextAreaElement | null => {
               const ta = document.activeElement as HTMLTextAreaElement | null;
-              return ta?.tagName === 'TEXTAREA' && !mirror() && ta.closest('.ls-block')?.getAttribute('blockid') === target ? ta : null;
+              return ta?.tagName === 'TEXTAREA' &&
+                !mirror() &&
+                ta.closest('.ls-block')?.getAttribute('blockid') === target
+                ? ta
+                : null;
             };
-            const code = () => !!mirror() && document.activeElement?.closest('.ls-block')?.getAttribute('blockid') === target;
+            const code = () =>
+              !!mirror() && document.activeElement?.closest('.ls-block')?.getAttribute('blockid') === target;
             // in CodeMirror, Logseq has no block being edited (`check_editing` is false) until Escape takes it back to the block
             const editing = async () => code() || (!!own() && (await api.check_editing()) === target);
             const open = async (): Promise<void> => {
@@ -447,7 +509,10 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
                 // edit_block opens the editor asynchronously
                 for (let i = 0; i < 100 && !(await editing()); i++) await new Promise((r) => setTimeout(r, 10));
               }
-              if (!(await editing())) throw new Error(`the block didn't open for editing (focus: ${document.activeElement?.tagName}, editing: ${await api.check_editing()})`);
+              if (!(await editing()))
+                throw new Error(
+                  `the block didn't open for editing (focus: ${document.activeElement?.tagName}, editing: ${await api.check_editing()})`,
+                );
             };
             await open();
             if (code()) {
@@ -467,17 +532,28 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
                 await wait(30);
               }
               if (!own()) await open();
-              own()!.setSelectionRange(Math.min(anchor, head), Math.max(anchor, head), head < anchor ? 'backward' : 'forward');
+              own()!.setSelectionRange(
+                Math.min(anchor, head),
+                Math.max(anchor, head),
+                head < anchor ? 'backward' : 'forward',
+              );
             }
           } else await api.exit_editing_mode(false);
           // the undo history from here: every transaction goes into it, this load's too, and an undo past
           // what the test did would take back part of it (proxy.ts)
           const ours = (window as any).__ourusLogseq;
-          if (!ours) throw new Error("Logseq's page has no __ourusLogseq (loaded before its proxy.ts patched its bundle?)");
+          if (!ours)
+            throw new Error("Logseq's page has no __ourusLogseq (loaded before its proxy.ts patched its bundle?)");
           await ours.clearHistory(api.get_state_from_store('git/current-repo'));
           return name;
         },
-        { blocks: blocks.map(({ depth, content, props, edit }) => ({ depth, content, props, edit })), sel, previous: pageState(page).current, db, view: doc.view ?? null },
+        {
+          blocks: blocks.map(({ depth, content, props, edit }) => ({ depth, content, props, edit })),
+          sel,
+          previous: pageState(page).current,
+          db,
+          view: doc.view ?? null,
+        },
       );
       pageState(page).viewed = !!doc.view;
       // blocks selected whole, as a user selects them: Escape ends the editing (the DB version's selects
@@ -495,7 +571,8 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
             return Math.max(-1, ...((await api.get_selected_blocks()) ?? []).map((b: any) => flat.indexOf(b.uuid)));
           }, pageState(page).current);
         await page.keyboard.press('Escape');
-        for (let k = 0; k <= doc.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+        for (let k = 0; k <= doc.blocks.length && (await reached()) < last; k++)
+          await page.keyboard.press('Shift+ArrowDown');
       }
     },
 
@@ -507,7 +584,11 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           // the DB version's task statuses, by the id a block's property refers to
           const statuses: Record<number, string> = db
             ? Object.fromEntries(
-                ((await api.datascript_query('[:find ?e ?i :where [?p :db/ident :logseq.property/status] [?e :block/closed-value-property ?p] [?e :db/ident ?i]]')) ?? []).map(([e, i]: [number, string]) => [e, String(i).replace(/^:?logseq\.property\/status\./, '')]),
+                (
+                  (await api.datascript_query(
+                    '[:find ?e ?i :where [?p :db/ident :logseq.property/status] [?e :block/closed-value-property ?p] [?e :db/ident ?i]]',
+                  )) ?? []
+                ).map(([e, i]: [number, string]) => [e, String(i).replace(/^:?logseq\.property\/status\./, '')]),
               )
             : {};
           const flat: { depth: number; uuid: string; collapsed: boolean; raw: any }[] = [];
@@ -522,9 +603,12 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
                   ? {
                       content: x.content ?? '',
                       heading: prop(x, 'logseq.property/heading') || undefined,
-                      status: status ? statuses[status.id ?? status] ?? 'todo' : undefined,
+                      status: status ? (statuses[status.id ?? status] ?? 'todo') : undefined,
                       ordered: !!prop(x, 'logseq.property/order-list-type') || undefined,
-                      code: prop(x, 'logseq.property.node/display-type') === 'code' ? String(prop(x, 'logseq.property.code/lang') ?? '') : undefined,
+                      code:
+                        prop(x, 'logseq.property.node/display-type') === 'code'
+                          ? String(prop(x, 'logseq.property.code/lang') ?? '')
+                          : undefined,
                       math: prop(x, 'logseq.property.node/display-type') === 'math' || undefined,
                     }
                   : { content: x.content ?? '', stored: x.content ?? '', properties: x.properties },
@@ -557,23 +641,38 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           // database's, an editor showing the text alone)
           if (i >= 0 && cm) {
             flat[i]!.raw.content = cm.getValue();
-            sel = { block: i, anchor: cm.indexFromPos(cm.getCursor('anchor')), head: cm.indexFromPos(cm.getCursor('head')) };
+            sel = {
+              block: i,
+              anchor: cm.indexFromPos(cm.getCursor('anchor')),
+              head: cm.indexFromPos(cm.getCursor('head')),
+            };
           } else if (i >= 0) {
             flat[i]!.raw.content = active!.value;
             const back = active!.selectionDirection === 'backward';
-            sel = { block: i, anchor: back ? active!.selectionEnd : active!.selectionStart, head: back ? active!.selectionStart : active!.selectionEnd };
+            sel = {
+              block: i,
+              anchor: back ? active!.selectionEnd : active!.selectionStart,
+              head: back ? active!.selectionStart : active!.selectionEnd,
+            };
           }
           // the blocks selected whole, the topmost: a selected block's children are selected with it
-          const all = new Set<number>(((await api.get_selected_blocks()) ?? []).map((b: any) => flat.findIndex((f) => f.uuid === b.uuid)).filter((k: number) => k >= 0));
+          const all = new Set<number>(
+            ((await api.get_selected_blocks()) ?? [])
+              .map((b: any) => flat.findIndex((f) => f.uuid === b.uuid))
+              .filter((k: number) => k >= 0),
+          );
           const under = (k: number): boolean => {
-            for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), all.has(j))) return true;
+            for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--)
+              if (flat[j]!.depth < d && ((d = flat[j]!.depth), all.has(j))) return true;
             return false;
           };
           const selected = [...all].filter((k) => !under(k)).sort((a, b) => a - b);
           // the view: the collapsed blocks, and the block whose page is shown, if one of the test's is
           const route = api.get_state_from_store('route-match')?.['path-params']?.name;
           const zoom = flat.findIndex((b) => b.uuid === route);
-          const view = viewed ? { folded: flat.flatMap((b, k) => (b.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+          const view = viewed
+            ? { folded: flat.flatMap((b, k) => (b.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null }
+            : undefined;
           return { blocks: flat.map(({ depth, raw }) => ({ depth, raw })), sel, selected, view };
         },
         { name: pageState(page).current, db, viewed: pageState(page).viewed },
@@ -591,11 +690,15 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       let sel = raw.sel;
       if (sel) {
         const { from, to, cut } = swaps[sel.block]!;
-        const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
+        const at = (p: number): number =>
+          shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
         sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
       }
       // the block's later lines keep the escapes Markdown source has at their start; a block's text needs none
-      return { ...unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
+      return {
+        ...unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }),
+        ...(raw.view && { view: raw.view }),
+      };
     },
 
     async configure(page: Page, settings) {
@@ -606,7 +709,8 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         const api = (window as any).logseq.api;
         const repo = api.get_state_from_store('git/current-repo');
         api.set_state_from_store(['config', `@${repo}`, 'editor/logical-outdenting?'], logical);
-        if (!!api.get_current_graph_configs('editor/logical-outdenting?') !== logical) throw new Error(`Logseq's logical outdenting didn't change to ${logical}`);
+        if (!!api.get_current_graph_configs('editor/logical-outdenting?') !== logical)
+          throw new Error(`Logseq's logical outdenting didn't change to ${logical}`);
       }, settings.outdent === 'logical');
     },
 
@@ -621,8 +725,13 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         // "```"))`); there Ctrl+A selects the text, and once all of it is selected, the block
         // (`select-parent`). From a DB code block's editor, the first Escape leaves the code for the
         // block, the second selects it
-        const fenced = !db && (await page.evaluate(() => (document.activeElement as HTMLTextAreaElement | null)?.value?.includes('```') ?? false));
-        const selected = async (): Promise<boolean> => !!(await page.evaluate(async () => ((await (window as any).logseq.api.get_selected_blocks()) ?? []).length));
+        const fenced =
+          !db &&
+          (await page.evaluate(
+            () => (document.activeElement as HTMLTextAreaElement | null)?.value?.includes('```') ?? false,
+          ));
+        const selected = async (): Promise<boolean> =>
+          !!(await page.evaluate(async () => ((await (window as any).logseq.api.get_selected_blocks()) ?? []).length));
         for (let i = 0; i < 2 && !(await selected()); i++) {
           await page.keyboard.press(fenced ? 'Control+a' : 'Escape');
           await settle();
@@ -682,9 +791,12 @@ async function logseqDrop(page: Page, drop: Drop, settle: () => Promise<void>): 
         const uuids: string[] = [];
         const walk = (bs: any[]) => bs.forEach((x) => (uuids.push(x.uuid), walk(x.children ?? [])));
         walk(await api.get_page_blocks_tree(name));
-        const block = (i: number) => document.querySelector(`#main-content-container .ls-block[blockid="${uuids[i]}"]`)!;
+        const block = (i: number) =>
+          document.querySelector(`#main-content-container .ls-block[blockid="${uuids[i]}"]`)!;
         if (which === 'from') {
-          const bullet = block(press).querySelector(':scope > .block-main-container .bullet-container')?.getBoundingClientRect();
+          const bullet = block(press)
+            .querySelector(':scope > .block-main-container .bullet-container')
+            ?.getBoundingClientRect();
           return bullet ? { x: bullet.left + bullet.width / 2, y: bullet.top + bullet.height / 2 } : null;
         }
         // (the page's first block's top: a few pixels in, the block's own padding above its row not taking the drag)

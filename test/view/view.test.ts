@@ -22,9 +22,10 @@ function find(doc: OurusDoc, text: string): OurusNode {
   return found;
 }
 
-const hidden = (doc: OurusDoc, range: { from: number; to: number } | null): string | null => (range ? doc.text.slice(range.from, range.to) : null);
+const hidden = (doc: OurusDoc, range: { from: number; to: number } | null): string | null =>
+  range ? doc.text.slice(range.from, range.to) : null;
 
-test('a fold hides from the end of its node\'s text to the end of its subtree\'s last line, the blank lines after it shown', () => {
+test("a fold hides from the end of its node's text to the end of its subtree's last line, the blank lines after it shown", () => {
   const doc = OurusDoc.parse('- a\n  - b\n\n- c\n');
   assert.equal(hidden(doc, doc.foldRange(find(doc, 'a'))), '\n  - b');
   assert.equal(doc.foldRange(find(doc, 'b')), null, 'a childless node does not fold');
@@ -36,18 +37,18 @@ test('a fold hides from the end of its node\'s text to the end of its subtree\'s
   assert.equal(hidden(quoted, quoted.foldRange(find(quoted, 'a'))), '\n  > b\n  >');
 });
 
-test('the row a fold belongs to is the outermost node starting on it, not `nodeAtLine`\'s innermost', () => {
+test("the row a fold belongs to is the outermost node starting on it, not `nodeAtLine`'s innermost", () => {
   const doc = OurusDoc.parse('> a\n>\n> b\n', { config: { quotes: 'container' } });
   assert.equal(doc.rowOwner(0)?.kind, 'quote');
   assert.equal(doc.nodeAtLine(0)?.kind, 'paragraph');
-  assert.equal(doc.rowOwner(1), null, 'no node starts on a line of the quote\'s alone');
+  assert.equal(doc.rowOwner(1), null, "no node starts on a line of the quote's alone");
   const nested = OurusDoc.parse('- - a\n    - b\n  - c\n');
   const outer = nested.rowOwner(0)!;
   assert.equal(outer.children.length, 2);
   assert.equal(nested.textOf(nested.rowOwner(1)!)?.text, 'b');
 });
 
-test('a zoom shows its root\'s lines, its descendants\' and its trailing gap', () => {
+test("a zoom shows its root's lines, its descendants' and its trailing gap", () => {
   const doc = OurusDoc.parse('- x\n- a\n  - b\n\n- c\n');
   const a = find(doc, 'a');
   const view = OurusView.of(doc);
@@ -66,7 +67,7 @@ test('zoomed, the folds of the root and its ancestors hide nothing; the folds in
   assert.deepEqual([...view.folded].sort(), [A, B, C].sort(), 'every fold stays stored');
   assert.deepEqual([...view.zoomFolded], [C]);
   assert.equal(view.isHidden(find(view.doc, 'B')), false, 'the root under its folded ancestor');
-  assert.equal(view.isHidden(find(view.doc, 'C')), false, 'the root\'s child, its fold suppressed');
+  assert.equal(view.isHidden(find(view.doc, 'C')), false, "the root's child, its fold suppressed");
   assert.equal(view.isHidden(find(view.doc, 'D')), true, 'under a fold inside the zoom');
   assert.equal(view.isHidden(find(view.doc, 'A')), true, 'outside the zoom');
   assert.deepEqual([...view.withZoom(null).zoomFolded].sort(), [A, B, C].sort());
@@ -99,32 +100,36 @@ test('the folds and the zoom go through an update by id: dropped where their nod
   assert.equal(gone.zoom, null);
 });
 
-test('an edit to a folded node\'s own markup that changes what it holds opens the fold', () => {
+test("an edit to a folded node's own markup that changes what it holds opens the fold", () => {
   // `## A` made `# A`: its section takes `## B`, which was shown and must not go hidden unseen
   const doc = OurusDoc.parse('## A\na\n\n## B\nb\n');
   const a = find(doc, '## A').id;
-  const promoted = OurusView.of(doc).withFolded([a]).update({ changes: [{ from: 0, to: 1, insert: '' }] });
+  const promoted = OurusView.of(doc)
+    .withFolded([a])
+    .update({ changes: [{ from: 0, to: 1, insert: '' }] });
   assert.equal(promoted.doc.textOf(promoted.doc.node(a)!)?.text, '# A');
   assert.deepEqual([...promoted.folded], []);
   // typing in its title keeps it
-  const typed = OurusView.of(doc).withFolded([a]).update({ changes: [{ from: 4, to: 4, insert: 'x' }] });
+  const typed = OurusView.of(doc)
+    .withFolded([a])
+    .update({ changes: [{ from: 4, to: 4, insert: 'x' }] });
   assert.deepEqual([...typed.folded], [a]);
 });
 
 test('a folded node moved keeps its fold, the move writing its lines again (Fold4)', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n');
   const b = find(doc, 'b').id;
-  const r = executeCommand((OurusView.of(doc).withFolded([b])).withSelection(7), { type: 'moveSubtreeUp' });
+  const r = executeCommand(OurusView.of(doc).withFolded([b]).withSelection(7), { type: 'moveSubtreeUp' });
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   assert.equal(r.view.doc.text, '- b\n  - c\n- a\n');
   assert.deepEqual([...r.view.folded], [b]);
 });
 
-test('an undo that takes back the snapshot before the move (`withDoc`) keeps its nodes, and the moved node\'s fold (Fold16)', () => {
+test("an undo that takes back the snapshot before the move (`withDoc`) keeps its nodes, and the moved node's fold (Fold16)", () => {
   const before = OurusDoc.parse('- a\n- b\n  - c\n');
   const b = find(before, 'b').id;
-  const r = executeCommand((OurusView.of(before).withFolded([b])).withSelection(7), { type: 'moveSubtreeUp' });
+  const r = executeCommand(OurusView.of(before).withFolded([b]).withSelection(7), { type: 'moveSubtreeUp' });
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   const undone = r.view.withDoc(before);
@@ -132,7 +137,9 @@ test('an undo that takes back the snapshot before the move (`withDoc`) keeps its
   assert.equal(find(undone.doc, 'b').id, b);
   assert.deepEqual([...undone.folded], [b]);
   // no id given again: a node made after the undo has one past every node the move made
-  const added = undone.update({ changes: [{ from: undone.doc.text.length, to: undone.doc.text.length, insert: '- d\n' }] });
+  const added = undone.update({
+    changes: [{ from: undone.doc.text.length, to: undone.doc.text.length, insert: '- d\n' }],
+  });
   assert.ok(find(added.doc, 'd').id >= r.view.doc.nextId, 'no id given again');
   // the text given whole instead, it is diffed line by line: the lines it keeps keep their nodes
   // (`b`, its fold too), the lines written again are new nodes (`a`)
@@ -173,20 +180,31 @@ test('`withConfig` carries the view: by id where the outline is read again, by l
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 200);
 
 /** Every node but the root, in document order. */
-const subtree = (n: OurusNode): Set<number> => new Set(allNodes({ rootNode: n } as OurusDoc).map((m) => m.id).concat(n.id));
+const subtree = (n: OurusNode): Set<number> =>
+  new Set(
+    allNodes({ rootNode: n } as OurusDoc)
+      .map((m) => m.id)
+      .concat(n.id),
+  );
 
 /**
  * `n`'s descendants, each by id, kind and text, in document order: what its fold hides, as nodes (but
  * the text of one all on `n`'s last line of text, which the fold shows).
  */
 const descendants = (doc: OurusDoc, n: OurusNode): string =>
-  JSON.stringify(allNodes({ rootNode: n } as OurusDoc).filter((m) => m !== n).map((m) => [m.id, m.kind, m.textLastLine <= n.textLastLine ? null : (doc.textOf(m)?.text ?? null)]));
+  JSON.stringify(
+    allNodes({ rootNode: n } as OurusDoc)
+      .filter((m) => m !== n)
+      .map((m) => [m.id, m.kind, m.textLastLine <= n.textLastLine ? null : (doc.textOf(m)?.text ?? null)]),
+  );
 
 /** A view of `text` with folds and a zoom picked by `picks` (fractions). */
 function viewed(text: string, picks: readonly number[], zoomAt: number | null): OurusView {
   const doc = OurusDoc.parse(text);
   const nodes = allNodes(doc);
-  const folds = nodes.filter((n, k) => doc.foldRange(n) && picks.some((p) => Math.floor(p * nodes.length) === k)).map((n) => n.id);
+  const folds = nodes
+    .filter((n, k) => doc.foldRange(n) && picks.some((p) => Math.floor(p * nodes.length) === k))
+    .map((n) => n.id);
   const zoom = zoomAt === null || !nodes.length ? null : nodes[Math.floor(zoomAt * nodes.length)]!.id;
   return OurusView.of(doc).withFolded(folds).withZoom(zoom);
 }
@@ -195,39 +213,50 @@ const fraction = fc.double({ min: 0, max: 0.999, noNaN: true });
 
 test('an update carries the view by its rules: folds on nodes with something to hide, the zoom kept, moved up or ended', () => {
   fc.assert(
-    fc.property(arbDoc(BLOCKS, { maxLines: 8 }), fc.array(fraction, { maxLength: 4 }), fc.option(fraction), arbEdit, (text, picks, zoomAt, edit) => {
-      const view = viewed(text, picks, zoomAt);
-      const doc = view.doc;
-      const change = changeOf(doc.text, edit);
-      const after = view.update({ changes: [change] });
-      const next = after.doc;
-      for (const id of after.folded) assert.ok(next.node(id) && next.foldRange(next.node(id)!), `fold ${id} hides nothing`);
-      // a fold stays exactly where its node still hides something and, but for the zoom root's and
-      // its ancestors', what it hides is the same nodes with the same texts, wherever the edit was
-      const suppressed = new Set<number>();
-      for (let p = view.zoom === null ? null : doc.node(view.zoom)!; p && p.kind !== 'root'; p = p.parent) suppressed.add(p.id);
-      for (const id of view.folded) {
-        const now = next.node(id);
-        const stays = !!now && !!next.foldRange(now) && (suppressed.has(id) || descendants(doc, doc.node(id)!) === descendants(next, now));
-        assert.equal(after.folded.has(id), stays, `fold ${id} ${stays ? 'opened' : 'kept'}`);
-      }
-      if (view.zoom === null) return assert.equal(after.zoom, null);
-      const root = next.node(view.zoom);
-      if (!root) {
-        // its nearest ancestor left, or none
-        const ancestors: number[] = [];
-        for (let p = doc.node(view.zoom)!.parent; p && p.kind !== 'root'; p = p.parent) ancestors.push(p.id);
-        return assert.equal(after.zoom, ancestors.find((id) => next.node(id)) ?? null);
-      }
-      const inside = subtree(root);
-      const left = [...subtree(doc.node(view.zoom)!)].some((id) => next.node(id) && !inside.has(id));
-      assert.equal(after.zoom, left ? null : view.zoom);
-    }),
+    fc.property(
+      arbDoc(BLOCKS, { maxLines: 8 }),
+      fc.array(fraction, { maxLength: 4 }),
+      fc.option(fraction),
+      arbEdit,
+      (text, picks, zoomAt, edit) => {
+        const view = viewed(text, picks, zoomAt);
+        const doc = view.doc;
+        const change = changeOf(doc.text, edit);
+        const after = view.update({ changes: [change] });
+        const next = after.doc;
+        for (const id of after.folded)
+          assert.ok(next.node(id) && next.foldRange(next.node(id)!), `fold ${id} hides nothing`);
+        // a fold stays exactly where its node still hides something and, but for the zoom root's and
+        // its ancestors', what it hides is the same nodes with the same texts, wherever the edit was
+        const suppressed = new Set<number>();
+        for (let p = view.zoom === null ? null : doc.node(view.zoom)!; p && p.kind !== 'root'; p = p.parent)
+          suppressed.add(p.id);
+        for (const id of view.folded) {
+          const now = next.node(id);
+          const stays =
+            !!now &&
+            !!next.foldRange(now) &&
+            (suppressed.has(id) || descendants(doc, doc.node(id)!) === descendants(next, now));
+          assert.equal(after.folded.has(id), stays, `fold ${id} ${stays ? 'opened' : 'kept'}`);
+        }
+        if (view.zoom === null) return assert.equal(after.zoom, null);
+        const root = next.node(view.zoom);
+        if (!root) {
+          // its nearest ancestor left, or none
+          const ancestors: number[] = [];
+          for (let p = doc.node(view.zoom)!.parent; p && p.kind !== 'root'; p = p.parent) ancestors.push(p.id);
+          return assert.equal(after.zoom, ancestors.find((id) => next.node(id)) ?? null);
+        }
+        const inside = subtree(root);
+        const left = [...subtree(doc.node(view.zoom)!)].some((id) => next.node(id) && !inside.has(id));
+        assert.equal(after.zoom, left ? null : view.zoom);
+      },
+    ),
     { numRuns: RUNS },
   );
 });
 
-test('`leavesZoom` accepts a host\'s edit only where the text outside the zoom root\'s Markdown is the same', () => {
+test("`leavesZoom` accepts a host's edit only where the text outside the zoom root's Markdown is the same", () => {
   fc.assert(
     fc.property(arbDoc(BLOCKS, { maxLines: 8 }), fraction, arbEdit, (text, zoomAt, edit) => {
       const view = viewed(text, [], zoomAt);
@@ -238,13 +267,16 @@ test('`leavesZoom` accepts a host\'s edit only where the text outside the zoom r
       const [root, now] = [doc.node(view.zoom)!, next.node(view.zoom)];
       if (!now) return;
       assert.equal(next.text.slice(0, next.markdownStart(now)), doc.text.slice(0, doc.markdownStart(root)));
-      assert.equal(next.text.slice(next.mdTree.ends[next.coverEnd(now)]!), doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!));
+      assert.equal(
+        next.text.slice(next.mdTree.ends[next.coverEnd(now)]!),
+        doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!),
+      );
     }),
     { numRuns: RUNS },
   );
 });
 
-test('a second view takes a command\'s snapshot with its own folds, by the writer\'s ids, never a replay\'s', () => {
+test("a second view takes a command's snapshot with its own folds, by the writer's ids, never a replay's", () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n  - e\n');
   const [b, d] = [find(doc, 'b').id, find(doc, 'd').id];
   // view 1 moves `b` down; view 2 has `b` and `d` folded
@@ -260,7 +292,7 @@ test('a second view takes a command\'s snapshot with its own folds, by the write
   assert.ok(replayed.folded.size < 2, 'a replay keeps the folds only by luck');
 });
 
-test('a host\'s own edit: refused where it changes the tightness of a list with an item off the root\'s path, accepted where the list is the root\'s alone', () => {
+test("a host's own edit: refused where it changes the tightness of a list with an item off the root's path, accepted where the list is the root's alone", () => {
   const doc = OurusDoc.parse('- a\n  - b\n- c\n');
   const zoomed = OurusView.of(doc).withZoom(find(doc, 'a').id);
   // a blank line before `b`: the outer list loose, `c` rendered otherwise
@@ -274,7 +306,7 @@ test('a host\'s own edit: refused where it changes the tightness of a list with 
   assert.equal(typed.zoom, zoomed.zoom);
 });
 
-test('zoomed, a container\'s prefix on the root\'s lines is the root\'s writing where the outline reads the same, refused where it doesn\'t', () => {
+test("zoomed, a container's prefix on the root's lines is the root's writing where the outline reads the same, refused where it doesn't", () => {
   const doc = OurusDoc.parse('> - a\n>   - b\n> c\n> - z\n');
   const zoomed = OurusView.of(doc).withZoom(find(doc, 'b').id);
   // the `>` of `c`, a lazy line of `b`'s, dropped: every node the same, rendered the same
@@ -284,7 +316,10 @@ test('zoomed, a container\'s prefix on the root\'s lines is the root\'s writing 
   const gap = OurusDoc.parse('> - a\n>   - b\n>\n> - z\n');
   const zoomedGap = OurusView.of(gap).withZoom(find(gap, 'a').id);
   const blank = gap.text.indexOf('>\n>');
-  assert.equal(leavesZoom(zoomedGap, zoomedGap.update({ changes: [{ from: blank, to: blank + 1, insert: '' }] }).doc), true);
+  assert.equal(
+    leavesZoom(zoomedGap, zoomedGap.update({ changes: [{ from: blank, to: blank + 1, insert: '' }] }).doc),
+    true,
+  );
 });
 
 test('an edit in the node right after a folded one opens the fold exactly where what it hides changes', () => {
@@ -299,12 +334,20 @@ test('an edit in the node right after a folded one opens the fold exactly where 
         const doc = view.doc;
         for (let line = doc.coverEnd(n) + 1; line <= doc.coverEnd(n) + 2 && line < doc.lineCount; line++) {
           for (let at = doc.mdTree.starts[line]!; at <= doc.mdTree.ends[line]!; at++) {
-            for (const change of [{ from: at, to: at, insert: '#' }, { from: at, to: Math.min(at + 1, doc.mdTree.ends[line]!), insert: '' }, { from: at, to: Math.min(at + 3, doc.mdTree.ends[line]!), insert: 'x' }]) {
+            for (const change of [
+              { from: at, to: at, insert: '#' },
+              { from: at, to: Math.min(at + 1, doc.mdTree.ends[line]!), insert: '' },
+              { from: at, to: Math.min(at + 3, doc.mdTree.ends[line]!), insert: 'x' },
+            ]) {
               const after = view.update({ changes: [change] });
               const next = after.doc;
               const now = next.node(n.id);
               const stays = !!now && !!next.foldRange(now) && descendants(doc, n) === descendants(next, now);
-              assert.equal(after.folded.has(n.id), stays, `${JSON.stringify(text)} ${JSON.stringify(change)}: fold ${stays ? 'opened' : 'kept'}`);
+              assert.equal(
+                after.folded.has(n.id),
+                stays,
+                `${JSON.stringify(text)} ${JSON.stringify(change)}: fold ${stays ? 'opened' : 'kept'}`,
+              );
             }
           }
         }
@@ -314,7 +357,7 @@ test('an edit in the node right after a folded one opens the fold exactly where 
   );
 });
 
-test('a fold on a row its first child shares stays through an edit of the row\'s text, and opens for one of what it hides', () => {
+test("a fold on a row its first child shares stays through an edit of the row's text, and opens for one of what it hides", () => {
   const doc = OurusDoc.parse('- - a\n  - SECRET\n- KEEP');
   const folded = OurusView.of(doc).withFolded([doc.rootNode.children[0]!.id]);
   const typed = folded.update({ changes: [{ from: 5, to: 5, insert: 'x' }], caret: 6 });
@@ -332,10 +375,13 @@ test('read anew, a zoom or a fold on a row nodes share stays on the node at its 
   const nested = OurusDoc.parse('- - a\n    - x\n  - sibling');
   const inner = nested.nodeAtLine(0)!;
   const read = OurusView.of(nested).withFolded([inner.id]).withConfig({ flavor: 'obsidian' });
-  assert.deepEqual([...read.folded].map((id) => read.doc.node(id)!.depth), [inner.depth]);
+  assert.deepEqual(
+    [...read.folded].map((id) => read.doc.node(id)!.depth),
+    [inner.depth],
+  );
 });
 
-test('a view toggled shares its document; a view command\'s result too, a text command\'s not', () => {
+test("a view toggled shares its document; a view command's result too, a text command's not", () => {
   const view = OurusView.of(OurusDoc.parse('- a\n  - b\n- c\n'));
   const a = find(view.doc, 'a');
   const folded = view.withFolded([a.id]);
@@ -367,7 +413,10 @@ test('a move that changes no character is another document, its ids swapped, a f
   assert.deepEqual(moved.changes, []);
   assert.notEqual(moved.view.doc, same.doc);
   assert.equal(moved.view.doc.text, same.doc.text);
-  assert.deepEqual(moved.view.doc.rootNode.children.map((n) => n.id), [...before].reverse());
+  assert.deepEqual(
+    moved.view.doc.rootNode.children.map((n) => n.id),
+    [...before].reverse(),
+  );
   const doc = OurusDoc.parse('- a\n  - x\n- a\n  - x\n');
   const first = doc.rootNode.children[0]!.id;
   const r = executeCommand(OurusView.of(doc, { folded: [first], selection: 2 }), { type: 'moveSubtreeDown' });
@@ -390,7 +439,10 @@ test('a selection command keeps the document, folds and zoom, and changes the se
 test('placeholders settled in two steps carry the view through each: the fold kept', async () => {
   const { settlePlaceholders } = await import('../../src/commands/index.ts');
   // (a held space in code can't be written again: dropped, a step, then the empty paragraph above the heading)
-  const doc = OurusDoc.parse('\n# h\n```\n  x\n```\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [0, 9] } });
+  const doc = OurusDoc.parse('\n# h\n```\n  x\n```\n', {
+    config: { flavor: 'obsidian' },
+    marks: { placeholders: [0, 9] },
+  });
   const heading = find(doc, '# h');
   const view = OurusView.of(doc, { folded: [heading.id] });
   const settled = settlePlaceholders(view.withSelection(1));
@@ -399,9 +451,12 @@ test('placeholders settled in two steps carry the view through each: the fold ke
   assert.equal(settled.view.doc.text, '# h\n```\n  x\n```\n');
 });
 
-test('settling keeps a fold whose hidden node it writes again: no edit of the user\'s opens it (Fold20)', async () => {
+test("settling keeps a fold whose hidden node it writes again: no edit of the user's opens it (Fold20)", async () => {
   const { settlePlaceholders } = await import('../../src/commands/index.ts');
-  const doc = OurusDoc.parse('\n# h\n> - \n> ^x\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [0, 9] } });
+  const doc = OurusDoc.parse('\n# h\n> - \n> ^x\n', {
+    config: { flavor: 'obsidian' },
+    marks: { placeholders: [0, 9] },
+  });
   const heading = find(doc, '# h');
   const settled = settlePlaceholders(OurusView.of(doc, { folded: [heading.id], selection: 1 }))!;
   assert.equal(settled.view.doc.text, '# h\n> - ^x\n');
@@ -416,7 +471,7 @@ test('a fold whose hidden children are reordered with no character changed opens
   assert.deepEqual([...result.view.folded], []);
 });
 
-test('editing a block-id line a folded node\'s hidden child carries opens the fold, as editing its text does', () => {
+test("editing a block-id line a folded node's hidden child carries opens the fold, as editing its text does", () => {
   const text = '# H\n\n```\na\n```\n\n^id\n';
   const view = OurusView.of(OurusDoc.parse(text, { config: { flavor: 'obsidian' } }), { folded: [1] });
   const from = text.indexOf('id');
@@ -440,23 +495,30 @@ test('deleteSubtree of disjoint nodes by id keeps a caret in a node between them
   assert.deepEqual(result.view.selection, { anchor: 2, head: 2 });
 });
 
-test('a subtree selection ending at the zoom\'s end reads as its node', () => {
+test("a subtree selection ending at the zoom's end reads as its node", () => {
   const view = OurusView.of(OurusDoc.parse('# h\n\na\n\nb\n'), { zoom: 1 });
-  assert.deepEqual(view.selectedSubtrees(view.selectionOf([3]))?.map((n) => n.id), [3]);
+  assert.deepEqual(
+    view.selectedSubtrees(view.selectionOf([3]))?.map((n) => n.id),
+    [3],
+  );
 });
 
-test('the zoom and fold guard takes a CRLF whole, as the host deletes it: refused at the zoom\'s edge, the caret out of a fold', () => {
+test("the zoom and fold guard takes a CRLF whole, as the host deletes it: refused at the zoom's edge, the caret out of a fold", () => {
   for (const eol of ['\n', '\r\n']) {
     const edge = executeOnText(`#${eol}- a`, { type: 'deleteContentForward' }, { caret: 1, view: { zoom: 1 } });
     assert.ok(edge instanceof OurusRejected && edge.reason === 'outside-zoom');
-    const fold = executeOnText(`# h${eol}b${eol}`, { type: 'deleteContentBackward' }, { caret: 4 + 2 * eol.length, view: { folded: [1] } });
+    const fold = executeOnText(
+      `# h${eol}b${eol}`,
+      { type: 'deleteContentBackward' },
+      { caret: 4 + 2 * eol.length, view: { folded: [1] } },
+    );
     assert.ok(fold instanceof OurusSuccess);
     assert.equal(fold.view.doc.text, `# h${eol}b`);
     assert.deepEqual(fold.view.selection, { anchor: 3, head: 3 });
   }
 });
 
-test('copy and drag at a caret a fold hides give it back where the view shows it, the fold\'s row', () => {
+test("copy and drag at a caret a fold hides give it back where the view shows it, the fold's row", () => {
   for (const command of [{ type: 'copy' }, { type: 'drag' }] as const) {
     const type = command.type;
     const result = executeOnText('- a\n  - b\n', command, { caret: 8, view: { folded: [1] } });
@@ -465,7 +527,7 @@ test('copy and drag at a caret a fold hides give it back where the view shows it
   }
 });
 
-test('fold, unfold and toggleFold refuse a node that doesn\'t exist, as the other node commands do', () => {
+test("fold, unfold and toggleFold refuse a node that doesn't exist, as the other node commands do", () => {
   for (const nodes of [[1, 999], [999], [0]]) {
     for (const type of ['fold', 'unfold', 'toggleFold'] as const) {
       const result = executeOnText('- p\n  - c\n- q', { type, nodes });
@@ -481,17 +543,21 @@ test('a fold opens where what it hides changes in structure or text: a hidden no
   const view = OurusView.of(OurusDoc.parse('- p\n  - a\n  - b'), { folded: [1] });
   assert.deepEqual([...view.update({ changes: [{ from: 10, to: 10, insert: '  ' }] }).folded], []);
   // (two hidden texts changed together so that the joined string of the old fingerprint came out the same)
-  const seam = '\0\x013\0item\0', a = 'a' + seam + 'b', text = '- p\n  - ' + a + '\n  - c';
-  const carried = OurusView.of(OurusDoc.parse(text), { folded: [1] }).update({ changes: [
-    { from: 8, to: 8 + a.length, insert: 'a' },
-    { from: 13 + a.length, to: text.length, insert: 'b' + seam + 'c' },
-  ] });
+  const seam = '\0\x013\0item\0',
+    a = 'a' + seam + 'b',
+    text = '- p\n  - ' + a + '\n  - c';
+  const carried = OurusView.of(OurusDoc.parse(text), { folded: [1] }).update({
+    changes: [
+      { from: 8, to: 8 + a.length, insert: 'a' },
+      { from: 13 + a.length, to: text.length, insert: 'b' + seam + 'c' },
+    ],
+  });
   assert.deepEqual([...carried.folded], []);
   // (a change that leaves what it hides as it was keeps it: a word typed in the fold's own text)
   assert.deepEqual([...view.update({ changes: [{ from: 3, to: 3, insert: 'x' }] }).folded], [1]);
 });
 
-test('a view holds a selection: given, or a caret at the start; carried through an edit, set by a host\'s', () => {
+test("a view holds a selection: given, or a caret at the start; carried through an edit, set by a host's", () => {
   const doc = OurusDoc.parse('- a\n- b\n');
   assert.deepEqual(OurusView.of(doc).selection, { anchor: 0, head: 0 });
   const view = OurusView.of(doc, { selection: { anchor: 6, head: 7 } });
@@ -499,14 +565,20 @@ test('a view holds a selection: given, or a caret at the start; carried through 
   assert.deepEqual(view.withSelection(3).selection, { anchor: 3, head: 3 });
   // (mapped through a change before it; a host's edit gives its own, or a caret)
   assert.deepEqual(view.update({ changes: [{ from: 0, to: 0, insert: 'xx' }] }).selection, { anchor: 8, head: 9 });
-  assert.deepEqual(view.update({ changes: [{ from: 3, to: 3, insert: 'z' }], caret: 4 }).selection, { anchor: 4, head: 4 });
-  assert.deepEqual(view.update({ changes: [{ from: 3, to: 3, insert: 'z' }], selection: { anchor: 0, head: 4 } }).selection, { anchor: 0, head: 4 });
+  assert.deepEqual(view.update({ changes: [{ from: 3, to: 3, insert: 'z' }], caret: 4 }).selection, {
+    anchor: 4,
+    head: 4,
+  });
+  assert.deepEqual(
+    view.update({ changes: [{ from: 3, to: 3, insert: 'z' }], selection: { anchor: 0, head: 4 } }).selection,
+    { anchor: 0, head: 4 },
+  );
   // (the folds and zoom kept)
   const folded = OurusView.of(OurusDoc.parse('- a\n  - b\n'), { folded: [1] });
   assert.equal(folded.withSelection(2).folded, folded.folded);
 });
 
-test('a host\'s edit gives the same view for `caret: n`, `selection: n` and a selection whose ends are n: the document keeps the outline at its head', () => {
+test("a host's edit gives the same view for `caret: n`, `selection: n` and a selection whose ends are n: the document keeps the outline at its head", () => {
   // (the paragraph's only character deleted: a placeholder at the caret keeps it)
   const view = OurusView.of(OurusDoc.parse('p\n\na\n'), { selection: 4 });
   const changes = [{ from: 3, to: 4, insert: '' }];
@@ -519,11 +591,13 @@ test('a host\'s edit gives the same view for `caret: n`, `selection: n` and a se
   }
 });
 
-test('the zoom guard sees what a host\'s edit does outside the zoom: an order changed, a node made under an older id, a removal\'s same text holding another outline (B219)', () => {
+test("the zoom guard sees what a host's edit does outside the zoom: an order changed, a node made under an older id, a removal's same text holding another outline (B219)", () => {
   // (outside nodes swapped leave the zoom)
   {
     const doc = OurusDoc.parse('x\n\nx\n\nq', { config: { listParent: 'container' } });
-    const moved = assertApplied(executeCommand(OurusView.of(doc, { selection: 0 }), { type: 'moveSubtreeDown', nodes: [1] }));
+    const moved = assertApplied(
+      executeCommand(OurusView.of(doc, { selection: 0 }), { type: 'moveSubtreeDown', nodes: [1] }),
+    );
     assert.equal(leavesZoom(OurusView.of(doc, { zoom: 3 }), moved.view.doc), true);
   }
   // (a branch's older id outside leaves the zoom)

@@ -55,7 +55,10 @@ function locate(root: MdBlock, line: number): { chain: Step[]; leaf: Step | null
       start = at;
       continue;
     }
-    return { chain, leaf: child.kind === 'leaf' && line < at + child.lines ? { node: child, start: at, index: lo } : null };
+    return {
+      chain,
+      leaf: child.kind === 'leaf' && line < at + child.lines ? { node: child, start: at, index: lo } : null,
+    };
   }
 }
 
@@ -99,7 +102,8 @@ function leafAttributes(role: MdLeafRole): Readonly<Record<string, unknown>> {
     const own: Record<string, unknown> = {};
     // `part`: what the line is within its leaf (a table row), for the leaf's builder; `blank`: a
     // whitespace line of indented code
-    for (const key of Object.keys(role)) if (key !== 'type' && key !== 'first' && key !== 'part' && key !== 'blank') own[key] = role[key];
+    for (const key of Object.keys(role))
+      if (key !== 'type' && key !== 'first' && key !== 'part' && key !== 'blank') own[key] = role[key];
     roleAttributes.set(role, (attrs = Object.freeze(own)));
   }
   return attrs;
@@ -117,7 +121,20 @@ export function buildTree(records: readonly MdLineRecord[], flavor: MdFlavor, re
   /** Every block made, in order. */
   const made: Building[] = [];
   const makeBlock = (type: string, line: number, parent: Building | null, kind: 'container' | 'leaf'): Building => {
-    const b: Building = { type, startLine: line, endLine: line, children: NO_CHILDREN, parent, attrs: NO_ATTRIBUTES, kind, span: 1, lines: 1, offsets: NO_OFFSETS, index: made.length, taken: null };
+    const b: Building = {
+      type,
+      startLine: line,
+      endLine: line,
+      children: NO_CHILDREN,
+      parent,
+      attrs: NO_ATTRIBUTES,
+      kind,
+      span: 1,
+      lines: 1,
+      offsets: NO_OFFSETS,
+      index: made.length,
+      taken: null,
+    };
     made.push(b);
     if (parent) {
       if (parent.children === NO_CHILDREN) parent.children = [b];
@@ -232,7 +249,8 @@ export function buildTree(records: readonly MdLineRecord[], flavor: MdFlavor, re
   // are the gap after them), lists with their last item; tightness; innermost first
   for (let k = containers.length - 1; k >= 0; k--) {
     const b = containers[k]!;
-    if (b.type === 'item' || b.type === 'footnote_definition') b.endLine = b.children.length ? b.children[b.children.length - 1]!.endLine : b.startLine;
+    if (b.type === 'item' || b.type === 'footnote_definition')
+      b.endLine = b.children.length ? b.children[b.children.length - 1]!.endLine : b.startLine;
     else if (b.type === 'list') {
       b.endLine = b.children[b.children.length - 1]!.endLine;
       b.attrs = { ...b.attrs, tight: isTight(b) };
@@ -253,7 +271,9 @@ function isTight(list: Building): boolean {
   if (separated(list.children)) return false;
   for (const item of list.children as Building[]) {
     const node = item.taken;
-    const blocks = node ? node.children.map((c, k) => ({ startLine: node.offsets[k]!, endLine: node.offsets[k]! + c.lines - 1 })) : item.children;
+    const blocks = node
+      ? node.children.map((c, k) => ({ startLine: node.offsets[k]!, endLine: node.offsets[k]! + c.lines - 1 }))
+      : item.children;
     if (separated(blocks)) return false;
   }
   return true;
@@ -290,7 +310,15 @@ function storePart(b: MdMutableBlock): MdBlock {
   const attrs: Record<string, unknown> = {};
   for (const key in b) if (!OWN.has(key)) attrs[key] = b[key];
   const lines = b.endLine - b.startLine + 1;
-  return { type: b.type, attrs: attrs as MdAttrs, kind: 'part', lines, span: lines, children: b.children.map(storePart), offsets: b.children.map((c) => c.startLine - b.startLine) };
+  return {
+    type: b.type,
+    attrs: attrs as MdAttrs,
+    kind: 'part',
+    lines,
+    span: lines,
+    children: b.children.map(storePart),
+    offsets: b.children.map((c) => c.startLine - b.startLine),
+  };
 }
 
 // ---------------------------------------------------------------------------- where blocks are
@@ -353,11 +381,17 @@ export class MdBlockAt {
 /** The containers open on `line` (outermost first, the document excluded) and the leaf holding it. */
 export function lineBlocks(root: MdBlock, line: number): { containers: MdBlockAt[]; leaf: MdBlockAt | null } {
   const { chain, leaf } = locate(root, line);
-  return { containers: chain.map((s) => new MdBlockAt(s.node, s.start)), leaf: leaf && new MdBlockAt(leaf.node, leaf.start) };
+  return {
+    containers: chain.map((s) => new MdBlockAt(s.node, s.start)),
+    leaf: leaf && new MdBlockAt(leaf.node, leaf.start),
+  };
 }
 
 /** For every line of a tree of `n` lines, what `lineBlocks` gives, in one walk. */
-export function allLineBlocks(root: MdBlock, n: number): { containers: (readonly MdBlockAt[])[]; leaves: (MdBlockAt | null)[] } {
+export function allLineBlocks(
+  root: MdBlock,
+  n: number,
+): { containers: (readonly MdBlockAt[])[]; leaves: (MdBlockAt | null)[] } {
   const containers = new Array<readonly MdBlockAt[]>(n);
   const leaves = new Array<MdBlockAt | null>(n).fill(null);
   // (a level's chain, its containers from the root, made when a line of its own needs it: a line nested

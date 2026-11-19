@@ -16,7 +16,19 @@
 
 import { availableParallelism } from 'node:os';
 import { Worker, isMainThread, parentPort } from 'node:worker_threads';
-import { CASES_PER_GROUP, caseId, filedCases, generatedStarts, readUntriaged, recordUntriaged, REPORT_OF, sessionFailures, sessionWheel, shrinkSession, type UntriagedCase } from './lib/index.ts';
+import {
+  CASES_PER_GROUP,
+  caseId,
+  filedCases,
+  generatedStarts,
+  readUntriaged,
+  recordUntriaged,
+  REPORT_OF,
+  sessionFailures,
+  sessionWheel,
+  shrinkSession,
+  type UntriagedCase,
+} from './lib/index.ts';
 
 const total = Number(process.env.VOLUME ?? 100_000);
 const seed = Number(process.env.VOLUME_SEED ?? 1);
@@ -43,7 +55,8 @@ function playRound(round: number, wheel: readonly string[]): Failed[] {
   const roundSeed = seed + round;
   const starts = generatedStarts(400, 31 + roundSeed);
   let state = roundSeed >>> 0;
-  const below = (n: number): number => Math.floor(((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32) * n);
+  const below = (n: number): number =>
+    Math.floor(((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32) * n);
   const out: Failed[] = [];
   for (let n = 0; n < ROUND && round * ROUND + n < total; n++) {
     const s = starts[below(starts.length)]!;
@@ -65,7 +78,10 @@ if (!isMainThread) {
     if ('round' in job) parentPort!.postMessage({ id: job.id, failed: playRound(job.round, wheel) } satisfies Done);
     else {
       const f = job.shrink;
-      parentPort!.postMessage({ id: job.id, small: shrinkSession(f.text, f.config, f.caret, f.actions.slice(0, f.at + 1), f.kind) } satisfies Done);
+      parentPort!.postMessage({
+        id: job.id,
+        small: shrinkSession(f.text, f.config, f.caret, f.actions.slice(0, f.at + 1), f.kind),
+      } satisfies Done);
     }
   });
 } else {
@@ -77,7 +93,7 @@ async function main(): Promise<void> {
   const size = Math.max(1, Math.min(Number(process.env.VOLUME_WORKERS ?? availableParallelism()), rounds));
   const workers = Array.from({ length: size }, () => new Worker(new URL(import.meta.url)));
   // (the jobs given out one at a time to the worker that's free: rounds take unlike times)
-  const run = <T,>(jobs: readonly ((id: number) => Job)[], take: (done: Done) => T): Promise<T[]> =>
+  const run = <T>(jobs: readonly ((id: number) => Job)[], take: (done: Done) => T): Promise<T[]> =>
     new Promise((resolve, reject) => {
       const results: T[] = new Array(jobs.length);
       let next = 0;
@@ -101,13 +117,18 @@ async function main(): Promise<void> {
 
   // how many cases each group keeps already: a run shrinks only what it would keep
   const kept = new Map<string, number>();
-  for (const c of readUntriaged()) if (REPORT_OF[c.check] === 'sessions') kept.set(c.group, (kept.get(c.group) ?? 0) + 1);
+  for (const c of readUntriaged())
+    if (REPORT_OF[c.check] === 'sessions') kept.set(c.group, (kept.get(c.group) ?? 0) + 1);
   const known = new Set(kept.keys());
   const filed = filedCases();
 
   const started = Date.now();
   const played = await run(
-    Array.from({ length: rounds }, (_, round) => (id: number): Job => ({ id, round })),
+    Array.from(
+      { length: rounds },
+      (_, round) =>
+        (id: number): Job => ({ id, round }),
+    ),
     (done) => ('failed' in done ? done.failed : []),
   );
 
@@ -117,7 +138,9 @@ async function main(): Promise<void> {
   const queued = new Map<string, Failed[]>();
   for (const f of played.flat()) {
     if (f.kind.includes(' threw')) {
-      threw.push(`${f.kind}: ${JSON.stringify(f.text)} ${JSON.stringify(f.config)} @${f.caret} ${JSON.stringify(f.actions)}`);
+      threw.push(
+        `${f.kind}: ${JSON.stringify(f.text)} ${JSON.stringify(f.config)} @${f.caret} ${JSON.stringify(f.actions)}`,
+      );
       continue;
     }
     groups.set(f.kind, (groups.get(f.kind) ?? 0) + 1);
@@ -142,12 +165,22 @@ async function main(): Promise<void> {
     }
     if (!batch.length) break;
     const smalls = await run(
-      batch.map(({ f }) => (id: number): Job => ({ id, shrink: f })),
+      batch.map(
+        ({ f }) =>
+          (id: number): Job => ({ id, shrink: f }),
+      ),
       (done) => ('small' in done ? done.small : []),
     );
     batch.forEach(({ group, f }, k) => {
       if ((kept.get(group) ?? 0) >= CASES_PER_GROUP) return;
-      const c: UntriagedCase = { check: 'session', group, text: f.text, config: f.config, caret: f.caret, actions: smalls[k]! };
+      const c: UntriagedCase = {
+        check: 'session',
+        group,
+        text: f.text,
+        config: f.config,
+        caret: f.caret,
+        actions: smalls[k]!,
+      };
       // (a case filed as a bug is that bug's: not kept again)
       const bug = filed.get(caseId(c));
       if (bug) {
@@ -161,12 +194,19 @@ async function main(): Promise<void> {
   await Promise.all(workers.map((w) => w.terminate()));
 
   const seconds = Math.round((Date.now() - started) / 1000);
-  console.log(`${total} sessions of ${length} actions, seeds ${seed} to ${seed + rounds - 1}, in ${seconds} s on ${size} threads`);
+  console.log(
+    `${total} sessions of ${length} actions, seeds ${seed} to ${seed + rounds - 1}, in ${seconds} s on ${size} threads`,
+  );
   for (const [key, runs] of [...groups].sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1))) {
     const bugs = filedFound.get(key);
-    console.log(`${String(runs).padStart(7)} sessions  ${key}${known.has(key) ? '' : '  (new group)'}${bugs ? `  (cases filed: ${bugs.join(' ')})` : ''}`);
+    console.log(
+      `${String(runs).padStart(7)} sessions  ${key}${known.has(key) ? '' : '  (new group)'}${bugs ? `  (cases filed: ${bugs.join(' ')})` : ''}`,
+    );
   }
   for (const t of threw) console.log(`FAIL ${t}`);
-  if (!dry) console.log(`${recordUntriaged('sessions', found)} sessions cases kept untriaged (test/bugs-untriaged.json), ${found.length} found this run`);
+  if (!dry)
+    console.log(
+      `${recordUntriaged('sessions', found)} sessions cases kept untriaged (test/bugs-untriaged.json), ${found.length} found this run`,
+    );
   process.exitCode = threw.length ? 1 : 0;
 }

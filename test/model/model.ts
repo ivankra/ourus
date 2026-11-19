@@ -27,7 +27,14 @@ export interface Caret {
   offset: number;
 }
 
-export type Cmd = 'indent' | 'outdent' | 'moveSubtreeUp' | 'moveSubtreeDown' | 'enter' | 'deleteContentBackward' | 'deleteContentForward';
+export type Cmd =
+  | 'indent'
+  | 'outdent'
+  | 'moveSubtreeUp'
+  | 'moveSubtreeDown'
+  | 'enter'
+  | 'deleteContentBackward'
+  | 'deleteContentForward';
 
 export type Outcome = { status: 'success'; root: MNode; caret: Caret } | { status: 'rejected'; reason: string };
 
@@ -115,7 +122,8 @@ const COMMANDS: Record<Cmd, Command> = {
     if (!prev) return reject('no-previous-sibling');
     if (ctx.md('only-items-indent', n.kind !== 'item')) return reject('not-expressible');
     if (ctx.md('only-items-hold-items', prev.kind !== 'item')) return reject('not-expressible');
-    if (ctx.md('leaves-hold-nothing', prev.kind === 'paragraph' || prev.kind === 'atom')) return reject('not-expressible');
+    if (ctx.md('leaves-hold-nothing', prev.kind === 'paragraph' || prev.kind === 'atom'))
+      return reject('not-expressible');
     remove(parent, n);
     prev.children.push(n);
     return ctx.ok({ node: n, offset });
@@ -167,12 +175,19 @@ const COMMANDS: Record<Cmd, Command> = {
     }
     if (n.kind === 'paragraph') {
       const typed = ctx.md('typed-marker-starts-node', /^(?:[-+*]|\d{1,9}[.)])(?:[ \t]+|$)/.test(after));
-      const fresh: MNode = typed ? { kind: 'item', text: after.replace(/^\S+[ \t]*/, ''), task: null, children: [] } : { kind: 'paragraph', text: after, children: [] };
+      const fresh: MNode = typed
+        ? { kind: 'item', text: after.replace(/^\S+[ \t]*/, ''), task: null, children: [] }
+        : { kind: 'paragraph', text: after, children: [] };
       parent.children.splice(parent.children.indexOf(n) + 1, 0, fresh);
       return ctx.ok({ node: fresh, offset: 0 });
     }
     const typed = ctx.md('typed-marker-starts-node', /^(?:[-+*]|\d{1,9}[.)])(?:[ \t]+|$)/.test(after));
-    const fresh: MNode = { kind: 'item', text: typed ? after.replace(/^\S+[ \t]*/, '') : after, task: n.task && !typed ? ' ' : null, children: [] };
+    const fresh: MNode = {
+      kind: 'item',
+      text: typed ? after.replace(/^\S+[ \t]*/, '') : after,
+      task: n.task && !typed ? ' ' : null,
+      children: [],
+    };
     // with children, the new node is the first child (Logseq, Workflowy), else the next sibling
     if (n.children.length > 0) n.children.unshift(fresh);
     else parent.children.splice(parent.children.indexOf(n) + 1, 0, fresh);
@@ -213,7 +228,8 @@ function rawEdit(ctx: Ctx, n: MNode, from: number, to: number): Caret {
     for (const l of lines) {
       const t = l.trim();
       const lead = l.length - l.trimStart().length;
-      if (from >= base && from <= base + l.length) offset = out.join('\n').length + (out.length ? 1 : 0) + Math.min(Math.max(0, from - base - lead), t.length);
+      if (from >= base && from <= base + l.length)
+        offset = out.join('\n').length + (out.length ? 1 : 0) + Math.min(Math.max(0, from - base - lead), t.length);
       out.push(t);
       base += l.length + 1;
     }
@@ -235,7 +251,8 @@ function joinUp(ctx: Ctx, n: MNode): Outcome {
     remove(parent, n);
     return ctx.ok({ node: prev, offset: prev.text.length });
   }
-  if (ctx.md('atoms-take-no-text', prev.kind === 'atom' || !!prev.block || n.kind === 'atom' || !!n.block)) return reject('not-expressible');
+  if (ctx.md('atoms-take-no-text', prev.kind === 'atom' || !!prev.block || n.kind === 'atom' || !!n.block))
+    return reject('not-expressible');
   if (ctx.md('heading-is-one-line', prev.kind === 'heading' && n.text.includes('\n'))) return reject('not-expressible');
   const at = remove(parent, n);
   const caret = { node: prev, offset: prev.text.length };
@@ -248,7 +265,10 @@ function joinUp(ctx: Ctx, n: MNode): Outcome {
     ctx.resection = true;
   } else if (n.children.length > 0) {
     // children go to the node above: into the joined node's place when that node is its parent
-    const adopt = prev !== parent && !ctx.md('leaves-hold-nothing', prev.kind === 'paragraph' || prev.kind === 'atom') && prev.kind !== 'root';
+    const adopt =
+      prev !== parent &&
+      !ctx.md('leaves-hold-nothing', prev.kind === 'paragraph' || prev.kind === 'atom') &&
+      prev.kind !== 'root';
     if (adopt) prev.children.push(...n.children);
     else parent.children.splice(at, 0, ...n.children);
   }
@@ -330,7 +350,8 @@ export function shape(n: MNode): unknown {
 /** A compact drawing of a tree for reports. */
 export function draw(n: MNode, depth = 0, out: string[] = []): string[] {
   if (n.kind !== 'root') {
-    const tag = n.kind === 'heading' ? `h${n.level}` : n.kind === 'item' ? (n.task ? `item[${n.task}]` : 'item') : n.kind;
+    const tag =
+      n.kind === 'heading' ? `h${n.level}` : n.kind === 'item' ? (n.task ? `item[${n.task}]` : 'item') : n.kind;
     out.push(`${'  '.repeat(depth - 1)}${tag}${n.block ? `<${n.block}>` : ''} ${JSON.stringify(n.text)}`);
   }
   n.children.forEach((c) => draw(c, depth + 1, out));

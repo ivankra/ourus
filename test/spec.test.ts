@@ -7,7 +7,24 @@ import { test, type TestContext } from 'node:test';
 import { type OurusNode, type OurusDoc } from '../src/doc/index.ts';
 import { codeAt } from '../src/commands/code.ts';
 import { CommandContext } from '../src/commands/context.ts';
-import { drawDoc, nodePlainText, isCommandAction, isDropAction, playActions, textPosition, specTestFlavors, runSpecTest, specTestStart, readSpecFile, specSlug, specConfig, specFiles, SPEC_DIR, onFenceLine, type SpecTest } from './lib/index.ts';
+import {
+  drawDoc,
+  nodePlainText,
+  isCommandAction,
+  isDropAction,
+  playActions,
+  textPosition,
+  specTestFlavors,
+  runSpecTest,
+  specTestStart,
+  readSpecFile,
+  specSlug,
+  specConfig,
+  specFiles,
+  SPEC_DIR,
+  onFenceLine,
+  type SpecTest,
+} from './lib/index.ts';
 import { OurusSuccess } from '../src/commands/index.ts';
 import { DECORATIONS } from '../src/config.ts';
 
@@ -39,7 +56,6 @@ for (const file of specFiles()) {
   }
 }
 
-
 // a case's name (its own heading) is unique across the spec, not only in its file: reports, the SxS
 // and notes name a case by it alone
 test('every case name is unique across the spec files', () => {
@@ -47,7 +63,10 @@ test('every case name is unique across the spec files', () => {
   for (const file of specFiles()) {
     for (const t of readSpecFile(file)) files.set(t.name, [...(files.get(t.name) ?? []), file]);
   }
-  assert.deepEqual([...files].filter(([, in_]) => in_.length > 1).map(([id, in_]) => `${id}: ${in_.join(', ')}`), []);
+  assert.deepEqual(
+    [...files].filter(([, in_]) => in_.length > 1).map(([id, in_]) => `${id}: ${in_.join(', ')}`),
+    [],
+  );
 });
 
 // every core case (the reader requires every case's rank) is walked through in a daily flow of scenarios.md
@@ -56,7 +75,8 @@ test('every core case appears in scenarios.md', () => {
   const problems: string[] = [];
   for (const file of specFiles()) {
     for (const t of readSpecFile(file)) {
-      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${specSlug(t.name)})`)) problems.push(`${t.name} (${file}): core, but in no scenario`);
+      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${specSlug(t.name)})`))
+        problems.push(`${t.name} (${file}): core, but in no scenario`);
     }
   }
   assert.deepEqual(problems, []);
@@ -76,7 +96,10 @@ function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
     const walk = (n: OurusNode, depth: number): void => {
       for (const c of n.children) {
         // what a node's text is (an empty item's is a paragraph, once typed into), and a heading's level
-        out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.attrs.level ?? ''}`, text: nodePlainText(d, c) });
+        out.push({
+          node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.attrs.level ?? ''}`,
+          text: nodePlainText(d, c),
+        });
         walk(c, depth + 1);
       }
     };
@@ -88,7 +111,10 @@ function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
   const at = doc.nodeAtLine(doc.lineAt(head).index);
   const type = at && (at.kind === 'atom' ? at.block : at.head)?.type;
   if (type === 'thematic_break' || (type === 'refdef' && head === doc.textStart(doc.lineAt(head).index))) return true;
-  const [before, after] = [shape(doc), shape(doc.update({ changes: [{ from: head, to: head, insert: 'x' }], caret: head + 1 }))];
+  const [before, after] = [
+    shape(doc),
+    shape(doc.update({ changes: [{ from: head, to: head, insert: 'x' }], caret: head + 1 })),
+  ];
   if (before.map((n) => n.node).join() !== after.map((n) => n.node).join()) return false;
   return before.filter((n, i) => n.text !== after[i]!.text).length <= 1;
 }
@@ -106,11 +132,19 @@ test('`enter-in-fence` tags exactly the cases with Enter on a fenced code or mat
       for (const action of t.steps.flatMap((s) => s.actions)) {
         if (action === 'enter') {
           const code = codeAt(new CommandContext(state.view));
-          if (code && (code.text.type === 'fenced_code' || code.text.type === 'math_block') && !onFenceLine(state.view.doc, state.view.selection.head)) entered = true;
+          if (
+            code &&
+            (code.text.type === 'fenced_code' || code.text.type === 'math_block') &&
+            !onFenceLine(state.view.doc, state.view.selection.head)
+          )
+            entered = true;
         }
         state = playActions(state, [action]);
       }
-      if (entered !== t.tags.includes('enter-in-fence')) problems.push(`${t.file}:${t.line} ${t.name}: ${entered ? 'Enter on a fenced block\'s line, untagged' : 'tagged, no Enter on a fenced block\'s line'}`);
+      if (entered !== t.tags.includes('enter-in-fence'))
+        problems.push(
+          `${t.file}:${t.line} ${t.name}: ${entered ? "Enter on a fenced block's line, untagged" : "tagged, no Enter on a fenced block's line"}`,
+        );
     }
   }
   assert.deepEqual(problems, []);
@@ -124,7 +158,8 @@ for (const markup of ['text', 'decorated'] as const) {
       for (const t of readSpecFile(file)) {
         if (t.pending) continue;
         // decorated: every case, its own config with every element drawn set over it
-        const options = markup === 'decorated' ? { ...specConfig(t.options), decorations: DECORATIONS } : specConfig(t.options);
+        const options =
+          markup === 'decorated' ? { ...specConfig(t.options), decorations: DECORATIONS } : specConfig(t.options);
         if (markup === 'text' && (options.decorations?.length ?? 0) > 0) continue;
         for (const flavor of specTestFlavors(t)) {
           let state = specTestStart(t, flavor, options);
@@ -134,7 +169,12 @@ for (const markup of ['text', 'decorated'] as const) {
               state = playActions(state, [action]);
               const { anchor, head } = state.view.selection;
               // typed text too, where ourus's `insertText` applied
-              if (!(isCommandAction(action) || isDropAction(action) || action.startsWith('"')) || !(state.last instanceof OurusSuccess) || anchor !== head) continue;
+              if (
+                !(isCommandAction(action) || isDropAction(action) || action.startsWith('"')) ||
+                !(state.last instanceof OurusSuccess) ||
+                anchor !== head
+              )
+                continue;
               const doc = state.view.doc;
               // a space a placeholder holds as text (`- ┃◌ x`) starts the text
               const held = doc.marks.placeholders.includes(head) && /[ \t]/.test(doc.text[head] ?? '');
@@ -142,12 +182,21 @@ for (const markup of ['text', 'decorated'] as const) {
               const inNode = head <= line.to && !!doc.nodeAtLine(line.index);
               const markupAt = inNode && head < doc.textStart(line.index) && !held;
               // where markup is text, indent and outdent from a fence line may keep the caret on one
-              const keptOnFence = markup === 'text' && (action === 'indent' || action === 'outdent') && onFenceLine(before.view.doc, before.view.selection.head);
+              const keptOnFence =
+                markup === 'text' &&
+                (action === 'indent' || action === 'outdent') &&
+                onFenceLine(before.view.doc, before.view.selection.head);
               const checked = markup === 'decorated' || (STRUCTURAL.includes(action) && !keptOnFence);
-              if (markupAt || (checked && textPosition(doc, head) !== head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawDoc(state.view, state.view.selection)}`);
+              if (markupAt || (checked && textPosition(doc, head) !== head))
+                problems.push(
+                  `${file}:${step.line} (${flavor}) ${action}: ${drawDoc(state.view, state.view.selection)}`,
+                );
               // and, apart from that helper, typing there after a structural command, in a node, keeps the
               // outline: the same nodes, only one of them with other text
-              else if (STRUCTURAL.includes(action) && !keptOnFence && inNode && !typingKeepsOutline(doc, head)) problems.push(`${file}:${step.line} (${flavor}) ${action}, then typing: ${drawDoc(state.view, state.view.selection)}`);
+              else if (STRUCTURAL.includes(action) && !keptOnFence && inNode && !typingKeepsOutline(doc, head))
+                problems.push(
+                  `${file}:${step.line} (${flavor}) ${action}, then typing: ${drawDoc(state.view, state.view.selection)}`,
+                );
             }
           }
         }

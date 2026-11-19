@@ -71,19 +71,40 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
   const hash = !literal && prefix === (numbered?.[0].length ?? 0) && /^\\#/.test(content);
   if (hash) content = content.slice(1);
   const cut = literal ? prefix + literal[1]!.length : hash ? prefix : undefined;
-  return { depth, content, note: '', checkbox: !!task, checked: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, prefix, ...(cut !== undefined && { cut }) };
+  return {
+    depth,
+    content,
+    note: '',
+    checkbox: !!task,
+    checked: !!task && task[1] !== ' ',
+    heading: heading?.[1]!.length ?? 0,
+    numbered: !!numbered,
+    prefix,
+    ...(cut !== undefined && { cut }),
+  };
 }
 
 /** An item's canonical text, and the length of the prefix its attributes stand for: its number `number` where it is numbered. */
 function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number } {
-  const prefix = (number !== null ? `${number}. ` : '') + (it.checkbox || it.checked ? (it.checked ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
+  const prefix =
+    (number !== null ? `${number}. ` : '') +
+    (it.checkbox || it.checked ? (it.checked ? '[x] ' : '[ ] ') : '') +
+    (it.heading ? '#'.repeat(it.heading) + ' ' : '');
   const plain = !prefix || prefix === `${number}. `;
   const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
   // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
   const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.content);
-  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : hash ? '\\' + it.content : it.content;
+  const content = literal
+    ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length)
+    : hash
+      ? '\\' + it.content
+      : it.content;
   const cut = literal ? literal[0].length : hash ? 0 : undefined;
-  return { text: prefix + content + (it.note ? '\n' + it.note : ''), prefix: prefix.length, ...(cut !== undefined && { cut }) };
+  return {
+    text: prefix + content + (it.note ? '\n' + it.note : ''),
+    prefix: prefix.length,
+    ...(cut !== undefined && { cut }),
+  };
 }
 
 /** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
@@ -130,7 +151,12 @@ export const driver: Driver = {
     // "go to first item" and "go to last item" land at the item's start and end
     cursorDocStart: 'Control+Home',
     cursorDocEnd: 'Control+End',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // a code block's fences are text, edited a character at a time, with no boundary to compare where
   // ourus has one (`markup-fence`, as for Logseq, Tine, Athens and Roam); the other `markup-` tags are
@@ -184,29 +210,46 @@ export const driver: Driver = {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'heading deeper than H3';
     // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
-    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Dynalist holds as the text #';
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text)))
+      return 'heading with no text (# alone), which Dynalist holds as the text #';
     // (blocks are selected by Shift-Down from the first, which takes the parent in past a deeper one)
-    if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1) return 'blocks selected at two depths: Shift-Down takes their parent in';
+    if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1)
+      return 'blocks selected at two depths: Shift-Down takes their parent in';
     // a checkbox and a heading level are the item's attributes, not text: no caret goes there
-    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix) return "caret in a task's checkbox or a heading's #s";
+    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix)
+      return "caret in a task's checkbox or a heading's #s";
     // numbering is a parent's list style: all its children numbered, from 1, or none
     for (const list of siblings(o).values()) {
       const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
-      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'list numbered in part, or not from 1';
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1))
+        return 'list numbered in part, or not from 1';
     }
     return undefined;
   },
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => (window as any).DYNALIST?.app?.app_document?.document && document.querySelector('.Node-content'), null, { timeout: 120000 });
-    const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+    await page.waitForFunction(
+      () => (window as any).DYNALIST?.app?.app_document?.document && document.querySelector('.Node-content'),
+      null,
+      { timeout: 120000 },
+    );
+    const settled = await page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+    );
     if (settled.timedOut) throw new Error(`Dynalist didn't settle after loading: ${settled.pending}`);
     // ready once a key does what it should: Tab indents
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await idle();
       await page.keyboard.press('Tab');
       await idle();
@@ -221,16 +264,26 @@ export const driver: Driver = {
   },
 
   async configure(page: Page, settings) {
-    await page.evaluate((inPlace) => (window as any).DYNALIST.app.preferences.set_boolean('unindent_in_place', inPlace), settings.outdent === 'direct');
+    await page.evaluate(
+      (inPlace) => (window as any).DYNALIST.app.preferences.set_boolean('unindent_in_place', inPlace),
+      settings.outdent === 'direct',
+    );
   },
 
   async load(page: Page, doc) {
     const o = doc as Outline;
     const items = o.blocks.map((b) => toItem(b.depth, b.text));
-    const local = (p: number, it: (typeof items)[number]): number => p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
+    const local = (p: number, it: (typeof items)[number]): number =>
+      p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
     // a selection of items: the caret at the first one's start, then Shift+Down (`selectsBlocks`)
     const selected = !o.sel && o.selected?.length ? o.selected : null;
-    const sel = o.sel ? { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+    const sel = o.sel
+      ? {
+          block: o.sel.block,
+          anchor: local(o.sel.anchor, items[o.sel.block]!),
+          head: local(o.sel.head, items[o.sel.block]!),
+        }
+      : selected && { block: selected[0]!, anchor: 0, head: 0 };
     // a numbered list is its parent's list style (the root's for the top level): `holds` saw to it
     // that a parent's children are all numbered or none
     const numbers = new Set([...siblings(o)].filter(([, list]) => items[list[0]!]!.numbered).map(([parent]) => parent));
@@ -292,7 +345,10 @@ export const driver: Driver = {
         ad.ui.set_selection(made[sel.block], sel.anchor, sel.head);
         const el = ad.ui.get_node_state(made[sel.block]).dom.content_el as HTMLElement;
         for (let i = 0; i < 100 && document.activeElement !== el; i++) await new Promise((r) => setTimeout(r, 10));
-        if (document.activeElement !== el) throw new Error(`the item didn't take the caret (focus: ${(document.activeElement as HTMLElement | null)?.className})`);
+        if (document.activeElement !== el)
+          throw new Error(
+            `the item didn't take the caret (focus: ${(document.activeElement as HTMLElement | null)?.className})`,
+          );
       },
       { items, lists, topNumbered: numbers.has(-1), sel, view: o.view ?? null },
     );
@@ -304,14 +360,30 @@ export const driver: Driver = {
       await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 }));
       return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
     };
-    for (let k = 0; k <= o.blocks.length + o.blocks[selected[0]!]!.text.split('\n').length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+    for (
+      let k = 0;
+      k <= o.blocks.length + o.blocks[selected[0]!]!.text.split('\n').length && (await reached()) < last;
+      k++
+    )
+      await page.keyboard.press('Shift+ArrowDown');
   },
 
   async read(page: Page) {
     const raw = await page.evaluate((viewed) => {
       const ad = (window as any).DYNALIST.app.app_document;
       const root = ad.document.get_node_collection().get_root();
-      const flat: { depth: number; content: string; note: string; checkbox: boolean; checked: boolean; heading: number; numbered: boolean; number: number | null; id: string; collapsed: boolean }[] = [];
+      const flat: {
+        depth: number;
+        content: string;
+        note: string;
+        checkbox: boolean;
+        checked: boolean;
+        heading: number;
+        numbered: boolean;
+        number: number | null;
+        id: string;
+        collapsed: boolean;
+      }[] = [];
       const walk = (node: any, depth: number) => {
         // a parent's list style numbers all its children, from 1 (a CSS counter per parent)
         const numbered = node.get_meta_object().is_numbered_list();
@@ -319,7 +391,18 @@ export const driver: Driver = {
         node.children.each((c: any) => {
           const m = c.get_meta_object();
           n++;
-          flat.push({ depth, content: m.get_content(), note: m.get_note(), checkbox: m.has_checkbox(), checked: m.is_checked(), heading: m.get_heading() || 0, numbered, number: numbered ? n : null, id: c.get_id(), collapsed: c.children.length() > 0 && c.is_collapsed() });
+          flat.push({
+            depth,
+            content: m.get_content(),
+            note: m.get_note(),
+            checkbox: m.has_checkbox(),
+            checked: m.is_checked(),
+            heading: m.get_heading() || 0,
+            numbered,
+            number: numbered ? n : null,
+            id: c.get_id(),
+            collapsed: c.children.length() > 0 && c.is_collapsed(),
+          });
           walk(c, depth + 1);
         });
       };
@@ -327,7 +410,11 @@ export const driver: Driver = {
       const s = ad.ui.selection().get();
       const index = (n: any) => (n ? flat.findIndex((f) => f.id === n.get_id()) : -1);
       const active = document.activeElement as HTMLElement | null;
-      const editing = active?.classList.contains('Node-content') ? 'content' : active?.classList.contains('Node-note') ? 'note' : null;
+      const editing = active?.classList.contains('Node-content')
+        ? 'content'
+        : active?.classList.contains('Node-note')
+          ? 'note'
+          : null;
       let sel: { block: number; anchor: number; head: number; inNote: boolean } | null = null;
       if (editing && s?.get_position_start) {
         const block = index(s.get_node());
@@ -340,13 +427,22 @@ export const driver: Driver = {
           back = r.comparePoint(ds.focusNode, ds.focusOffset) < 0;
         }
         const [start, end] = [s.get_position_start(), s.get_position_end()];
-        if (block >= 0) sel = { block, anchor: back ? end : start, head: back ? start : end, inNote: editing === 'note' };
+        if (block >= 0)
+          sel = { block, anchor: back ? end : start, head: back ? start : end, inNote: editing === 'note' };
       }
       // items selected as items (Shift+Up or Down past an item's edge)
-      const selected = !editing && s?.get_nodes ? s.get_nodes().map(index).filter((i: number) => i >= 0) : [];
+      const selected =
+        !editing && s?.get_nodes
+          ? s
+              .get_nodes()
+              .map(index)
+              .filter((i: number) => i >= 0)
+          : [];
       // the view: the collapsed items, and the item zoomed into, if one of the test's (the root: none)
       const zoom = index(ad.ui.current_root.is_root() ? null : ad.ui.current_root);
-      const view = viewed ? { folded: flat.flatMap((f, k) => (f.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+      const view = viewed
+        ? { folded: flat.flatMap((f, k) => (f.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null }
+        : undefined;
       return { flat, sel, selected, view };
     }, viewed(page).on);
     const texts = raw.flat.map((f) => fromItem(f, f.number));
@@ -360,7 +456,10 @@ export const driver: Driver = {
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
     // (its italic `__x__` as Markdown's)
-    return { ...italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
+    return {
+      ...italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }),
+      ...(raw.view && { view: raw.view }),
+    };
   },
 
   drops: ['moveSubtree'],
@@ -410,7 +509,10 @@ async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promis
       if (top) return { from, to: on(top, 0.25) };
       // into a leaf: its line's lower half, past its "inner" column (its line starts 100 pixels left of its bullet)
       const self = box(dom(parent).self_el);
-      return { from, to: { x: self.left + 100 + 0.2 * (self.width - 100) + 30 + 40, y: self.top + self.height * 0.75 } };
+      return {
+        from,
+        to: { x: self.left + 100 + 0.2 * (self.width - 100) + 30 + 40, y: self.top + self.height * 0.75 },
+      };
     }
     const next = kids(parent)[kids(parent).indexOf(after) + 1];
     if (next) return { from, to: on(next, 0.25) };

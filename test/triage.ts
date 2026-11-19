@@ -9,7 +9,15 @@
 //
 // The text written is read off `OurusDraft.done` by a global probe (`__triageWritten`), set only here.
 
-import { OurusDoc, OurusView, OurusFailed, OurusSuccess, executeCommand, type OurusCommand, type OurusNode } from '../src/index.ts';
+import {
+  OurusDoc,
+  OurusView,
+  OurusFailed,
+  OurusSuccess,
+  executeCommand,
+  type OurusCommand,
+  type OurusNode,
+} from '../src/index.ts';
 import { playActions, type PlayedState } from './lib/action-player.ts';
 import { lostMarks } from './lib/report-checks.ts';
 import { writeFailedKind } from './lib/report-baselines.ts';
@@ -139,7 +147,10 @@ function written(step: Step, config: Record<string, unknown>, action: string): s
   const g = globalThis as { __triageWritten?: string | null };
   g.__triageWritten = null;
   try {
-    const doc = OurusDoc.parse(step.text, { config, marks: { placeholders: [...step.placeholders], auto: [...step.auto] } });
+    const doc = OurusDoc.parse(step.text, {
+      config,
+      marks: { placeholders: [...step.placeholders], auto: [...step.auto] },
+    });
     executeCommand(viewOf(doc, step), commandOf(action, step.clipboard));
   } catch {
     // (a throw is its own report)
@@ -167,7 +178,16 @@ for (const c of readUntriaged()) {
       return n ? { line: n.startLine, kind: n.kind } : null;
     };
     const folds = [...view.folded].map(lineOf).filter((at): at is NodeAt => at !== null);
-    const step: Step = { text: view.doc.text, placeholders: view.doc.marks.placeholders, auto: view.doc.marks.auto, anchor: view.selection.anchor, head: view.selection.head, clipboard: { ...state.clipboard }, folds, zoom: view.zoom === null ? null : lineOf(view.zoom) };
+    const step: Step = {
+      text: view.doc.text,
+      placeholders: view.doc.marks.placeholders,
+      auto: view.doc.marks.auto,
+      anchor: view.selection.anchor,
+      head: view.selection.head,
+      clipboard: { ...state.clipboard },
+      folds,
+      zoom: view.zoom === null ? null : lineOf(view.zoom),
+    };
     let next: PlayedState;
     try {
       next = playActions(state, [action]);
@@ -175,7 +195,12 @@ for (const c of readUntriaged()) {
       break;
     }
     const last = next.last;
-    const kind = last instanceof OurusFailed ? `${action}: ${writeFailedKind(last)}` : last instanceof OurusSuccess ? (lostMarks(state.view, last).map((k) => `${action}: ${k}`)[0] ?? null) : null;
+    const kind =
+      last instanceof OurusFailed
+        ? `${action}: ${writeFailedKind(last)}`
+        : last instanceof OurusSuccess
+          ? (lostMarks(state.view, last).map((k) => `${action}: ${k}`)[0] ?? null)
+          : null;
     if (kind === c.group) {
       found = { step, action, kind };
       break;
@@ -183,20 +208,41 @@ for (const c of readUntriaged()) {
     state = next;
   }
   if (!found) {
-    console.log(json ? JSON.stringify({ id, group: c.group, passes: true }) : `${id} ${c.group}: passes (no step fails so)`);
+    console.log(
+      json ? JSON.stringify({ id, group: c.group, passes: true }) : `${id} ${c.group}: passes (no step fails so)`,
+    );
     continue;
   }
   const small = reduce(found.step, config, found.action, found.kind);
   const start = small.anchor === small.head ? { caret: small.anchor } : { anchor: small.anchor, head: small.head };
   // (the view's folds and zoom by their nodes' ids in the reduced note, as `executeOnText` takes them)
   const reducedView = viewOf(OurusDoc.parse(small.text, { config }), small);
-  const viewState = reducedView.folded.size || reducedView.zoom !== null ? { view: { folded: [...reducedView.folded], zoom: reducedView.zoom } } : {};
-  const options = { ...start, config, ...(small.placeholders.length && { placeholders: small.placeholders }), ...(small.auto.length && { auto: small.auto }), ...viewState };
-  const out = { id, group: c.group, kind: found.kind, text: small.text, command: commandOf(found.action, small.clipboard), options, written: found.kind.includes('write-failed') ? written(small, config, found.action) : null };
+  const viewState =
+    reducedView.folded.size || reducedView.zoom !== null
+      ? { view: { folded: [...reducedView.folded], zoom: reducedView.zoom } }
+      : {};
+  const options = {
+    ...start,
+    config,
+    ...(small.placeholders.length && { placeholders: small.placeholders }),
+    ...(small.auto.length && { auto: small.auto }),
+    ...viewState,
+  };
+  const out = {
+    id,
+    group: c.group,
+    kind: found.kind,
+    text: small.text,
+    command: commandOf(found.action, small.clipboard),
+    options,
+    written: found.kind.includes('write-failed') ? written(small, config, found.action) : null,
+  };
   if (json) console.log(JSON.stringify(out));
   else {
     console.log(`${id} ${found.kind}`);
-    console.log(`  executeOnText(${JSON.stringify(out.text)}, ${JSON.stringify(out.command)}, ${JSON.stringify(out.options)})`);
+    console.log(
+      `  executeOnText(${JSON.stringify(out.text)}, ${JSON.stringify(out.command)}, ${JSON.stringify(out.options)})`,
+    );
     if (out.written !== null) console.log(`  written ${JSON.stringify(out.written)}`);
   }
 }

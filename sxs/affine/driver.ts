@@ -54,24 +54,45 @@ interface AfBlock {
 function toAffine(text: string, free: boolean): { block: Omit<AfBlock, 'children'>; prefix: number; cut?: number } {
   const heading = /^(#{1,6}) /.exec(text);
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
-  if (free && heading) return { block: { flavour: 'affine:paragraph', type: `h${heading[1]!.length}`, text: text.slice(heading[0].length) }, prefix: heading[0].length };
-  if (free && fence) return { block: { flavour: 'affine:code', type: 'code', text: fence[2]!, ...(fence[1] && { language: fence[1] }) }, prefix: 4 + fence[1]!.length };
-  if (free && text.startsWith('> ')) return { block: { flavour: 'affine:paragraph', type: 'quote', text: text.slice(2) }, prefix: 2 };
+  if (free && heading)
+    return {
+      block: { flavour: 'affine:paragraph', type: `h${heading[1]!.length}`, text: text.slice(heading[0].length) },
+      prefix: heading[0].length,
+    };
+  if (free && fence)
+    return {
+      block: { flavour: 'affine:code', type: 'code', text: fence[2]!, ...(fence[1] && { language: fence[1] }) },
+      prefix: 4 + fence[1]!.length,
+    };
+  if (free && text.startsWith('> '))
+    return { block: { flavour: 'affine:paragraph', type: 'quote', text: text.slice(2) }, prefix: 2 };
   const task = free ? null : /^\[([ xX])\] /.exec(text);
-  if (task) return { block: { flavour: 'affine:list', type: 'todo', checked: task[1] !== ' ', text: text.slice(4) }, prefix: 4 };
+  if (task)
+    return {
+      block: { flavour: 'affine:list', type: 'todo', checked: task[1] !== ' ', text: text.slice(4) },
+      prefix: 4,
+    };
   const numbered = free ? null : /^(\d{1,9})\. /.exec(text);
   const prefix = numbered?.[0].length ?? 0;
-  const base = free ? { flavour: 'affine:paragraph' as const, type: 'text' } : { flavour: 'affine:list' as const, type: numbered ? 'numbered' : 'bulleted' };
+  const base = free
+    ? { flavour: 'affine:paragraph' as const, type: 'text' }
+    : { flavour: 'affine:list' as const, type: numbered ? 'numbered' : 'bulleted' };
   // a number that is text (after a numbered block's own number too): the escape's backslash off
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text.slice(prefix));
-  if (literal) return { block: { ...base, text: literal[1] + text.slice(prefix + literal[0].length) }, prefix, cut: prefix + literal[1]!.length };
+  if (literal)
+    return {
+      block: { ...base, text: literal[1] + text.slice(prefix + literal[0].length) },
+      prefix,
+      cut: prefix + literal[1]!.length,
+    };
   // and a `#` that is text (a heading is a paragraph's type, its text plain: Enter9)
   if (/^\\#/.test(text.slice(prefix))) return { block: { ...base, text: text.slice(prefix + 1) }, prefix, cut: prefix };
   return { block: { ...base, text: text.slice(prefix) }, prefix };
 }
 
 /** A canonical offset in a block's text as one in AFFiNE's, the prefix and an escape (`cut`) taken off. */
-const appOffset = (offset: number, at: { prefix: number; cut?: number }): number => Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
+const appOffset = (offset: number, at: { prefix: number; cut?: number }): number =>
+  Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
 
 /** Starts AFFiNE can't hold: a heading, code or a quote as a list item, numbers that don't count on, a caret in markup that is a block's type. */
 function holds(o: Outline): string | undefined {
@@ -86,7 +107,8 @@ function holds(o: Outline): string | undefined {
   for (const b of o.blocks) {
     last.length = b.depth + 1;
     const n = !b.free && /^(\d{1,9})\. /.exec(b.text);
-    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1) return 'numbered list right after another (AFFiNE numbers them as one)';
+    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1)
+      return 'numbered list right after another (AFFiNE numbers them as one)';
     last[b.depth] = n ? Number(n[1]) : null;
   }
   if (!o.sel) return undefined;
@@ -94,8 +116,16 @@ function holds(o: Outline): string | undefined {
   const from = Math.min(o.sel.anchor, o.sel.head);
   const to = Math.max(o.sel.anchor, o.sel.head);
   const at = toAffine(b.text, !!b.free);
-  if (from < at.prefix) return at.block.type === 'todo' ? "caret in a task's checkbox" : at.block.type === 'quote' ? "caret in a quote's >" : at.block.flavour === 'affine:code' ? "caret on a code block's fence" : "caret in a heading's #s";
-  if (at.block.flavour === 'affine:code' && to > at.prefix + at.block.text.length) return "caret on a code block's fence";
+  if (from < at.prefix)
+    return at.block.type === 'todo'
+      ? "caret in a task's checkbox"
+      : at.block.type === 'quote'
+        ? "caret in a quote's >"
+        : at.block.flavour === 'affine:code'
+          ? "caret on a code block's fence"
+          : "caret in a heading's #s";
+  if (at.block.flavour === 'affine:code' && to > at.prefix + at.block.text.length)
+    return "caret on a code block's fence";
   return undefined;
 }
 
@@ -131,7 +161,11 @@ interface PageBlock {
 }
 
 /** In the page: the blocks, the caret (by block and offset in its content) and blocks selected whole. */
-function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number; head: number } | null; selected: number[] } {
+function readPage(): {
+  blocks: PageBlock[];
+  sel: { block: number; anchor: number; head: number } | null;
+  selected: number[];
+} {
   const ed = (window as any).currentEditor;
   const doc = ed.doc;
   const flat: (PageBlock & { id: string })[] = [];
@@ -156,8 +190,14 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
         // its number as AFFiNE draws it (each item's own `order`, which a move leaves as it was: `2.`
         // before `1.`), else counted on from the item before
         const prev = ms[k - 1];
-        const drawn = /^(\d+)\.$/.exec(ed.std.view.getBlock(m.id)?.querySelector('.affine-list-block__prefix')?.textContent?.trim() ?? '');
-        number = drawn ? Number(drawn[1]) : prev?.flavour === 'affine:list' && prev.props.type === 'numbered' ? number + 1 : Number(m.props.order) || 1;
+        const drawn = /^(\d+)\.$/.exec(
+          ed.std.view.getBlock(m.id)?.querySelector('.affine-list-block__prefix')?.textContent?.trim() ?? '',
+        );
+        number = drawn
+          ? Number(drawn[1])
+          : prev?.flavour === 'affine:list' && prev.props.type === 'numbered'
+            ? number + 1
+            : Number(m.props.order) || 1;
         prefix = `${number}. `;
       }
       if ((m.flavour === 'affine:list' && type !== 'todo') || (m.flavour === 'affine:paragraph' && type === 'text')) {
@@ -171,12 +211,22 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
       else if (m.flavour === 'affine:code') {
         // its fence longer than a run of backticks starting one of its lines, as Markdown needs
         const ticks = '`'.repeat(Math.max(3, ...[...t.matchAll(/^ {0,3}(`+)/gm)].map((x) => x[1]!.length + 1)));
-        const lang = m.props.language && m.props.language !== 'plain text' && m.props.language !== 'text' ? m.props.language : '';
+        const lang =
+          m.props.language && m.props.language !== 'plain text' && m.props.language !== 'text' ? m.props.language : '';
         prefix = `${ticks}${lang}\n`;
         suffix = `\n${ticks}`;
       } else if (m.flavour === 'affine:divider') prefix = '---';
       else if (m.flavour !== 'affine:list' && m.flavour !== 'affine:paragraph') prefix = `<${m.flavour}> `;
-      flat.push({ depth, prefix, suffix, runs: m.flavour === 'affine:code' ? null : runsOf(m.props.text), plain: t, ...(cut !== undefined && { cut }), id: m.id, free: m.flavour !== 'affine:list' });
+      flat.push({
+        depth,
+        prefix,
+        suffix,
+        runs: m.flavour === 'affine:code' ? null : runsOf(m.props.text),
+        plain: t,
+        ...(cut !== undefined && { cut }),
+        id: m.id,
+        free: m.flavour !== 'affine:list',
+      });
       walk(m.children, depth + 1);
     });
   };
@@ -191,15 +241,26 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
   let sel: { block: number; anchor: number; head: number } | null = null;
   if (text && (!text.to || text.to.blockId === text.from.blockId)) {
     const block = index(text.from.blockId);
-    const [start, end] = text.to ? [text.from.index, text.to.index + text.to.length] : [text.from.index, text.from.index + text.from.length];
+    const [start, end] = text.to
+      ? [text.from.index, text.to.index + text.to.length]
+      : [text.from.index, text.from.index + text.from.length];
     if (block >= 0) sel = { block, anchor: text.reverse ? end : start, head: text.reverse ? start : end };
   }
-  const selected = value.filter((s) => s.type === 'block').map((s) => index(s.blockId)).filter((i) => i >= 0);
+  const selected = value
+    .filter((s) => s.type === 'block')
+    .map((s) => index(s.blockId))
+    .filter((i) => i >= 0);
   return { blocks: flat.map(({ id, ...b }) => b), sel, selected };
 }
 
 /** In the page: the outline loaded in place of the doc's, the history made empty, the caret placed (block, offsets past its prefix). */
-async function loadPage({ blocks, at }: { blocks: AfBlock[]; at: { block: number; anchor: number; head: number } | null }): Promise<string> {
+async function loadPage({
+  blocks,
+  at,
+}: {
+  blocks: AfBlock[];
+  at: { block: number; anchor: number; head: number } | null;
+}): Promise<string> {
   const ed = (window as any).currentEditor;
   const doc = ed.doc;
   const std = ed.std;
@@ -269,7 +330,19 @@ export const driver: Driver = {
     // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
     headings: 'block',
     // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
-    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
+    decorations: [
+      'bullet',
+      'number',
+      'checkbox',
+      'heading',
+      'setext',
+      'quote',
+      'callout',
+      'fence',
+      'math',
+      'rule',
+      'footnote',
+    ],
     // its blocks a flat sequence, each item a block of its own: a list after a paragraph is no block's
     // (Lists6, Lists8b, Lists10, Lists12 to Lists15), and a move passes one block, an item included
     // (Lists13 to Lists15)
@@ -317,14 +390,28 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+V',
     undo: 'Control+z',
     redo: 'Control+Shift+Z',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // after deleting a block selected whole no block is edited
   noCaretAfter: ['deleteSubtree'],
   // a code block is a block of its own, its fences no text. AFFiNE's tables, LaTeX and dividers are
   // blocks of their own too, with no text to put a caret in, which the driver doesn't make (as text
   // in a paragraph they would be another start): skipped, with Markdown's other atoms
-  refuses: ['markup-fence', 'table', 'math', 'thematic break', 'html', 'link reference definition', 'comment', 'footnote'],
+  refuses: [
+    'markup-fence',
+    'table',
+    'math',
+    'thematic break',
+    'html',
+    'link reference definition',
+    'comment',
+    'footnote',
+  ],
   ordered: true,
   holds: (doc) => holds(doc as Outline),
 
@@ -333,22 +420,55 @@ export const driver: Driver = {
     // a new browser's first visit makes the demo workspace and opens "Getting Started"; a later one
     // opens the workspace's list of docs, which links to it by its title
     await page.waitForURL(/\/workspace\/[^/]+\//, { timeout: 120000 });
-    const editor = (timeout: number) => page.waitForFunction(() => (window as any).currentEditor?.doc?.root && document.querySelector('affine-page-root'), null, { timeout }).then(() => true, () => false);
+    const editor = (timeout: number) =>
+      page
+        .waitForFunction(
+          () => (window as any).currentEditor?.doc?.root && document.querySelector('affine-page-root'),
+          null,
+          { timeout },
+        )
+        .then(
+          () => true,
+          () => false,
+        );
     if (!(await editor(15000))) {
-      const href = await page.waitForFunction((title) => [...document.querySelectorAll<HTMLAnchorElement>('a[href*="/workspace/"]')].find((a) => a.textContent?.trim().startsWith(title))?.getAttribute('href'), DOC, { timeout: 60000 });
-      await page.goto(new URL((await href.jsonValue())!, this.url).href, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      const href = await page.waitForFunction(
+        (title) =>
+          [...document.querySelectorAll<HTMLAnchorElement>('a[href*="/workspace/"]')]
+            .find((a) => a.textContent?.trim().startsWith(title))
+            ?.getAttribute('href'),
+        DOC,
+        { timeout: 60000 },
+      );
+      await page.goto(new URL((await href.jsonValue())!, this.url).href, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120000,
+      });
       if (!(await editor(120000))) throw new Error(`AFFiNE's "${DOC}" doc didn't open`);
     }
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000 }));
     await idle();
     // ready once a key does what it should: Tab nests a block
-    await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+    await this.load(page, {
+      blocks: [
+        { depth: 0, text: 'a' },
+        { depth: 0, text: 'b' },
+      ],
+      sel: { block: 1, anchor: 1, head: 1 },
+    });
     await idle();
     await page.keyboard.press('Tab');
     await idle();
-    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1) throw new Error("AFFiNE's keys didn't come up: Tab doesn't nest a block");
+    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1)
+      throw new Error("AFFiNE's keys didn't come up: Tab doesn't nest a block");
     // the version, in the names of the workers it loads (`workspace-profile-0.27.4.worker.js`)
-    return page.evaluate(() => performance.getEntriesByType('resource').map((e) => /\/js\/[\w-]+-(\d+\.\d+\.\d+[\w.-]*)\.worker\.js$/.exec(e.name)?.[1]).find(Boolean));
+    return page.evaluate(() =>
+      performance
+        .getEntriesByType('resource')
+        .map((e) => /\/js\/[\w-]+-(\d+\.\d+\.\d+[\w.-]*)\.worker\.js$/.exec(e.name)?.[1])
+        .find(Boolean),
+    );
   },
 
   async load(page: Page, doc) {
@@ -357,7 +477,10 @@ export const driver: Driver = {
     const at = o.sel && toAffine(blocks[o.sel.block]!.text, !!blocks[o.sel.block]!.free);
     const placed = await page.evaluate(loadPage, {
       blocks: nest(blocks),
-      at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : null,
+      at:
+        o.sel && at
+          ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) }
+          : null,
     });
     if (placed !== 'placed' && placed !== 'no caret') throw new Error(`the caret has no place: ${placed}`);
   },
@@ -370,12 +493,27 @@ export const driver: Driver = {
       const md = b.runs ? runsAsMarkdown(b.runs) : { text: b.plain, at: (p: number) => p };
       const cut = b.cut !== undefined ? md.at(b.cut) : -1;
       const body = cut >= 0 ? `${md.text.slice(0, cut)}\\${md.text.slice(cut)}` : md.text;
-      return { text: b.prefix + body + b.suffix, at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0) };
+      return {
+        text: b.prefix + body + b.suffix,
+        at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0),
+      };
     });
-    const sel = r.sel && { block: r.sel.block, anchor: texts[r.sel.block]!.at(r.sel.anchor), head: texts[r.sel.block]!.at(r.sel.head) };
+    const sel = r.sel && {
+      block: r.sel.block,
+      anchor: texts[r.sel.block]!.at(r.sel.anchor),
+      head: texts[r.sel.block]!.at(r.sel.head),
+    };
     // (any block may hold children, a paragraph too: what a free block holds read as its Markdown
     // reads, beside it, then owned as the app's `listParent` says)
-    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) }));
-    return { blocks: asMarkdownReads(blocks, driver.behaves?.listParent), sel, ...(r.selected.length && { selected: r.selected }) };
+    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({
+      depth,
+      text: texts[i]!.text,
+      ...(free && { free: true as const }),
+    }));
+    return {
+      blocks: asMarkdownReads(blocks, driver.behaves?.listParent),
+      sel,
+      ...(r.selected.length && { selected: r.selected }),
+    };
   },
 };

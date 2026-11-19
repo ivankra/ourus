@@ -30,18 +30,50 @@ import { join, resolve } from 'node:path';
 import type { OurusCommand } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { allNodes, CASES_PER_GROUP, commandFailures, commandLabel, copyPasteFailures, corpusHash, cutPasteFailures, generatedStarts, nodeCaret, noteFailure, readBaseline, recordUntriaged, staleBaseline, writeBaseline, type Found, type GeneratedStart, type UntriagedCase } from './lib/index.ts';
+import {
+  allNodes,
+  CASES_PER_GROUP,
+  commandFailures,
+  commandLabel,
+  copyPasteFailures,
+  corpusHash,
+  cutPasteFailures,
+  generatedStarts,
+  nodeCaret,
+  noteFailure,
+  readBaseline,
+  recordUntriaged,
+  staleBaseline,
+  writeBaseline,
+  type Found,
+  type GeneratedStart,
+  type UntriagedCase,
+} from './lib/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const examples = Number(process.env.SWEEP_EXAMPLES ?? 2);
 const count = Number(process.env.SWEEP_GENERATED ?? 60);
 
-const ODD = ['\u00a0', '\ufeff', '\u2028', '\u2029', '\u0085', '\t', '\u200b', '\u{1f600}', '\u0301', '\ud800', '\u3000', '\u202e'];
+const ODD = [
+  '\u00a0',
+  '\ufeff',
+  '\u2028',
+  '\u2029',
+  '\u0085',
+  '\t',
+  '\u200b',
+  '\u{1f600}',
+  '\u0301',
+  '\ud800',
+  '\u3000',
+  '\u202e',
+];
 /** The notes, then the same shapes with one odd character each at a place in a line. */
 function corpus(): GeneratedStart[] {
   const base = generatedStarts(count, 11);
   let state = 5;
-  const below = (n: number): number => Math.floor(((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32) * n);
+  const below = (n: number): number =>
+    Math.floor(((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32) * n);
   const odd = generatedStarts(count, 23).map((s, k) => {
     const lines = s.text.split('\n');
     const at = below(lines.length - 1);
@@ -97,7 +129,14 @@ for (const s of starts) {
       runs++;
       const where = `${s.name}: ${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${pos}`;
       try {
-        note(commandFailures(view, pos, command), where, (group) => ({ check: 'command', group, text: s.text, config: s.config, pos, command }));
+        note(commandFailures(view, pos, command), where, (group) => ({
+          check: 'command',
+          group,
+          text: s.text,
+          config: s.config,
+          pos,
+          command,
+        }));
       } catch (e) {
         fails.push(`${label} threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
       }
@@ -110,7 +149,13 @@ for (const s of starts) {
       runs++;
       const where = `${s.name}: ${JSON.stringify(s.text)} ${JSON.stringify(s.config)} ${check === 'copy→paste' ? 'copy' : 'cut'} @${pos} (${node.kind})`;
       try {
-        note(check === 'copy→paste' ? copyPasteFailures(view, node) : cutPasteFailures(view, node), where, (group) => ({ check, group, text: s.text, config: s.config, node: index }));
+        note(check === 'copy→paste' ? copyPasteFailures(view, node) : cutPasteFailures(view, node), where, (group) => ({
+          check,
+          group,
+          text: s.text,
+          config: s.config,
+          node: index,
+        }));
       } catch (e) {
         fails.push(`${check} threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
       }
@@ -133,11 +178,14 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].runs - x[1].runs || (
 }
 for (const failure of fails) console.log(`FAIL ${failure}`);
 if (rose.length) console.log(`\nmore failures than the baseline: ${rose.join('; ')}`);
-if (baseline && !sameCorpus && !counted) console.log('\nthe corpus changed since the baseline: its counts are not held to it; SWEEP_UPDATE=1 records them');
+if (baseline && !sameCorpus && !counted)
+  console.log('\nthe corpus changed since the baseline: its counts are not held to it; SWEEP_UPDATE=1 records them');
 const stale = updating ? [] : staleBaseline(baseline, hash, groups, counted, 'SWEEP_UPDATE');
 for (const line of stale) console.log(`\n${line}`);
 if (updating) {
   writeBaseline(baselineFile, hash, groups);
-  console.log(`baseline updated: ${baselineFile}; ${recordUntriaged('sweep', cases)} cases kept untriaged (test/bugs-untriaged.json)`);
+  console.log(
+    `baseline updated: ${baselineFile}; ${recordUntriaged('sweep', cases)} cases kept untriaged (test/bugs-untriaged.json)`,
+  );
 }
 process.exitCode = fails.length === 0 && rose.length === 0 && stale.length === 0 ? 0 : 1;

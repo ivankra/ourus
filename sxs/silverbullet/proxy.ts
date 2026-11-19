@@ -11,9 +11,19 @@ import { header, withBody, type ProxyRequest, type ProxyResponse, type ProxyRule
 export const rules: ProxyRules = {
   hosts: ['demo.silverbullet.md'],
   respond(req: ProxyRequest): ProxyResponse | undefined {
-    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') return { status: 503, headers: [['content-type', 'text/plain']], body: Buffer.from('ourus proxy: the demo is not written to\n') };
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS')
+      return {
+        status: 503,
+        headers: [['content-type', 'text/plain']],
+        body: Buffer.from('ourus proxy: the demo is not written to\n'),
+      };
     // the driver's pages (driver.ts), as the server answers for a page it doesn't have
-    if (/\/\.fs\/ourus-sxs/.test(req.url.pathname)) return { status: 404, headers: [['content-type', 'text/plain; charset=utf-8']], body: Buffer.from('404 page not found\n') };
+    if (/\/\.fs\/ourus-sxs/.test(req.url.pathname))
+      return {
+        status: 404,
+        headers: [['content-type', 'text/plain; charset=utf-8']],
+        body: Buffer.from('404 page not found\n'),
+      };
     return undefined;
   },
   patch(req: ProxyRequest, res: ProxyResponse): ProxyResponse | undefined {

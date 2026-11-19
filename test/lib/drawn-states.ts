@@ -6,7 +6,13 @@
 // Auto marks, the characters ourus put in: a combining caron below (U+032C) after one (`2\̬. b`, an
 // escape of ours); a line break of ours (a blank line ourus raised) isn't drawn yet.
 
-import { OurusFailed, OurusRejected, OurusSuccess, type OurusResult, type OurusSelection } from '../../src/commands/index.ts';
+import {
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+  type OurusResult,
+  type OurusSelection,
+} from '../../src/commands/index.ts';
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusProse, OurusDoc, textEnd, textStart, type OurusNode } from '../../src/doc/index.ts';
 import { trimMd } from '../../src/text/index.ts';
@@ -38,7 +44,10 @@ export function readLineMarks(drawn: string): { drawn: string; marks: Map<number
       own.unshift(m[1] as LineMark);
       line = line.slice(0, m.index);
     }
-    if (/[⟦⟧]/.test(line)) throw new Error(`line ${i + 1}: a mark (\`⟦folded⟧\`, \`⟦zoomed⟧\`, \`⟦selected⟧\`) is last on its line: ${JSON.stringify(line)}`);
+    if (/[⟦⟧]/.test(line))
+      throw new Error(
+        `line ${i + 1}: a mark (\`⟦folded⟧\`, \`⟦zoomed⟧\`, \`⟦selected⟧\`) is last on its line: ${JSON.stringify(line)}`,
+      );
     if (own.length) marks.set(i, own);
     return line;
   });
@@ -51,7 +60,14 @@ export function drawLineMarks(drawn: string, marks: ReadonlyMap<number, readonly
   const order: readonly LineMark[] = ['folded', 'zoomed', 'selected'];
   return drawn
     .split('\n')
-    .map((line, i) => line + [...(marks.get(i) ?? [])].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((m) => `⟦${m}⟧`).join(''))
+    .map(
+      (line, i) =>
+        line +
+        [...(marks.get(i) ?? [])]
+          .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+          .map((m) => `⟦${m}⟧`)
+          .join(''),
+    )
     .join('\n');
 }
 
@@ -68,7 +84,13 @@ const LABELS = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]+(?=␍?(?:⟦(?:folded
 /** A label glyph's number, 1 to 50. */
 /** A result's status as the spec writes it (`result:`): `success`, `rejected`, `deferredToHost`. */
 export function resultStatus(r: OurusResult): 'success' | 'rejected' | 'deferredToHost' | 'failed' {
-  return r instanceof OurusSuccess ? 'success' : r instanceof OurusRejected ? 'rejected' : r instanceof OurusFailed ? 'failed' : 'deferredToHost';
+  return r instanceof OurusSuccess
+    ? 'success'
+    : r instanceof OurusRejected
+      ? 'rejected'
+      : r instanceof OurusFailed
+        ? 'failed'
+        : 'deferredToHost';
 }
 
 export function labelNumber(glyph: string): number {
@@ -127,12 +149,14 @@ export function readDropLine(drawn: string): { drawn: string; drop: DropLine | n
   const lines = drawn.split('\n');
   const at = lines.flatMap((line, i) => (/^ *▸ *$/.test(line) ? [i] : []));
   const stray = lines.findIndex((line, i) => /[▸▹]/.test(line) && !at.includes(i));
-  if (stray >= 0) throw new Error(`line ${stray + 1}: a drop line holds a \`▸\` and spaces only: ${JSON.stringify(lines[stray])}`);
+  if (stray >= 0)
+    throw new Error(`line ${stray + 1}: a drop line holds a \`▸\` and spaces only: ${JSON.stringify(lines[stray])}`);
   if (at.length > 1) throw new Error(`line ${at[1]! + 1}: a second drop line: a case drops once`);
   if (!at.length) return { drawn, drop: null };
   const line = at[0]!;
   const column = lines[line]!.indexOf('▸');
-  if (column % 2) throw new Error(`line ${line + 1}: a drop line's \`▸\` is at an even column, twice the depth (column ${column})`);
+  if (column % 2)
+    throw new Error(`line ${line + 1}: a drop line's \`▸\` is at an even column, twice the depth (column ${column})`);
   return { drawn: lines.filter((_, i) => i !== line).join('\n'), drop: { line, depth: column / 2 } };
 }
 
@@ -150,7 +174,17 @@ export interface DrawnView {
  * taken out, and given by line; so is a drop line (`▸`). (A subtree selection drawn `««…»»`, as runs
  * the SxS stored before, reads too: its span's.)
  */
-export function readDrawing(drawn: string): { text: string; selection: OurusSelection; subtrees: 'down' | 'up' | null; selected: readonly number[] | null; view: DrawnView; placeholders: number[]; auto: number[]; labels: Map<number, number[]>; drop: DropLine | null } {
+export function readDrawing(drawn: string): {
+  text: string;
+  selection: OurusSelection;
+  subtrees: 'down' | 'up' | null;
+  selected: readonly number[] | null;
+  view: DrawnView;
+  placeholders: number[];
+  auto: number[];
+  labels: Map<number, number[]>;
+  drop: DropLine | null;
+} {
   let text = '';
   const placeholders: number[] = [];
   const auto: number[] = [];
@@ -164,13 +198,16 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
   const read = readLabels(unviewed);
   const labels = read.labels;
   // (`␄` ends the text, no line break after it: the buffer's own, the line its block ends, isn't the text's)
-  if (read.drawn.includes('␄') && !/␄\n?$/.test(read.drawn)) throw new Error('`␄` ends the text: nothing after it on its line, nor a line below');
-  const lineOf = (mark: LineMark): number[] => [...marks].flatMap(([line, own]) => own.filter((m) => m === mark).map(() => line)).sort((a, b) => a - b);
+  if (read.drawn.includes('␄') && !/␄\n?$/.test(read.drawn))
+    throw new Error('`␄` ends the text: nothing after it on its line, nor a line below');
+  const lineOf = (mark: LineMark): number[] =>
+    [...marks].flatMap(([line, own]) => own.filter((m) => m === mark).map(() => line)).sort((a, b) => a - b);
   const zoomed = lineOf('zoomed');
   if (zoomed.length > 1) throw new Error(`a second \`⟦zoomed⟧\` (line ${zoomed[1]! + 1}): one node is zoomed into`);
   const viewLines = { folded: lineOf('folded'), zoom: zoomed[0] ?? null };
   const marked = lineOf('selected');
-  if (new Set(marked).size < marked.length) throw new Error('a line marked `⟦selected⟧` twice: a line has one root of a subtree selection');
+  if (new Set(marked).size < marked.length)
+    throw new Error('a line marked `⟦selected⟧` twice: a line has one root of a subtree selection');
   const s = readText(read.drawn.replace(/␄\n?$/, ''));
   /** Where each line of the drawing starts in the text. */
   const lineStarts = [0];
@@ -182,7 +219,8 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
       if (s[i + 1] === '«') headAtStart = true;
     } else if (c === '◌') placeholders.push(text.length);
     else if (c === AUTO_CHAR) {
-      if (!text.length) throw new Error(`a caron below (an auto mark) with no character before it: ${JSON.stringify(drawn)}`);
+      if (!text.length)
+        throw new Error(`a caron below (an auto mark) with no character before it: ${JSON.stringify(drawn)}`);
       auto.push(text.length - 1);
     } else if (c === '«') {
       if (s[i + 1] === '«') [i, subtrees] = [i + 1, 'down'];
@@ -195,18 +233,54 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
   const selectedLines = marked;
   // (a mark is by the line of the drawing; the text's line starting it, which a lone CR, `␍` in a line, makes another)
   const textLine = (k: number): number => lineIndexAt(text, lineStarts[k] ?? text.length);
-  const view: DrawnView = { folded: viewLines.folded.map(textLine), zoom: viewLines.zoom === null ? null : textLine(viewLines.zoom) };
+  const view: DrawnView = {
+    folded: viewLines.folded.map(textLine),
+    zoom: viewLines.zoom === null ? null : textLine(viewLines.zoom),
+  };
   if (selectedLines.length) {
     // the first root's line start, where `┃` makes it upward: no other caret or selection drawn
     const first = lineStarts[selectedLines[0]!]!;
-    if (open >= 0 || close >= 0 || (caret >= 0 && caret !== first)) throw new Error('a subtree selection (`⟦selected⟧`) draws no other caret or selection: `┃` alone, at its first root\'s line start, makes it upward');
-    return { text, selection: { anchor: first, head: first }, subtrees: caret >= 0 ? 'up' : 'down', selected: selectedLines.map(textLine), view, placeholders, auto, labels, drop };
+    if (open >= 0 || close >= 0 || (caret >= 0 && caret !== first))
+      throw new Error(
+        "a subtree selection (`⟦selected⟧`) draws no other caret or selection: `┃` alone, at its first root's line start, makes it upward",
+      );
+    return {
+      text,
+      selection: { anchor: first, head: first },
+      subtrees: caret >= 0 ? 'up' : 'down',
+      selected: selectedLines.map(textLine),
+      view,
+      placeholders,
+      auto,
+      labels,
+      drop,
+    };
   }
   if (open >= 0 && close >= 0) {
-    return { text, selection: headAtStart ? { anchor: close, head: open } : { anchor: open, head: close }, subtrees: subtrees && headAtStart ? 'up' : subtrees, selected: null, view, placeholders, auto, labels, drop };
+    return {
+      text,
+      selection: headAtStart ? { anchor: close, head: open } : { anchor: open, head: close },
+      subtrees: subtrees && headAtStart ? 'up' : subtrees,
+      selected: null,
+      view,
+      placeholders,
+      auto,
+      labels,
+      drop,
+    };
   }
   const pos = caret >= 0 ? caret : 0;
-  return { text, selection: { anchor: pos, head: pos }, subtrees: null, selected: null, view, placeholders, auto, labels, drop };
+  return {
+    text,
+    selection: { anchor: pos, head: pos },
+    subtrees: null,
+    selected: null,
+    view,
+    placeholders,
+    auto,
+    labels,
+    drop,
+  };
 }
 
 /** The line of `text` that offset `pos` is on (a CR alone, a CR LF and a LF each end one, as the parser has them). */
@@ -224,7 +298,11 @@ const startsDrawnLine = (text: string, pos: number): boolean => pos === 0 || tex
 
 /** The node a line mark names on line `line` of `view`'s document: the `k`th outermost of those starting there that `fits` (inside the zoom, for a selection). */
 function markedNode(view: OurusView, line: number, fits: (node: OurusNode) => boolean, k = 0): OurusNode | null {
-  return allNodes(view.doc).filter((n) => n.startLine === line && fits(n)).sort((a, b) => a.depth - b.depth)[k] ?? null;
+  return (
+    allNodes(view.doc)
+      .filter((n) => n.startLine === line && fits(n))
+      .sort((a, b) => a.depth - b.depth)[k] ?? null
+  );
 }
 
 /** Whether `node` is inside `view`'s zoom, its root included (anywhere, unzoomed). */
@@ -247,7 +325,10 @@ export function drawnView(doc: OurusDoc, view: DrawnView): { folded: number[]; z
     const k = seen.get(line) ?? 0;
     seen.set(line, k + 1);
     const node = markedNode(plain, line, (n) => !!doc.foldRange(n), k);
-    if (!node) throw new Error(`line ${line + 1}: \`⟦folded⟧\` on a line where no node${k ? ' more' : ''} with something to fold starts`);
+    if (!node)
+      throw new Error(
+        `line ${line + 1}: \`⟦folded⟧\` on a line where no node${k ? ' more' : ''} with something to fold starts`,
+      );
     folded.push(node.id);
   }
   const zoom = view.zoom === null ? null : markedNode(plain, view.zoom, () => true)?.id;
@@ -261,7 +342,14 @@ export function drawnView(doc: OurusDoc, view: DrawnView): { folded: number[]; z
  * one's line, the marks those of its roots or an error; else as drawn. (One drawn `««…»»`: of the
  * nodes its span touches.)
  */
-export function drawnSelection(view: OurusView, drawing: { readonly selection: OurusSelection; readonly subtrees: 'down' | 'up' | null; readonly selected?: readonly number[] | null }): OurusSelection {
+export function drawnSelection(
+  view: OurusView,
+  drawing: {
+    readonly selection: OurusSelection;
+    readonly subtrees: 'down' | 'up' | null;
+    readonly selected?: readonly number[] | null;
+  },
+): OurusSelection {
   if (!drawing.subtrees) return drawing.selection;
   if (!drawing.selected) return view.selectionOf(view.touchedSubtrees(drawing.selection), drawing.subtrees);
   const roots = drawing.selected.map((line) => {
@@ -271,7 +359,10 @@ export function drawnSelection(view: OurusView, drawing: { readonly selection: O
   });
   const sel = view.selectionOf(roots, drawing.subtrees);
   const back = view.selectedSubtrees(sel)?.map((n) => n.id) ?? [];
-  if (JSON.stringify(back) !== JSON.stringify(roots.map((n) => n.id))) throw new Error(`the \`⟦selected⟧\` lines (${drawing.selected.map((l) => l + 1).join(', ')}) aren't the roots of the subtree selection they span: mark each root, and only the roots`);
+  if (JSON.stringify(back) !== JSON.stringify(roots.map((n) => n.id)))
+    throw new Error(
+      `the \`⟦selected⟧\` lines (${drawing.selected.map((l) => l + 1).join(', ')}) aren't the roots of the subtree selection they span: mark each root, and only the roots`,
+    );
   return sel;
 }
 
@@ -287,14 +378,26 @@ export function subtreeRoots(view: OurusView, sel: OurusSelection): readonly Our
   const canonical = view.selectionOf(roots, sel.head < sel.anchor ? 'up' : 'down');
   if (canonical.anchor !== sel.anchor || canonical.head !== sel.head) return null;
   const starts = view.doc.mdTree.starts;
-  return roots.every((r) => startsDrawnLine(view.doc.text, starts[r.startLine]!) && markedNode(view, r.startLine, (n) => inZoom(view, n))?.id === r.id) ? roots : null;
+  return roots.every(
+    (r) =>
+      startsDrawnLine(view.doc.text, starts[r.startLine]!) &&
+      markedNode(view, r.startLine, (n) => inZoom(view, n))?.id === r.id,
+  )
+    ? roots
+    : null;
 }
 
 /**
  * A text and a selection in it drawn, its placeholders and auto marks (but on line breaks, not drawn
  * yet); `caret` false, the selection not drawn (a subtree selection's roots are, by their lines).
  */
-export function drawState(text: string, sel: OurusSelection, placeholders: readonly number[] = [], caret = true, auto: readonly number[] = []): string {
+export function drawState(
+  text: string,
+  sel: OurusSelection,
+  placeholders: readonly number[] = [],
+  caret = true,
+  auto: readonly number[] = [],
+): string {
   const from = Math.min(sel.anchor, sel.head);
   const to = Math.max(sel.anchor, sel.head);
   const marks = new Map<number, string>();
@@ -311,7 +414,8 @@ export function drawState(text: string, sel: OurusSelection, placeholders: reado
   // an auto character, a caron below it (an auto line break, a blank line's, isn't drawn yet)
   const marked = new Set(auto.filter((pos) => text[pos] !== '\n' && text[pos] !== '\r'));
   let out = '';
-  for (let i = 0; i <= text.length; i++) out += (marks.get(i) ?? '') + (text[i] ?? '') + (marked.has(i) ? AUTO_CHAR : '');
+  for (let i = 0; i <= text.length; i++)
+    out += (marks.get(i) ?? '') + (text[i] ?? '') + (marked.has(i) ? AUTO_CHAR : '');
   return endingText(drawText(out));
 }
 
@@ -326,8 +430,13 @@ export const endingText = (drawn: string): string => (drawn.endsWith('\n') ? dra
  * Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR, `⍽`
  * U+00A0, `␠` a space (as `probe.ts` draws a line's trailing ones; drawing writes them as they are).
  */
-export const readText = (drawn: string): string => drawn.replace(/→/g, '\t').replace(/␍/g, '\r').replace(/⍽/g, '\u00a0').replace(/␠/g, ' ');
-export const drawText = (text: string): string => text.replace(/\t/g, '→').replace(/\r/g, '␍').replace(/\u00a0/g, '⍽');
+export const readText = (drawn: string): string =>
+  drawn.replace(/→/g, '\t').replace(/␍/g, '\r').replace(/⍽/g, '\u00a0').replace(/␠/g, ' ');
+export const drawText = (text: string): string =>
+  text
+    .replace(/\t/g, '→')
+    .replace(/\r/g, '␍')
+    .replace(/\u00a0/g, '⍽');
 
 /**
  * How a document reads, drawn: a line per node in document order, indented two spaces a level, its
@@ -339,7 +448,12 @@ export function drawOutline(doc: OurusDoc): string {
   const out: string[] = [];
   const visit = (node: OurusNode): void => {
     const text = doc.textOf(node);
-    const kind = node.kind === 'heading' ? `heading ${node.head!.attrs.level}` : node.kind === 'atom' ? `atom ${node.block.type}` : node.kind;
+    const kind =
+      node.kind === 'heading'
+        ? `heading ${node.head!.attrs.level}`
+        : node.kind === 'atom'
+          ? `atom ${node.block.type}`
+          : node.kind;
     const task = node.kind === 'item' && text instanceof OurusProse && text.task ? ` [${text.task.status}]` : '';
     const own = drawText(nodePlainText(doc, node)).replace(/\r?\n/g, '⏎');
     out.push(`${'  '.repeat(node.depth - 1)}${kind}${task}${own ? `: ${own}` : ''}`);
@@ -359,7 +473,11 @@ export function nodePlainText(doc: OurusDoc, node: OurusNode): string {
   const lines = text.body.split('\n');
   const escapes = doc.mdTree.flavor.markupEscapes(lines);
   return lines
-    .map((line, k) => trimMd(escapes.filter((e) => e.line === k).reduceRight((out, e) => out.slice(0, e.at) + out.slice(e.at + 1), line)))
+    .map((line, k) =>
+      trimMd(
+        escapes.filter((e) => e.line === k).reduceRight((out, e) => out.slice(0, e.at) + out.slice(e.at + 1), line),
+      ),
+    )
     .join('\n');
 }
 
@@ -375,11 +493,16 @@ export function allNodes(doc: OurusDoc): OurusNode[] {
 }
 
 /** The document a drawn state reads as: its text, placeholders and auto marks, read with `config`. */
-export const parseWithMarks = (text: string, placeholders: readonly number[] = [], config: Partial<OurusConfig> = {}, auto: readonly number[] = []): OurusDoc =>
-  OurusDoc.parse(text, { config, marks: { placeholders, auto } });
+export const parseWithMarks = (
+  text: string,
+  placeholders: readonly number[] = [],
+  config: Partial<OurusConfig> = {},
+  auto: readonly number[] = [],
+): OurusDoc => OurusDoc.parse(text, { config, marks: { placeholders, auto } });
 
 /** `text` read with `config`, in a view of nothing folded and no zoom. */
-export const parseView = (text: string, config: Partial<OurusConfig> = {}): OurusView => OurusView.of(OurusDoc.parse(text, { config }));
+export const parseView = (text: string, config: Partial<OurusConfig> = {}): OurusView =>
+  OurusView.of(OurusDoc.parse(text, { config }));
 
 /**
  * A view's document and a selection in it, drawn: a subtree selection by its roots' lines
@@ -391,7 +514,9 @@ export function drawDoc(view: OurusView, sel: OurusSelection): string {
   const roots = subtreeRoots(view, sel);
   const up = !!roots && sel.head < sel.anchor;
   const at = roots ? doc.mdTree.starts[roots[0]!.startLine]! : 0;
-  const drawn = roots ? drawState(doc.text, { anchor: at, head: at }, doc.marks.placeholders, up, doc.marks.auto) : drawState(doc.text, sel, doc.marks.placeholders, true, doc.marks.auto);
+  const drawn = roots
+    ? drawState(doc.text, { anchor: at, head: at }, doc.marks.placeholders, up, doc.marks.auto)
+    : drawState(doc.text, sel, doc.marks.placeholders, true, doc.marks.auto);
   const marks = new Map<number, LineMark[]>();
   const mark = (line: number, m: LineMark): void => void marks.set(line, [...(marks.get(line) ?? []), m]);
   // (on the drawing's line where each node's first line starts)

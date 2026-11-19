@@ -35,7 +35,8 @@ function sections(lines: number): string {
     out.push(`## Section ${section}`, '', `Notes for section ${section}, with *some* text and a [link](http://x.y):`);
     for (let item = 0; item < 8; item++) {
       out.push(`- item ${section}.${item} with some \`code\` text`);
-      for (let child = 0; child < 3; child++) out.push(`  - child ${child} of ${item}`, `    - grandchild ${child} **bold**`);
+      for (let child = 0; child < 3; child++)
+        out.push(`  - child ${child} of ${item}`, `    - grandchild ${child} **bold**`);
     }
     out.push('', '> a quote', '> - quoted item', '', '```', 'code', '```', '');
   }
@@ -61,7 +62,11 @@ for (const [name, text] of documents) {
   const lines = text.split('\n').length;
   console.log(`\n${name}: ${lines} lines, ${(text.length / 1024).toFixed(0)} KB, ${runs} runs`);
   console.log(`  ${''.padEnd(34)} ${'median'.padStart(9)} ${'p95'.padStart(9)}`);
-  for (const [flavorName, flavor] of [['commonmark', commonmark], ['gfm', gfm], ['obsidian', obsidian]] as [string, MdFlavor][]) {
+  for (const [flavorName, flavor] of [
+    ['commonmark', commonmark],
+    ['gfm', gfm],
+    ['obsidian', obsidian],
+  ] as [string, MdFlavor][]) {
     measure(`${flavorName}: parse`, () => MdTree.parse(text, flavor));
     measure(`${flavorName}: parse + tree + lines`, () => void MdTree.parse(text, flavor).lines);
     measure(`${flavorName}: + all inlines`, () => {

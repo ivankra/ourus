@@ -6,7 +6,17 @@
 //   node test/extremes.ts
 
 import { test } from 'node:test';
-import { MdFlavor, MdHtmlParser, MdTree, OurusDoc, OurusView, executeCommand, leavesZoom, settlePlaceholders, type OurusCommand } from '../src/index.ts';
+import {
+  MdFlavor,
+  MdHtmlParser,
+  MdTree,
+  OurusDoc,
+  OurusView,
+  executeCommand,
+  leavesZoom,
+  settlePlaceholders,
+  type OurusCommand,
+} from '../src/index.ts';
 
 /** The public API's calls on `text`, `commands` at `at` among them: none may throw (a refusal or a failure is an answer). */
 function everyApi(text: string, at: number, commands: readonly OurusCommand[]): void {
@@ -23,7 +33,17 @@ function everyApi(text: string, at: number, commands: readonly OurusCommand[]): 
   MdTree.parse(text, MdFlavor.gfm).renderHtml();
 }
 
-const COMMANDS: readonly OurusCommand[] = [{ type: 'enter' }, { type: 'indent' }, { type: 'outdent' }, { type: 'moveSubtreeDown' }, { type: 'deleteContentBackward' }, { type: 'insertText', text: 'z' }, { type: 'copy' }, { type: 'selectNode' }, { type: 'fold' }];
+const COMMANDS: readonly OurusCommand[] = [
+  { type: 'enter' },
+  { type: 'indent' },
+  { type: 'outdent' },
+  { type: 'moveSubtreeDown' },
+  { type: 'deleteContentBackward' },
+  { type: 'insertText', text: 'z' },
+  { type: 'copy' },
+  { type: 'selectNode' },
+  { type: 'fold' },
+];
 
 test('the public API on a note 10,000 levels deep and on one of 200,000 siblings throws nothing', () => {
   // (deep: quotes, each a level, every command at the text's end and the note's start; a list nested by

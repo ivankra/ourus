@@ -34,7 +34,8 @@ export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop
     const pressed = label === undefined ? undefined : state.labels?.get(labelNumber(label));
     if (label !== undefined && pressed === undefined) return `${label} labels no node`;
     const picked = dragRun(new CommandContext(view), pressed);
-    if (!Array.isArray(picked)) return `the pickup is refused (${picked instanceof OurusRejected ? picked.reason : resultStatus(picked)})`;
+    if (!Array.isArray(picked))
+      return `the pickup is refused (${picked instanceof OurusRejected ? picked.reason : resultStatus(picked)})`;
     run = picked;
     press = pressed === undefined ? null : doc.node(pressed)!.startLine;
   }
@@ -53,7 +54,10 @@ export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop
     seam: { above: drop.line > 0 ? drop.line - 1 : null, below },
     depth: drop.depth,
     listDepth,
-    to: { parent: place.parent === 'root' ? 'root' : parent.startLine, after: place.after === null ? null : doc.node(place.after)!.startLine },
+    to: {
+      parent: place.parent === 'root' ? 'root' : parent.startLine,
+      after: place.after === null ? null : doc.node(place.after)!.startLine,
+    },
   };
 }
 
@@ -75,7 +79,15 @@ export function inBlocks(drop: Drop, rows: ReadonlyMap<number, number>, outline:
   const below = drop.seam.below === null ? null : block(drop.seam.below);
   const parent = drop.to.parent === 'root' ? 'root' : block(drop.to.parent);
   const after = drop.to.after === null ? null : block(drop.to.after);
-  if (press === undefined || carried.includes(undefined) || above === undefined || below === undefined || parent === undefined || after === undefined) return 'a row no block holds';
+  if (
+    press === undefined ||
+    carried.includes(undefined) ||
+    above === undefined ||
+    below === undefined ||
+    parent === undefined ||
+    after === undefined
+  )
+    return 'a row no block holds';
   const depth = parent === 'root' ? 0 : outline.blocks[parent]!.depth + 1;
   return { ...drop, press, rows: carried as number[], seam: { above, below }, depth, to: { parent, after } };
 }
@@ -94,7 +106,13 @@ export interface Point {
  * found once the drag has started, as the eye finds it then: a press that ends an edit can move the
  * page under the pointer (Logseq's code block, rendered again shorter: MoveSubtree22).
  */
-export async function gesture(page: Page, from: Point, to: Point | (() => Promise<Point>), settle: () => Promise<void>, options: { readonly threshold?: number; readonly here?: boolean } = {}): Promise<void> {
+export async function gesture(
+  page: Page,
+  from: Point,
+  to: Point | (() => Promise<Point>),
+  settle: () => Promise<void>,
+  options: { readonly threshold?: number; readonly here?: boolean } = {},
+): Promise<void> {
   const threshold = options.threshold ?? 8;
   // (from off the page, as a hand comes to a mark: not from where the last drop left the pointer, over
   // the next case's document)

@@ -9,7 +9,7 @@ const reTitle = new RegExp(
   'y',
 );
 const reDestinationBraces = /<(?:[^<>\n\\\x00]|\\.)*>/y;
-const reLabel = /\[(?:[^\\[\]]|\\.){0,1000}\]/ysu;
+const reLabel = /\[(?:[^\\[\]]|\\.){0,1000}\]/suy;
 // (spaces or tabs, up to one line ending, between a link's parts: CommonMark's, as micromark and cmark-gfm read it)
 const reSpnl = /[ \t]*(?:\n[ \t]*)?/y;
 const reSpaceAtLineEnd = /[ \t]*(?:\n|$)/y;
@@ -46,7 +46,8 @@ export function scanLabel(s: string, pos: number): number {
 /** A link destination at `pos`: its end and its value (unescaped and URL-normalized), or null. */
 export function scanDestination(s: string, pos: number): { end: number; value: string } | null {
   const braced = matchAt(reDestinationBraces, s, pos);
-  if (braced >= 0) return { end: pos + braced, value: normalizeUri(unescapeString(s.slice(pos + 1, pos + braced - 1))) };
+  if (braced >= 0)
+    return { end: pos + braced, value: normalizeUri(unescapeString(s.slice(pos + 1, pos + braced - 1))) };
   if (s.charCodeAt(pos) === 60 /* < */) return null;
   let i = pos;
   let parens = 0;
@@ -56,8 +57,7 @@ export function scanDestination(s: string, pos: number): { end: number; value: s
     else if (c === 40 /* ( */) {
       // nesting is capped, as cmark does it (the spec allows a limit): else `[a](b` repeated is quadratic
       if (++parens > 32) return null;
-    }
-    else if (c === 41 /* ) */) {
+    } else if (c === 41 /* ) */) {
       if (parens < 1) break;
       parens--;
     } else if (c === 32 || (c >= 9 && c <= 13)) break;
@@ -73,7 +73,8 @@ export function scanTitle(s: string, pos: number): { end: number; value: string 
   return n < 0 ? null : { end: pos + n, value: unescapeString(s.slice(pos + 1, pos + n - 1)) };
 }
 
-const isEscapable = (c: number): boolean => (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126);
+const isEscapable = (c: number): boolean =>
+  (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126);
 
 export interface MdReference {
   /** The label as written, brackets included. */

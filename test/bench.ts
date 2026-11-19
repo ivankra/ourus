@@ -46,7 +46,9 @@ const nodes = allNodes(doc);
 const view = OurusView.of(doc);
 const middle = Math.floor(doc.lineCount / 2);
 // an item near the middle, with children and a sibling above: its text start, and the end of its text
-const item = nodes.find((node) => node.kind === 'item' && node.startLine >= middle && node.children.length > 0 && node.index > 0)!;
+const item = nodes.find(
+  (node) => node.kind === 'item' && node.startLine >= middle && node.children.length > 0 && node.index > 0,
+)!;
 const textEnd = (node: OurusNode): number => doc.posOf(node, doc.textOf(node)!.text.length);
 const start = doc.posOf(item, 0);
 const end = textEnd(item);
@@ -54,13 +56,18 @@ const at = (pos: number) => ({ anchor: pos, head: pos });
 const command = (name: string, type: OurusCommand, pos: number): void =>
   measure(name, () => {
     const result = executeCommand(view.withSelection(at(pos)), type);
-    if (!(result instanceof OurusSuccess)) throw new Error(`${name}: ${resultStatus(result)} ${result instanceof OurusRejected ? result.reason : ''}`);
+    if (!(result instanceof OurusSuccess))
+      throw new Error(`${name}: ${resultStatus(result)} ${result instanceof OurusRejected ? result.reason : ''}`);
   });
 
-console.log(`${doc.lineCount} lines, ${nodes.length + 1} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`);
+console.log(
+  `${doc.lineCount} lines, ${nodes.length + 1} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`,
+);
 console.log(`${''.padEnd(28)} ${'median'.padStart(8)} ${'p95'.padStart(8)}`);
 measure('full parse', () => OurusDoc.parse(text));
-measure('keystroke (OurusDoc.update)', () => doc.update({ changes: [{ from: end, to: end, insert: 'x' }], caret: end + 1 }));
+measure('keystroke (OurusDoc.update)', () =>
+  doc.update({ changes: [{ from: end, to: end, insert: 'x' }], caret: end + 1 }),
+);
 command('moveSubtreeDown', { type: 'moveSubtreeDown' }, end);
 command('indent', { type: 'indent' }, end);
 command('outdent (child)', { type: 'outdent' }, textEnd(item.children[0]!));

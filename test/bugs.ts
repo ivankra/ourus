@@ -40,10 +40,42 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { executeCommand, leavesZoom, mapPos, MdFlavor, MdHtmlParser, MdTree, OurusDoc, OurusProse, OurusFailed, OurusRejected, OurusSuccess, OurusView, settlePlaceholders } from '../src/index.ts';
+import {
+  executeCommand,
+  leavesZoom,
+  mapPos,
+  MdFlavor,
+  MdHtmlParser,
+  MdTree,
+  OurusDoc,
+  OurusProse,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+  OurusView,
+  settlePlaceholders,
+} from '../src/index.ts';
 import * as extend from '../src/parser/extend.ts';
 import { defineFlavor, gfmExtensions } from '../src/parser/extend.ts';
-import { appliedText, assertApplied, assertNoWriteFailure, convertPastedHtml, executeAfter, executeOnText, firstBlockInlines, caseId, filedCases, htmlFailures, lostMarksOnText, readUntriaged, REPORT_OF, scalingFactor, untriagedFailures, writeUntriaged, type UntriagedCase } from './lib/index.ts';
+import {
+  appliedText,
+  assertApplied,
+  assertNoWriteFailure,
+  convertPastedHtml,
+  executeAfter,
+  executeOnText,
+  firstBlockInlines,
+  caseId,
+  filedCases,
+  htmlFailures,
+  lostMarksOnText,
+  readUntriaged,
+  REPORT_OF,
+  scalingFactor,
+  untriagedFailures,
+  writeUntriaged,
+  type UntriagedCase,
+} from './lib/index.ts';
 
 // -------------------------------------------------------------------------------------------------
 // The runner
@@ -82,7 +114,10 @@ function throwingFrame(error: Error): string {
 
 /** How `error` failed, as a baseline holds it: what an assertion got where it says, on one line. */
 function failureSignature(error: Error): string {
-  const got = error instanceof assert.AssertionError && error.generatedMessage ? `got ${JSON.stringify(error.actual)}` : error.message;
+  const got =
+    error instanceof assert.AssertionError && error.generatedMessage
+      ? `got ${JSON.stringify(error.actual)}`
+      : error.message;
   return got.replaceAll('\n', '⏎').slice(0, 160);
 }
 
@@ -175,7 +210,11 @@ function reportUntriaged(attention: string[], update: boolean): void {
     else {
       group.changed++;
       if (kinds.length) now.push({ ...c, group: kinds[0]! });
-      attention.push(kinds.length ? `untriaged  ${name}: fails otherwise now, ${kinds[0]}\n           ${shown}` : `untriaged  ${name}: passes now\n           ${shown}`);
+      attention.push(
+        kinds.length
+          ? `untriaged  ${name}: fails otherwise now, ${kinds[0]}\n           ${shown}`
+          : `untriaged  ${name}: passes now\n           ${shown}`,
+      );
     }
   }
   console.log(`untriaged: ${cases.length} cases in ${groups.size} groups (test/bugs-untriaged.json)`);
@@ -187,14 +226,17 @@ function reportUntriaged(attention: string[], update: boolean): void {
 
 function reportBugs(nextId: number): void {
   const baselineFile = join(import.meta.dirname, 'bugs.baseline.json');
-  const recorded: BugBaseline = existsSync(baselineFile) ? JSON.parse(readFileSync(baselineFile, 'utf8')) : { summary: null, failures: {} };
+  const recorded: BugBaseline = existsSync(baselineFile)
+    ? JSON.parse(readFileSync(baselineFile, 'utf8'))
+    : { summary: null, failures: {} };
   const baseline = recorded.failures;
   const asked = process.argv.slice(2);
   const played = asked.length ? bugs.filter((bug) => asked.includes(bug.id)) : bugs;
   const failures: Record<string, string> = {};
   const summary = bugSummary();
   const attention = idProblems(nextId);
-  if (JSON.stringify(recorded.summary) !== JSON.stringify(summary)) attention.push('summary  the counts in bugs.baseline.json are out of date: BUGS_UPDATE=1 records them');
+  if (JSON.stringify(recorded.summary) !== JSON.stringify(summary))
+    attention.push('summary  the counts in bugs.baseline.json are out of date: BUGS_UPDATE=1 records them');
   const stillOpen: OpenBug[] = [];
   for (const bug of played) {
     let open = false;
@@ -212,7 +254,8 @@ function reportBugs(nextId: number): void {
         continue;
       }
       failures[key] = outcome.message;
-      if (key in baseline && baseline[key] !== outcome.message) attention.push(`changed  ${key}\n           was ${baseline[key]}\n           now ${outcome.message}`);
+      if (key in baseline && baseline[key] !== outcome.message)
+        attention.push(`changed  ${key}\n           was ${baseline[key]}\n           now ${outcome.message}`);
       if (!(key in baseline)) attention.push(`new      ${key}\n           ${outcome.message}`);
       if (asked.length) console.log(`${key}\n  ${outcome.message}`);
     }
@@ -220,12 +263,19 @@ function reportBugs(nextId: number): void {
     else attention.push(`FIXED    ${bug.id} ${bug.title}: every case passes, take it out of test/bugs.ts`);
   }
   const count = (prefix: string): number => stillOpen.filter((bug) => bug.rank.startsWith(prefix)).length;
-  console.log(`${stillOpen.length} open bugs: ${count('P1')} P1, ${count('P2')} P2, ${count('P3')} P3, ${count('P4')} P4; ${stillOpen.filter((bug) => bug.rank.endsWith('policy')).length} policy`);
+  console.log(
+    `${stillOpen.length} open bugs: ${count('P1')} P1, ${count('P2')} P2, ${count('P3')} P3, ${count('P4')} P4; ${stillOpen.filter((bug) => bug.rank.endsWith('policy')).length} policy`,
+  );
   if (!asked.length) {
     const clusters = new Map<string, number>();
     for (const bug of stillOpen) clusters.set(bug.cluster, (clusters.get(bug.cluster) ?? 0) + 1);
     for (const [cluster, open] of clusters) console.log(`${String(open).padStart(5)}  ${cluster}`);
-    console.log(`P1: ${stillOpen.filter((bug) => bug.rank.startsWith('P1')).map((bug) => bug.id).join(' ')}`);
+    console.log(
+      `P1: ${stillOpen
+        .filter((bug) => bug.rank.startsWith('P1'))
+        .map((bug) => bug.id)
+        .join(' ')}`,
+    );
     console.log(`next id: B${nextId}`);
   }
   // the cases the reports found that nobody filed: with every bug played, not some
@@ -235,7 +285,9 @@ function reportBugs(nextId: number): void {
     // by id, so a diff shows what moved)
     const owner = (key: string): OpenBug | undefined => bugs.find((bug) => key.startsWith(`${bug.id}: `));
     const kept = Object.entries(baseline).filter(([key]) => owner(key) && !played.includes(owner(key)!));
-    const sorted = [...kept, ...Object.entries(failures)].sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }));
+    const sorted = [...kept, ...Object.entries(failures)].sort(([a], [b]) =>
+      a.localeCompare(b, 'en', { numeric: true }),
+    );
     writeFileSync(baselineFile, `${JSON.stringify({ summary, failures: Object.fromEntries(sorted) }, null, 2)}\n`);
     console.log('baseline recorded');
     return;
@@ -426,12 +478,30 @@ bugCluster('Copy, cut and paste (Markdown and plain text)');
 // Status (2026-11-13): seed 801. `1. first⏎2. ⏎⏎   -⏎⏎     ested bullet` (GFM, `listParent: container`),
 // `- ` pasted at `2. `: written `1. first⏎- ⏎   -⏎⏎     ested bullet`, the numbered item gone where
 // the draft keeps it: `root: 4 children, read as 2`. The last commit's code fails alike. P4.
-openBug('B519', 'P4', "An empty item pasted on a numbered list's empty item writes it outside the list, its children read otherwise", {
-  'the case reduced': () => {
-    // kept: d9e640ab419d
-    assertNoWriteFailure(executeOnText("1. first\n2. \n\n   -\n\n     ested bullet\n", {"type":"paste","clipboard":{"text/plain":"- \n","text/markdown":"- \n","text/html":"<!-- ourus --><ul>\n<li></li>\n</ul>\n"}}, {"caret":13,"config":{"flavor":"gfm","listParent":"container"}}));
+openBug(
+  'B519',
+  'P4',
+  "An empty item pasted on a numbered list's empty item writes it outside the list, its children read otherwise",
+  {
+    'the case reduced': () => {
+      // kept: d9e640ab419d
+      assertNoWriteFailure(
+        executeOnText(
+          '1. first\n2. \n\n   -\n\n     ested bullet\n',
+          {
+            type: 'paste',
+            clipboard: {
+              'text/plain': '- \n',
+              'text/markdown': '- \n',
+              'text/html': '<!-- ourus --><ul>\n<li></li>\n</ul>\n',
+            },
+          },
+          { caret: 13, config: { flavor: 'gfm', listParent: 'container' } },
+        ),
+      );
+    },
   },
-});
+);
 
 // B458 [P4]. A paste of a setext `--` heading after an item's text reads as more items
 //
@@ -443,7 +513,20 @@ openBug('B458', 'P4', "A paste of a setext `--` heading after an item's text rea
     // kept: 1bb619b2fa56 (seed 551)
     // kept: 16f694994ef0 (seed 801)
     // kept: ae20a2a80ba3 (seed 651)
-    assertNoWriteFailure(executeOnText("- x\n", {"type": "paste", "clipboard": {"text/plain": "--\n-\n", "text/markdown": "--\n-\n", "text/html": "<!-- ourus --><h2>--</h2>\n"}}, {"caret": 3, "config": {"flavor": "gfm", "listParent": "container"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- x\n',
+        {
+          type: 'paste',
+          clipboard: {
+            'text/plain': '--\n-\n',
+            'text/markdown': '--\n-\n',
+            'text/html': '<!-- ourus --><h2>--</h2>\n',
+          },
+        },
+        { caret: 3, config: { flavor: 'gfm', listParent: 'container' } },
+      ),
+    );
   },
 });
 
@@ -453,7 +536,13 @@ openBug('B458', 'P4', "A paste of a setext `--` heading after an item's text rea
 openBug('B463', 'P4', "A cut leaving a bare task under a lazy `-` reads the task as a setext heading's text", {
   'the case reduced': () => {
     // kept: b95565e1ed24
-    assertNoWriteFailure(executeOnText("- [ ] write spec [x] outline\n  -\n", {"type": "cut"}, {"anchor": 6, "head": 28, "config": {"flavor": "obsidian", "indentUnit": "tab"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- [ ] write spec [x] outline\n  -\n',
+        { type: 'cut' },
+        { anchor: 6, head: 28, config: { flavor: 'obsidian', indentUnit: 'tab' } },
+      ),
+    );
   },
 });
 
@@ -462,12 +551,23 @@ openBug('B463', 'P4', "A cut leaving a bare task under a lazy `-` reads the task
 // Status (2026-11-12): found by the volume run (seed 401). `- [ ] ⏎  x⏎  ◌` (CommonMark or GFM), `- y`
 // pasted on the held line: written `- [ ] ⏎  x⏎- y`, the draft's task text `x`, read as `⏎x`. A paste of
 // text, not an item, writes. P4 (rare: a task's text on the line below it).
-openBug('B476', 'P4', "An item pasted on a held line after a task whose text starts below its marker misreads the task's text", {
-  'the case reduced': () => {
-    // kept: f3b28f1e95b5
-    assertNoWriteFailure(executeOnText('- [ ] \n  x\n  ', { type: 'paste', clipboard: { 'text/plain': '- y\n', 'text/markdown': '- y\n' } }, { caret: 13, config: { flavor: 'commonmark' }, placeholders: [13] }));
+openBug(
+  'B476',
+  'P4',
+  "An item pasted on a held line after a task whose text starts below its marker misreads the task's text",
+  {
+    'the case reduced': () => {
+      // kept: f3b28f1e95b5
+      assertNoWriteFailure(
+        executeOnText(
+          '- [ ] \n  x\n  ',
+          { type: 'paste', clipboard: { 'text/plain': '- y\n', 'text/markdown': '- y\n' } },
+          { caret: 13, config: { flavor: 'commonmark' }, placeholders: [13] },
+        ),
+      );
+    },
   },
-});
+);
 
 // B502 [P4]. A plain paste of nothing over a quote atom's last line leaves its indentation as a blank line
 //
@@ -480,7 +580,13 @@ openBug('B502', 'P4', "A plain paste of nothing over a quote atom's last line le
   'the case reduced': () => {
     // kept: 94cb7118a112
     // kept: e7f655c1a038 (seed 601: `\n> a quote` pasted plain over a quote atom's lines)
-    assertNoWriteFailure(executeOnText("2. > quote\n   > more\n", {"type":"pastePlain","text":""}, {"anchor":14,"head":20,"config":{"flavor":"gfm","quotes":"atom"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '2. > quote\n   > more\n',
+        { type: 'pastePlain', text: '' },
+        { anchor: 14, head: 20, config: { flavor: 'gfm', quotes: 'atom' } },
+      ),
+    );
   },
 });
 
@@ -497,17 +603,24 @@ openBug('B502', 'P4', "A plain paste of nothing over a quote atom's last line le
 // Status (2026-11-14): seed 1001. `- > quoted in item⏎> quoted in item⏎> over two lines` (GFM, `quotes:
 // atom`), the root quote's lines selected, a plain paste of `⏎`: written `- > quoted in item⏎⏎> `,
 // `root › 0: 0 blank lines after its text, read as 1`. The last commit's code fails alike. P4.
-openBug('B529', 'P4', "A plain paste of a line break over a quote after an item's quote leaves a blank line the draft doesn't have", {
-  'the case reduced': () => {
-    // kept: 1487977c5617
-    assertNoWriteFailure(executeOnText("- > quoted in item\n> quoted in item\n> over two lines\n", {"type":"pastePlain","text":"\n"}, {"anchor":19,"head":52,"config":{"flavor":"gfm","quotes":"atom"}}));
+openBug(
+  'B529',
+  'P4',
+  "A plain paste of a line break over a quote after an item's quote leaves a blank line the draft doesn't have",
+  {
+    'the case reduced': () => {
+      // kept: 1487977c5617
+      assertNoWriteFailure(
+        executeOnText(
+          '- > quoted in item\n> quoted in item\n> over two lines\n',
+          { type: 'pastePlain', text: '\n' },
+          { anchor: 19, head: 52, config: { flavor: 'gfm', quotes: 'atom' } },
+        ),
+      );
+    },
   },
-});
+);
 bugCluster('Moves, indent, outdent and duplicate across quotes and loose lists');
-
-
-
-
 
 // B514 [P4]. Shift-Tab on a folded item whose text is a table with a second delimiter row keeps that row's indentation in its text
 //
@@ -515,12 +628,23 @@ bugCluster('Moves, indent, outdent and duplicate across quotes and loose lists')
 // folded, Shift-Tab: written `| a | b || a | b |⏎|---|---|⏎  |---|---|`, read with the table's text
 // `|---|---|⏎  |---|---|` where the draft has `|---|---|⏎|---|---|`: `root › 1: text`. The last
 // commit's code fails alike. P4: a table's second delimiter row a lazy line.
-openBug('B514', 'P4', "Shift-Tab on a folded item whose text is a table with a second delimiter row keeps that row's indentation in its text", {
-  'the case reduced': () => {
-    // kept: 1c6155a28e6e
-    assertNoWriteFailure(executeOnText("- | a | b || a | b |\n|---|---|\n  |---|---|\n", {"type":"outdent"}, {"caret":30,"config":{"flavor":"obsidian"},"view":{"folded":[1],"zoom":null}}));
+openBug(
+  'B514',
+  'P4',
+  "Shift-Tab on a folded item whose text is a table with a second delimiter row keeps that row's indentation in its text",
+  {
+    'the case reduced': () => {
+      // kept: 1c6155a28e6e
+      assertNoWriteFailure(
+        executeOnText(
+          '- | a | b || a | b |\n|---|---|\n  |---|---|\n',
+          { type: 'outdent' },
+          { caret: 30, config: { flavor: 'obsidian' }, view: { folded: [1], zoom: null } },
+        ),
+      );
+    },
   },
-});
+);
 
 // B510 [P4]. Alt-Down on a numbered item's quote with a lazy callout line writes the lazy line out of it
 //
@@ -531,7 +655,13 @@ openBug('B514', 'P4', "Shift-Tab on a folded item whose text is a table with a s
 openBug('B510', 'P4', "Alt-Down on a numbered item's quote with a lazy callout line writes the lazy line out of it", {
   'the case reduced': () => {
     // kept: cefb8225432b
-    assertNoWriteFailure(executeOnText("2. > quot> [!note] Title\n   >> [!note] Title\n> body text\n\n   > e\n", {"type":"moveSubtreeDown"}, {"caret":57,"config":{"flavor":"commonmark"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '2. > quot> [!note] Title\n   >> [!note] Title\n> body text\n\n   > e\n',
+        { type: 'moveSubtreeDown' },
+        { caret: 57, config: { flavor: 'commonmark' } },
+      ),
+    );
   },
 });
 
@@ -541,10 +671,15 @@ openBug('B510', 'P4', "Alt-Down on a numbered item's quote with a lazy callout l
 openBug('B490', 'P4', 'Alt-Up on an item whose text is a padded quote with an empty item and a quote below', {
   'the case reduced': () => {
     // kept: 181852288cc7
-    assertNoWriteFailure(executeOnText("- item\n > quoted in item\n  - \n  > - list in quote\n", {"type":"moveSubtreeUp"}, {"caret":7,"config":{"flavor":"obsidian","listParent":"container"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- item\n > quoted in item\n  - \n  > - list in quote\n',
+        { type: 'moveSubtreeUp' },
+        { caret: 7, config: { flavor: 'obsidian', listParent: 'container' } },
+      ),
+    );
   },
 });
-
 
 // B504 [P4]. Alt-Up past a folded copy of a padded heading's section reads the moved heading as another node
 //
@@ -553,14 +688,25 @@ openBug('B490', 'P4', 'Alt-Up on an item whose text is a padded quote with an em
 // written with the first heading's padding normalized (`# Project plan`), read back with its id
 // another's: `root › 0 › 0: id 5, read as 7`; ` # ⏎    second paragraph…` twice, the same. Two
 // identical sections, a padded ATX heading, a fold. The last commit's code fails alike. P4.
-openBug('B504', 'P4', 'Alt-Up past a folded copy of a padded heading\'s section reads the moved heading as another node', {
-  'the case reduced': () => {
-    // kept: 0d5cc5daf3ef 4ecb7ae8f7db (seeds 901, 951: padded headings over a copy of their section)
-    // kept: 56a704ba5baf 87af16e755ec
-    // kept: 63c37e585bcf (seed 801)
-    assertNoWriteFailure(executeOnText(" # Project plan\n\n1. num\n2. > quote\n   > more\n # Project plan\n\n1. num\n2. > quote\n   > more\n", {"type":"moveSubtreeUp"}, {"caret":48,"config":{"flavor":"commonmark","quotes":"atom"},"view":{"folded":[4],"zoom":null}}));
+openBug(
+  'B504',
+  'P4',
+  "Alt-Up past a folded copy of a padded heading's section reads the moved heading as another node",
+  {
+    'the case reduced': () => {
+      // kept: 0d5cc5daf3ef 4ecb7ae8f7db (seeds 901, 951: padded headings over a copy of their section)
+      // kept: 56a704ba5baf 87af16e755ec
+      // kept: 63c37e585bcf (seed 801)
+      assertNoWriteFailure(
+        executeOnText(
+          ' # Project plan\n\n1. num\n2. > quote\n   > more\n # Project plan\n\n1. num\n2. > quote\n   > more\n',
+          { type: 'moveSubtreeUp' },
+          { caret: 48, config: { flavor: 'commonmark', quotes: 'atom' }, view: { folded: [4], zoom: null } },
+        ),
+      );
+    },
   },
-});
+);
 
 // =================================================================================================
 // Enter and Shift-Enter in quotes, callouts and quoted lists
@@ -574,14 +720,24 @@ openBug('B504', 'P4', 'Alt-Up past a folded copy of a padded heading\'s section 
 // (Obsidian), Alt-Down on the padded item: written `…⏎> quoted in it⏎  -  sibling⏎- em⏎  > - list in
 // quote`, `em` lined up to column 0, the quote after it read as its: `root: 3 children, read as 2`. The
 // seam check reads `em` where it was (`  - em`). The last commit's code fails alike. P4.
-openBug('B524', 'P4', "Alt-Down on a padded item into a quoted paragraph's list lines the next item up, the quote after it read into it", {
-  'the case reduced': () => {
-    // kept: bc663ddb5ff7
-    assertNoWriteFailure(executeOnText("- sibling\n-  sibling\n  > quoted in it\n  - em\n  > - list in quote\n", {"type":"moveSubtreeDown"}, {"caret":13,"config":{"flavor":"obsidian"}}));
+openBug(
+  'B524',
+  'P4',
+  "Alt-Down on a padded item into a quoted paragraph's list lines the next item up, the quote after it read into it",
+  {
+    'the case reduced': () => {
+      // kept: bc663ddb5ff7
+      assertNoWriteFailure(
+        executeOnText(
+          '- sibling\n-  sibling\n  > quoted in it\n  - em\n  > - list in quote\n',
+          { type: 'moveSubtreeDown' },
+          { caret: 13, config: { flavor: 'obsidian' } },
+        ),
+      );
+    },
   },
-});
+);
 bugCluster('Enter and Shift-Enter in quotes, callouts and quoted lists');
-
 
 // B508 [P4]. Enter in a table's header in an item over a `# ---` delimiter row splits it into a heading
 //
@@ -592,10 +748,15 @@ bugCluster('Enter and Shift-Enter in quotes, callouts and quoted lists');
 openBug('B508', 'P4', "Enter in a table's header in an item over a `# ---` delimiter row splits it into a heading", {
   'the case reduced': () => {
     // kept: a4a1a2c792c7
-    assertNoWriteFailure(executeOnText("- | a | b |\n  # ---|---|\n | 2 |\n", {"type":"enter"}, {"caret":17,"config":{"flavor":"obsidian"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- | a | b |\n  # ---|---|\n | 2 |\n',
+        { type: 'enter' },
+        { caret: 17, config: { flavor: 'obsidian' } },
+      ),
+    );
   },
 });
-
 
 // B494 [P4]. Shift-Enter in a tab-led padded item under a callout's item fails to write
 //
@@ -604,7 +765,13 @@ openBug('B494', 'P4', "Shift-Enter in a tab-led padded item under a callout's it
   'the case reduced': () => {
     // kept: ce78f7f6563b
     // kept: 7ab11e3cb569 (seed 601)
-    assertNoWriteFailure(executeOnText("- > [!note] Title\n\t-  parent\n\t\t- grandchild\n\t  - child three\n", {"type":"shiftEnter"}, {"caret":22,"config":{"flavor":"obsidian","indentUnit":"tab"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- > [!note] Title\n\t-  parent\n\t\t- grandchild\n\t  - child three\n',
+        { type: 'shiftEnter' },
+        { caret: 22, config: { flavor: 'obsidian', indentUnit: 'tab' } },
+      ),
+    );
   },
 });
 
@@ -615,7 +782,6 @@ openBug('B494', 'P4', "Shift-Enter in a tab-led padded item under a callout's it
 // start of an item holding a multi-line callout) or join in a way that loses structure: a heading
 // is demoted, a checkbox stays as literal text, an unrelated paragraph becomes a child.
 bugCluster('Backspace, Delete and joins around quotes, tasks and headings');
-
 
 // =================================================================================================
 // Code, math and comment blocks
@@ -630,12 +796,23 @@ bugCluster('Backspace, Delete and joins around quotes, tasks and headings');
 // `listParent: container`), `  - ` held, the underline of `sibling`'s setext heading: Backspace there
 // written `- sibling⏎  - ⏎- quoted in item⏎…`, `root: 3 children, read as 2`. The last commit's code
 // fails alike. P4.
-openBug('B521', 'P4', 'Backspace or Delete Subtree on a held setext `- ` underline in an item before a padded item fails to write', {
-  'the case reduced': () => {
-    // kept: 113a59a9998d 95f6444f079f
-    assertNoWriteFailure(executeOnText("- sibling\n  - \n\n  - quoted in item\n  > - list in quote\n", {"type":"deleteContentBackward"}, {"caret":15,"config":{"flavor":"obsidian","listParent":"container"},"placeholders":[15]}));
+openBug(
+  'B521',
+  'P4',
+  'Backspace or Delete Subtree on a held setext `- ` underline in an item before a padded item fails to write',
+  {
+    'the case reduced': () => {
+      // kept: 113a59a9998d 95f6444f079f
+      assertNoWriteFailure(
+        executeOnText(
+          '- sibling\n  - \n\n  - quoted in item\n  > - list in quote\n',
+          { type: 'deleteContentBackward' },
+          { caret: 15, config: { flavor: 'obsidian', listParent: 'container' }, placeholders: [15] },
+        ),
+      );
+    },
   },
-});
+);
 bugCluster('Code, math and comment blocks');
 
 // B479 [P4]. A closing fence after a quote's `>`, a space and a tab reads as unclosed in the text's frame
@@ -705,10 +882,12 @@ openBug('B94', 'P4', 'Moving open delimiter blocks across quote boundaries swall
 // The caret is inside the opener's indentation. `lineBreakAtOpening` (`src/commands/code.ts:108`)
 // acts at the opening's start only, so the indentation splits. The same family as B201, fixed for
 // quote atoms by taking the spaces before the first `>` as the quote's start (`atQuoteStart`).
-openBug('B206', 'P4', 'A line break pasted in an indented fence\'s indentation fails to write', {
-  'a line break in an indented fence\'s indentation writes': () => {
+openBug('B206', 'P4', "A line break pasted in an indented fence's indentation fails to write", {
+  "a line break in an indented fence's indentation writes": () => {
     // writes # a⏎⏎␠⏎␠```⏎
-    assertNoWriteFailure(executeOnText('# a\n\n  ```\n', { type: 'pastePlain', text: '\n' }, { caret: 6, config: { flavor: 'obsidian' } }));
+    assertNoWriteFailure(
+      executeOnText('# a\n\n  ```\n', { type: 'pastePlain', text: '\n' }, { caret: 6, config: { flavor: 'obsidian' } }),
+    );
   },
 });
 
@@ -724,7 +903,7 @@ openBug('B206', 'P4', 'A line break pasted in an indented fence\'s indentation f
 // as ["","→PAYLOAD",""]`. Left: the writer spelling it, the tab's columns as spaces or the fence's
 // indent kept. `- a⏎⏎ ```⏎→x⏎ ``` ` the same. With spaces (` ```⏎  x⏎ ``` `) the code keeps. Not B92.
 // P3: a refusal now, on rare input.
-openBug('B294', 'P4', 'Indenting a fence indented one space can\'t write its tab-led code', {
+openBug('B294', 'P4', "Indenting a fence indented one space can't write its tab-led code", {
   'indenting an indented fence keeps its tab-led code': () => {
     const source = ' ```\n\tPAYLOAD\n ```';
     const code = (html: string): string | undefined => /<pre><code>([^]*?)<\/code><\/pre>/.exec(html)?.[1];
@@ -754,7 +933,13 @@ openBug('B294', 'P4', 'Indenting a fence indented one space can\'t write its tab
 openBug('B299', 'P4', 'Moving an unclosed code or math block drops its last blank line', {
   'moving unclosed code keeps its last blank line': () => {
     // kept: 31cc85aea32f (seed 751: unclosed math in an item's quote, Alt-Up past a callout, the blank line after it not written, the callout read into the math)
-    assertNoWriteFailure(executeOnText('- m\n  ```\n  let x;\n  ```-\n \n#', { type: 'moveSubtreeDown' }, { caret: 27, config: { flavor: 'commonmark', quotes: 'atom' } }));
+    assertNoWriteFailure(
+      executeOnText(
+        '- m\n  ```\n  let x;\n  ```-\n \n#',
+        { type: 'moveSubtreeDown' },
+        { caret: 27, config: { flavor: 'commonmark', quotes: 'atom' } },
+      ),
+    );
   },
 });
 
@@ -769,9 +954,15 @@ openBug('B299', 'P4', 'Moving an unclosed code or math block drops its last blan
 // reads as its start. Not B205. (2026-11-11: the item's fence case writes now, the blank line Enter
 // makes there that item's.)
 openBug('B326', 'P4', 'Two line breaks inserted before an opening delimiter fail to write', {
-  'two line breaks before a math block\'s opening write': () => {
+  "two line breaks before a math block's opening write": () => {
     // root › 0: 1 blank lines after its text, read as 3
-    assertNoWriteFailure(executeOnText('# h\n\n$$\nx\n$$', { type: 'insertText', text: '\n\n' }, { caret: 5, config: { flavor: 'obsidian' } }));
+    assertNoWriteFailure(
+      executeOnText(
+        '# h\n\n$$\nx\n$$',
+        { type: 'insertText', text: '\n\n' },
+        { caret: 5, config: { flavor: 'obsidian' } },
+      ),
+    );
   },
 });
 
@@ -789,7 +980,13 @@ openBug('B326', 'P4', 'Two line breaks inserted before an opening delimiter fail
 openBug('B522', 'P4', 'A cut leaving an empty item and a blank line before a padded unclosed fence fails to write', {
   'the case reduced': () => {
     // kept: 11ca556768e7
-    assertNoWriteFailure(executeOnText("-\n  \nlet x;\n  ```\n- next\n# Project plan\n", {"type":"cut"}, {"caret":5,"config":{"flavor":"obsidian","listParent":"container"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '-\n  \nlet x;\n  ```\n- next\n# Project plan\n',
+        { type: 'cut' },
+        { caret: 5, config: { flavor: 'obsidian', listParent: 'container' } },
+      ),
+    );
   },
 });
 bugCluster('Tab-led, padded and lazy-continuation lines');
@@ -800,12 +997,23 @@ bugCluster('Tab-led, padded and lazy-continuation lines');
 // child two` (CommonMark, `indentUnit: tab`), Alt-Up on the padded `child one`: written `- item⏎  -  child
 // one⏎  - child one⏎  - grd two⏎⏎→second paragraph…`, `grd two` its sibling's column, the tab-led
 // paragraph read into it: `root › 0: 4 children, read as 3`. The last commit's code fails alike. P4.
-openBug('B512', 'P4', 'Alt-Up on a padded item under the tab unit lines a tab-led grandchild up beside it, the paragraph after it read in', {
-  'the case reduced': () => {
-    // kept: a1d14f2b0c7f
-    assertNoWriteFailure(executeOnText("- item\n  - child one\n  -  child one\n\t- grd two\n\n\tsecond paragraph of child two\n", {"type":"moveSubtreeUp"}, {"caret":26,"config":{"flavor":"commonmark","indentUnit":"tab"}}));
+openBug(
+  'B512',
+  'P4',
+  'Alt-Up on a padded item under the tab unit lines a tab-led grandchild up beside it, the paragraph after it read in',
+  {
+    'the case reduced': () => {
+      // kept: a1d14f2b0c7f
+      assertNoWriteFailure(
+        executeOnText(
+          '- item\n  - child one\n  -  child one\n\t- grd two\n\n\tsecond paragraph of child two\n',
+          { type: 'moveSubtreeUp' },
+          { caret: 26, config: { flavor: 'commonmark', indentUnit: 'tab' } },
+        ),
+      );
+    },
   },
-});
+);
 
 // B448 [P4]. Cmd-Backspace on a padded tab-led item's text takes its sibling in
 //
@@ -813,7 +1021,13 @@ openBug('B512', 'P4', 'Alt-Up on a padded item under the tab unit lines a tab-le
 openBug('B448', 'P4', "Cmd-Backspace on a padded tab-led item's text takes its sibling in", {
   'the case reduced': () => {
     // kept: 6b4d2bfe00ee
-    assertNoWriteFailure(executeOnText("- item\n\t-  parent\n\t\t- grandchild\n\t  - child three\n", {"type": "deleteSoftLineBackward"}, {"caret": 17, "config": {"flavor": "commonmark", "indentUnit": "tab"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- item\n\t-  parent\n\t\t- grandchild\n\t  - child three\n',
+        { type: 'deleteSoftLineBackward' },
+        { caret: 17, config: { flavor: 'commonmark', indentUnit: 'tab' } },
+      ),
+    );
   },
 });
 
@@ -823,7 +1037,13 @@ openBug('B448', 'P4', "Cmd-Backspace on a padded tab-led item's text takes its s
 openBug('B464', 'P4', "Backspace at a paragraph's start before a tab-led empty item and a footnote takes a node in", {
   'the case reduced': () => {
     // kept: 663e7007a7ef
-    assertNoWriteFailure(executeOnText("x\n\t- \n- \n[^1]: a footnote\n", {"type": "deleteContentBackward"}, {"caret": 0, "config": {"flavor": "obsidian", "indentUnit": "tab"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        'x\n\t- \n- \n[^1]: a footnote\n',
+        { type: 'deleteContentBackward' },
+        { caret: 0, config: { flavor: 'obsidian', indentUnit: 'tab' } },
+      ),
+    );
   },
 });
 
@@ -833,13 +1053,24 @@ openBug('B464', 'P4', "Backspace at a paragraph's start before a tab-led empty i
 // Shift-Tab on the empty `- `: written `…→  er⏎⏎⏎- # x`, the empty item gone and its gap's blank lines
 // after `er`'s item, read as its: `root › 0 › 1: 0 blank lines after its text, read as 1`. The last
 // commit's code fails alike. P4: an empty item after a tab-led bare `-` and its next line.
-openBug('B507', 'P4', "Shift-Tab on an empty item after a tab-led item's split lazy text writes a blank line it reads as the item's", {
-  'the case reduced': () => {
-    // kept: e361bfaa69bc
-    // kept: 2e4df5f3100b (seed 801: Shift-Enter in the tab-led item before a paragraph)
-    assertNoWriteFailure(executeOnText("- item ^id1\n\t- oth\n\t-\n\t  er\n- \n\n- # x\n", {"type":"outdent"}, {"caret":31,"config":{"flavor":"commonmark","indentUnit":"tab"}}));
+openBug(
+  'B507',
+  'P4',
+  "Shift-Tab on an empty item after a tab-led item's split lazy text writes a blank line it reads as the item's",
+  {
+    'the case reduced': () => {
+      // kept: e361bfaa69bc
+      // kept: 2e4df5f3100b (seed 801: Shift-Enter in the tab-led item before a paragraph)
+      assertNoWriteFailure(
+        executeOnText(
+          '- item ^id1\n\t- oth\n\t-\n\t  er\n- \n\n- # x\n',
+          { type: 'outdent' },
+          { caret: 31, config: { flavor: 'commonmark', indentUnit: 'tab' } },
+        ),
+      );
+    },
   },
-});
+);
 
 // B509 [P4]. Shift-Tab on an item after a nested numbered quote writes its paragraph lazy into the quote
 //
@@ -851,7 +1082,13 @@ openBug('B509', 'P4', 'Shift-Tab on an item after a nested numbered quote writes
   'the case reduced': () => {
     // kept: 7d2794a4bffe
     // kept: d0f229209318 (seed 801)
-    assertNoWriteFailure(executeOnText("1. num\n\t1. > quote\n\t   >\n\t   > `\n- item\n", {"type":"outdent"}, {"caret":39,"config":{"flavor":"gfm","indentUnit":"tab"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '1. num\n\t1. > quote\n\t   >\n\t   > `\n- item\n',
+        { type: 'outdent' },
+        { caret: 39, config: { flavor: 'gfm', indentUnit: 'tab' } },
+      ),
+    );
   },
 });
 
@@ -863,7 +1100,9 @@ openBug('B509', 'P4', 'Shift-Tab on an item after a nested numbered quote writes
 // paragraph's text keeps the tab before its escaped fence, the written line doesn't.
 openBug('B343', 'P4', 'A line break pasted before a tab-led fence after a quote loses the tab', {
   'a line break pasted before a tab-led fence writes': () => {
-    assertNoWriteFailure(executeOnText('x\n>b\n\t~~~\n', { type: 'pastePlain', text: '\n' }, { caret: 5, config: { flavor: 'gfm' } }));
+    assertNoWriteFailure(
+      executeOnText('x\n>b\n\t~~~\n', { type: 'pastePlain', text: '\n' }, { caret: 5, config: { flavor: 'gfm' } }),
+    );
   },
 });
 
@@ -877,7 +1116,13 @@ openBug('B343', 'P4', 'A line break pasted before a tab-led fence after a quote 
 // gave it`, B155's message.
 openBug('B344', 'P4', 'Tab-led lines pasted after a held padding fail to write', {
   'tab-led lines pasted after a held padding write': () => {
-    assertNoWriteFailure(executeOnText('-  ``` x\n', { type: 'pastePlain', text: '- a\n\t- b\n\t\t- c\n' }, { caret: 3, placeholders: [2], config: { flavor: 'commonmark' } }));
+    assertNoWriteFailure(
+      executeOnText(
+        '-  ``` x\n',
+        { type: 'pastePlain', text: '- a\n\t- b\n\t\t- c\n' },
+        { caret: 3, placeholders: [2], config: { flavor: 'commonmark' } },
+      ),
+    );
   },
 });
 
@@ -893,7 +1138,9 @@ openBug('B344', 'P4', 'Tab-led lines pasted after a held padding fail to write',
 // another column than done() gave it
 openBug('B155', 'P4', 'Moving a subtree down cannot preserve a tab-led lazy continuation', {
   'moving a subtree down keeps a tab-led lazy line': () => {
-    assertNoWriteFailure(executeOnText('>b\n>>>q\n\tc\n#', { type: 'moveSubtreeDown', nodes: [4] }, { anchor: 1, head: 9 }));
+    assertNoWriteFailure(
+      executeOnText('>b\n>>>q\n\tc\n#', { type: 'moveSubtreeDown', nodes: [4] }, { anchor: 1, head: 9 }),
+    );
   },
 });
 
@@ -925,13 +1172,19 @@ openBug('B159', 'P4', 'Typing multiple fence characters mishandles a tab-led fol
 // it was. `- item⏎  | a | b |⏎  |---|---|` (not lazy) outdents; the lazy shape indents and moves;
 // with a third row it fails the same way. Relevant paths: `src/commands/outdent.ts` (`unwrapItems`)
 // and the shift of an atom with a lazy first line in `src/writer/write.ts`.
-openBug('B165', 'P4', 'Outdenting an item with a lazy-headed table keeps the table\'s indentation', {
-  'outdenting an item with a lazy-headed table cuts the table\'s indentation': () => {
+openBug('B165', 'P4', "Outdenting an item with a lazy-headed table keeps the table's indentation", {
+  "outdenting an item with a lazy-headed table cuts the table's indentation": () => {
     assertNoWriteFailure(executeOnText('- item\n| a | b |\n  |---|---|\n', { type: 'outdent' }, { caret: 2 }));
   },
   'Shift-Tab on an item whose child is a padded lazy-headed table (seed 501)': () => {
     // kept: c96cb35ad211
-    assertNoWriteFailure(executeOnText("- next\n | a | b |\n  |---|---|\n", {"type":"outdent"}, {"caret":6,"config":{"flavor":"gfm","listParent":"container"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- next\n | a | b |\n  |---|---|\n',
+        { type: 'outdent' },
+        { caret: 6, config: { flavor: 'gfm', listParent: 'container' } },
+      ),
+    );
   },
 });
 
@@ -944,11 +1197,22 @@ openBug('B165', 'P4', 'Outdenting an item with a lazy-headed table keeps the tab
 // line starts with a tab. Without the placeholder the paste writes (`-  xa⏎   →b`); with spaces
 // (`a⏎  b`) too. The held space and the tab's column disagree about where the text's later lines
 // start.
-openBug('B192', 'P4', 'A plain paste with a tab-led line into an item whose padding holds a placeholder fails to write', {
-  'a tab-led plain paste into a held padding writes': () => {
-    assertNoWriteFailure(executeOnText('-  x\n', { type: 'pastePlain', text: 'a\n\tb' }, { caret: 4, config: { flavor: 'commonmark' }, placeholders: [2] }));
+openBug(
+  'B192',
+  'P4',
+  'A plain paste with a tab-led line into an item whose padding holds a placeholder fails to write',
+  {
+    'a tab-led plain paste into a held padding writes': () => {
+      assertNoWriteFailure(
+        executeOnText(
+          '-  x\n',
+          { type: 'pastePlain', text: 'a\n\tb' },
+          { caret: 4, config: { flavor: 'commonmark' }, placeholders: [2] },
+        ),
+      );
+    },
   },
-});
+);
 
 // B290 [P4]. A footnote label's own indentation is lost across a quote's edge
 //
@@ -960,8 +1224,8 @@ openBug('B192', 'P4', 'A plain paste with a tab-led line into an item whose padd
 // have: `text "→[^1]:", read as "␠␠[^1]:"`. Without the space, the tab, both work. Not B92 nor B164.
 // P3: padded and tab-led labels. The padded label writes since the second writing (recommendation 1,
 // step 2), its test in `commands.test.ts`.
-openBug('B290', 'P4', 'A footnote label\'s own indentation is lost across a quote\'s edge', {
-  'outdenting a footnote after a quote\'s tab writes': () => {
+openBug('B290', 'P4', "A footnote label's own indentation is lost across a quote's edge", {
+  "outdenting a footnote after a quote's tab writes": () => {
     assertNoWriteFailure(executeOnText('>\t[^1]:', { type: 'outdent' }, { caret: 7 }));
   },
 });
@@ -976,7 +1240,13 @@ openBug('B290', 'P4', 'A footnote label\'s own indentation is lost across a quot
 openBug('B331', 'P4', 'Moving tab-led indented code into an empty quote fails to write', {
   'tab-led code moves into an empty quote': () => {
     // root › 0 › 0: id 1, read as 3
-    assertNoWriteFailure(executeOnText('\tdef\n>', { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } }, { config: { flavor: 'obsidian', quotes: 'container', indentUnit: 2 } }));
+    assertNoWriteFailure(
+      executeOnText(
+        '\tdef\n>',
+        { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } },
+        { config: { flavor: 'obsidian', quotes: 'container', indentUnit: 2 } },
+      ),
+    );
   },
 });
 
@@ -995,10 +1265,22 @@ openBug('B331', 'P4', 'Moving tab-led indented code into an empty quote fails to
 openBug('B523', 'P4', "Backspace unquoting a tab-led quote's line in a numbered item writes the line out of the item", {
   'the case reduced': () => {
     // kept: cb337c255fe1
-    assertNoWriteFailure(executeOnText("1. num\n\t  > more\n", {"type":"deleteContentBackward"}, {"caret":12,"config":{"flavor":"commonmark","indentUnit":"tab"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '1. num\n\t  > more\n',
+        { type: 'deleteContentBackward' },
+        { caret: 12, config: { flavor: 'commonmark', indentUnit: 'tab' } },
+      ),
+    );
   },
-  'an item\'s second quote, tab-led, unquoted (the diff suite\'s)': () => {
-    assertNoWriteFailure(executeOnText("- > a quote\n\n\t> over two lines\n", { type: 'deleteContentBackward' }, { caret: 16, config: { flavor: 'gfm', indentUnit: 'tab' } }));
+  "an item's second quote, tab-led, unquoted (the diff suite's)": () => {
+    assertNoWriteFailure(
+      executeOnText(
+        '- > a quote\n\n\t> over two lines\n',
+        { type: 'deleteContentBackward' },
+        { caret: 16, config: { flavor: 'gfm', indentUnit: 'tab' } },
+      ),
+    );
   },
 });
 // B527 [P4]. Alt-Up on an empty item above a tab-led grandchild and its paragraph fails to write
@@ -1009,7 +1291,13 @@ openBug('B523', 'P4', "Backspace unquoting a tab-led quote's line in a numbered 
 openBug('B527', 'P4', 'Alt-Up on an empty item above a tab-led grandchild and its paragraph fails to write', {
   'the case reduced': () => {
     // kept: b47b82ac91af
-    assertNoWriteFailure(executeOnText("- parent\n  - child one\n  - \n\n\t- grandchild\n\n\tsecond paragraph of child two\n", {"type":"moveSubtreeUp"}, {"caret":28,"config":{"flavor":"obsidian","indentUnit":"tab"},"auto":[43]}));
+    assertNoWriteFailure(
+      executeOnText(
+        '- parent\n  - child one\n  - \n\n\t- grandchild\n\n\tsecond paragraph of child two\n',
+        { type: 'moveSubtreeUp' },
+        { caret: 28, config: { flavor: 'obsidian', indentUnit: 'tab' }, auto: [43] },
+      ),
+    );
   },
 });
 // B528 [P4]. Shift-Tab on a held empty tab-led item between padded items before a lazy fence fails to write
@@ -1017,12 +1305,23 @@ openBug('B527', 'P4', 'Alt-Up on an empty item above a tab-led grandchild and it
 // Status (2026-11-14): seed 1001. `-  let x;⏎→- ⏎→-  let x;⏎  ```⏎- next` (GFM, `indentUnit: tab`),
 // Shift-Tab on the held empty item: `root › 1: 1 children, read as 2`. The last commit's code fails
 // alike. P4.
-openBug('B528', 'P4', 'Shift-Tab on a held empty tab-led item between padded items before a lazy fence fails to write', {
-  'the case reduced': () => {
-    // kept: 7efdbec36e15
-    assertNoWriteFailure(executeOnText("-  let x;\n\t- \n\t-  let x;\n  ```\n- next\n", {"type":"outdent"}, {"caret":13,"config":{"flavor":"gfm","indentUnit":"tab"},"placeholders":[13]}));
+openBug(
+  'B528',
+  'P4',
+  'Shift-Tab on a held empty tab-led item between padded items before a lazy fence fails to write',
+  {
+    'the case reduced': () => {
+      // kept: 7efdbec36e15
+      assertNoWriteFailure(
+        executeOnText(
+          '-  let x;\n\t- \n\t-  let x;\n  ```\n- next\n',
+          { type: 'outdent' },
+          { caret: 13, config: { flavor: 'gfm', indentUnit: 'tab' }, placeholders: [13] },
+        ),
+      );
+    },
   },
-});
+);
 bugCluster('Numbered lists and shared marker lines');
 
 // B403 [P4]. Deleting an item before a shared marker line `- - - ` lines the line's child up wrong
@@ -1042,19 +1341,32 @@ openBug('B403', 'P4', "Deleting an item before a shared marker line `- - - ` lin
   'the case reduced': () => {
     // kept: dbf445dbc663 (seed 151: `- 1. second` deleted)
     // kept: b0bc8706019c
-    assertNoWriteFailure(executeOnText("- item ^id1\n- - - \n  - other\n  > [!note] Title\n", {"type": "deleteSubtree"}, {"caret": 18}));
+    assertNoWriteFailure(
+      executeOnText('- item ^id1\n- - - \n  - other\n  > [!note] Title\n', { type: 'deleteSubtree' }, { caret: 18 }),
+    );
   },
 });
 
 // B461 [P4]. Backspace joining into a nested bullet after a list renumbered across 9/10 writes it outside its item
 //
 // Status (2026-11-12): found by the volume run (seed 351). `…1. first⏎   - nested bullet⏎3. ┃hird` (Obsidian, `listParent: container`), the list renumbered to `10. first`: the bullet left at column 3, short of `10. `'s content. The 9/10 family (B210's). P4 (the user's rule: rare, odd spacing or tabs).
-openBug('B461', 'P4', "Backspace joining into a nested bullet after a list renumbered across 9/10 writes it outside its item", {
-  'the case reduced': () => {
-    // kept: 8b7a0ad4fd60
-    assertNoWriteFailure(executeOnText("3. third\n1. first\n2. second\n3. third\n1. first\n2. second\n3. third\n1. first\n   - nested bullet\n3. hird\n", {"type": "deleteContentBackward"}, {"caret": 96, "config": {"flavor": "obsidian", "listParent": "container"}}));
+openBug(
+  'B461',
+  'P4',
+  'Backspace joining into a nested bullet after a list renumbered across 9/10 writes it outside its item',
+  {
+    'the case reduced': () => {
+      // kept: 8b7a0ad4fd60
+      assertNoWriteFailure(
+        executeOnText(
+          '3. third\n1. first\n2. second\n3. third\n1. first\n2. second\n3. third\n1. first\n   - nested bullet\n3. hird\n',
+          { type: 'deleteContentBackward' },
+          { caret: 96, config: { flavor: 'obsidian', listParent: 'container' } },
+        ),
+      );
+    },
   },
-});
+);
 
 // B481 [P4]. Enter renumbering across 9/10 an item whose quote has a lazy line
 //
@@ -1062,7 +1374,13 @@ openBug('B461', 'P4', "Backspace joining into a nested bullet after a list renum
 openBug('B481', 'P4', 'Enter renumbering across 9/10 an item whose quote has a lazy line', {
   'the case reduced': () => {
     // kept: dd2fc88505a5
-    assertNoWriteFailure(executeOnText("8. x\n9. > quote\n   x> more\n", {"type":"enter"}, {"caret":4,"config":{"flavor":"commonmark","quotes":"atom"}}));
+    assertNoWriteFailure(
+      executeOnText(
+        '8. x\n9. > quote\n   x> more\n',
+        { type: 'enter' },
+        { caret: 4, config: { flavor: 'commonmark', quotes: 'atom' } },
+      ),
+    );
   },
 });
 
@@ -1094,12 +1412,23 @@ openBug('B278', 'P4', 'A marker widened across 9/10 makes its tab padding code',
 // Status (2026-11-14): seed 1001. `- parent⏎→- child one⏎⏎→  se⏎→- - - ⏎→  - child three` (GFM,
 // `indentUnit: tab`), Alt-Down on `child three`'s line: `root › 0: 3 children, read as 2`. The last
 // commit's code fails alike. P4.
-openBug('B526', 'P4', 'Alt-Down on a tab-led item past its paragraph and a `- - - ` shared marker line fails to write', {
-  'the case reduced': () => {
-    // kept: dd04f8014e5b
-    assertNoWriteFailure(executeOnText("- parent\n\t- child one\n\n\t  se\n\t- - - \n\t  - child three\n", {"type":"moveSubtreeDown"}, {"caret":36,"config":{"flavor":"gfm","indentUnit":"tab"}}));
+openBug(
+  'B526',
+  'P4',
+  'Alt-Down on a tab-led item past its paragraph and a `- - - ` shared marker line fails to write',
+  {
+    'the case reduced': () => {
+      // kept: dd04f8014e5b
+      assertNoWriteFailure(
+        executeOnText(
+          '- parent\n\t- child one\n\n\t  se\n\t- - - \n\t  - child three\n',
+          { type: 'moveSubtreeDown' },
+          { caret: 36, config: { flavor: 'gfm', indentUnit: 'tab' } },
+        ),
+      );
+    },
   },
-});
+);
 bugCluster('Selections and carets in the view');
 
 // =================================================================================================
@@ -1146,9 +1475,11 @@ bugCluster('Held marks (placeholders)');
 // placeholders gone, read back with the paragraph named otherwise. No key sequence tried reaches it.
 // Enter writes since the third writing (recommendation 1, step 2): `>  q⏎>⏎> `, the held space settled
 // as the paragraph's own; its test in `commands.test.ts`.
-openBug('B413', 'P4', "A quoted paragraph whose space after `>` is held loses its marks through Enter or Shift-Enter", {
+openBug('B413', 'P4', 'A quoted paragraph whose space after `>` is held loses its marks through Enter or Shift-Enter', {
   'Shift-Enter in a quoted paragraph held past its `>`': () => {
-    assertNoWriteFailure(executeOnText('> q', { type: 'shiftEnter' }, { caret: 3, config: { quotes: 'container' }, placeholders: [1] }));
+    assertNoWriteFailure(
+      executeOnText('> q', { type: 'shiftEnter' }, { caret: 3, config: { quotes: 'container' }, placeholders: [1] }),
+    );
   },
 });
 
@@ -1179,7 +1510,14 @@ openBug('B444', 'P4', "A raised blank line after a quote loses its mark where a 
     // kept: d03a0cda43e0 1255142e57fa 7fa970d6d2e9 (seed 751)
     // kept: e55dd3d169a8 6f234a501e97 (seed 801)
     // kept: 7f6b7746419b 44219dd3e949 (seed 851: a cut of a callout's body, a text paste in a quoted list)
-    assert.deepEqual(lostMarksOnText("> [!note] Title\n>\n> xtmore\n\n- item\n", {"type":"cut"}, {"caret":22,"config":{"flavor":"gfm"},"auto":[27]}), []);
+    assert.deepEqual(
+      lostMarksOnText(
+        '> [!note] Title\n>\n> xtmore\n\n- item\n',
+        { type: 'cut' },
+        { caret: 22, config: { flavor: 'gfm' }, auto: [27] },
+      ),
+      [],
+    );
   },
 });
 
@@ -1191,27 +1529,53 @@ openBug('B445', 'P4', "Shift-Enter in a text before its lone block-id line loses
     // kept: d21ff0fb5bab (seed 1001)
     // kept: 576393e97c47
     // kept: 52422495cfad (seed 351)
-    assert.deepEqual(lostMarksOnText("`\n\n^blk\n", {"type": "shiftEnter"}, {"caret": 1, "config": {"flavor": "obsidian", "quotes": "atom"}, "auto": [2]}), []);
+    assert.deepEqual(
+      lostMarksOnText(
+        '`\n\n^blk\n',
+        { type: 'shiftEnter' },
+        { caret: 1, config: { flavor: 'obsidian', quotes: 'atom' }, auto: [2] },
+      ),
+      [],
+    );
   },
 });
 
 // B446 [P4]. A raised line lost: a paste on blank lines after a block id, Shift-Enter between empty items or under an item's heading, Backspace in an item
 //
 // Status (2026-11-12): found by the volume run (seed 301). Three cases, one each, not read further yet: to split when read. P4 (the user's rule: rare, odd spacing or a hand-built mark).
-openBug('B446', 'P4', "A raised line lost: a paste on blank lines after a block id, Shift-Enter between empty items or under an item's heading, Backspace in an item", {
-  'the case reduced': () => {
-    // kept: e06b329894ad (seed 1001: Shift-Enter on blank lines under an item)
-    // kept: 6c4b82952103 7c2e3c3fb3d8
-    // kept: 3714059e7389 1885f762c63f 93c61027d415 (seed 351)
-    // kept: 8ec1374510d1 (seed 451)
-    // kept: cc51ff642044 86efd78b19d1 (seed 551: a cut of unclosed math after a lone block-id line; Shift-Enter on a tab-led blank line after an item)
-    // kept: a450d60d3fb3 b02ad0f2fead f8d8e896717c 05b970626541 (seed 601)
-    // kept: e363c57af399 5627b3b1c114 d0ebe2247e39 (seed 701)
-    // kept: 8cf6802a2e12 088e48298be5 (seed 751)
-    // kept: 4616ab21dcb0 489601ef947c b65165b77c89 (seed 801)
-    assert.deepEqual(lostMarksOnText("Final line ^blk\n\n\n ", {"type": "paste", "clipboard": {"text/plain": "- [x] done\n", "text/markdown": "- [x] done\n", "text/html": "<!-- ourus --><ul>\n<li>[x] done</li>\n</ul>\n"}}, {"caret": 19, "config": {"flavor": "commonmark", "quotes": "container"}, "auto": [16]}), []);
+openBug(
+  'B446',
+  'P4',
+  "A raised line lost: a paste on blank lines after a block id, Shift-Enter between empty items or under an item's heading, Backspace in an item",
+  {
+    'the case reduced': () => {
+      // kept: e06b329894ad (seed 1001: Shift-Enter on blank lines under an item)
+      // kept: 6c4b82952103 7c2e3c3fb3d8
+      // kept: 3714059e7389 1885f762c63f 93c61027d415 (seed 351)
+      // kept: 8ec1374510d1 (seed 451)
+      // kept: cc51ff642044 86efd78b19d1 (seed 551: a cut of unclosed math after a lone block-id line; Shift-Enter on a tab-led blank line after an item)
+      // kept: a450d60d3fb3 b02ad0f2fead f8d8e896717c 05b970626541 (seed 601)
+      // kept: e363c57af399 5627b3b1c114 d0ebe2247e39 (seed 701)
+      // kept: 8cf6802a2e12 088e48298be5 (seed 751)
+      // kept: 4616ab21dcb0 489601ef947c b65165b77c89 (seed 801)
+      assert.deepEqual(
+        lostMarksOnText(
+          'Final line ^blk\n\n\n ',
+          {
+            type: 'paste',
+            clipboard: {
+              'text/plain': '- [x] done\n',
+              'text/markdown': '- [x] done\n',
+              'text/html': '<!-- ourus --><ul>\n<li>[x] done</li>\n</ul>\n',
+            },
+          },
+          { caret: 19, config: { flavor: 'commonmark', quotes: 'container' }, auto: [16] },
+        ),
+        [],
+      );
+    },
   },
-});
+);
 
 // B477 [P4]. A text deleted down to its block id loses the raised blank line's mark above it
 //
@@ -1228,7 +1592,14 @@ openBug('B477', 'P4', "A text deleted down to its block id loses the raised blan
     // kept: 0f646abe7777 cb5fa738be3e (seed 601)
     // kept: 94d998468318 (seed 651)
     // kept: 981cfcb74079 (seed 851)
-    assert.deepEqual(lostMarksOnText('para\n\nFinal line ^blk\n', { type: 'deleteSoftLineBackward' }, { caret: 16, config: { flavor: 'obsidian' }, auto: [5] }), []);
+    assert.deepEqual(
+      lostMarksOnText(
+        'para\n\nFinal line ^blk\n',
+        { type: 'deleteSoftLineBackward' },
+        { caret: 16, config: { flavor: 'obsidian' }, auto: [5] },
+      ),
+      [],
+    );
   },
 });
 
@@ -1239,25 +1610,49 @@ openBug('B477', 'P4', "A text deleted down to its block id loses the raised blan
 // written gap's last line ours, never another (`#lastBlankLineOurs`); Enter before a fence after a
 // raised line, Shift-Enter on blank lines at the end, a deleted last paragraph after code the same.
 // P4 (low payoff: a mark on hand-built gaps).
-openBug('B478', 'P4', 'A gap whose first blank line is ours, not its last, loses the mark where a command writes the gap', {
-  'the case reduced': () => {
-    // kept: 9f6ca159ec3b (seed 901: a heading deleted after code)
-    // kept: 28fd08a3720b df450ffcc39c e606a637c9f1 e7da1c0648c9
-    // kept: 7137b7618f10 (seed 501)
-    // kept: be5950473ccd (seed 851: Enter before an unclosed fence after a raised line)
-    assert.deepEqual(lostMarksOnText('- q\n- x\n\n\n- p\n', { type: 'deleteContentBackward' }, { caret: 6, config: { flavor: 'commonmark', listParent: 'container' }, auto: [8] }), []);
+openBug(
+  'B478',
+  'P4',
+  'A gap whose first blank line is ours, not its last, loses the mark where a command writes the gap',
+  {
+    'the case reduced': () => {
+      // kept: 9f6ca159ec3b (seed 901: a heading deleted after code)
+      // kept: 28fd08a3720b df450ffcc39c e606a637c9f1 e7da1c0648c9
+      // kept: 7137b7618f10 (seed 501)
+      // kept: be5950473ccd (seed 851: Enter before an unclosed fence after a raised line)
+      assert.deepEqual(
+        lostMarksOnText(
+          '- q\n- x\n\n\n- p\n',
+          { type: 'deleteContentBackward' },
+          { caret: 6, config: { flavor: 'commonmark', listParent: 'container' }, auto: [8] },
+        ),
+        [],
+      );
+    },
   },
-});
+);
 
 // B495 [P4]. Shift-Tab on an item after a lone block-id line loses the raised blank line's mark before the id
 //
 // Status (2026-11-13): found by the volume run (seed 501). `itemx⏎⏎^id1⏎- other` (Obsidian, the blank line ours): `other` a paragraph now, written `itemx⏎⏎^id1⏎⏎other`, the first blank line's mark gone. B412's family. P4 (low payoff).
-openBug('B495', 'P4', "Shift-Tab on an item after a lone block-id line loses the raised blank line's mark before the id", {
-  'the case reduced': () => {
-    // kept: c663d5da97c3
-    assert.deepEqual(lostMarksOnText("itemx\n\n^id1\n- other\n", {"type": "outdent"}, {"caret": 14, "config": {"flavor": "obsidian", "indentUnit": "tab"}, "auto": [6]}), []);
+openBug(
+  'B495',
+  'P4',
+  "Shift-Tab on an item after a lone block-id line loses the raised blank line's mark before the id",
+  {
+    'the case reduced': () => {
+      // kept: c663d5da97c3
+      assert.deepEqual(
+        lostMarksOnText(
+          'itemx\n\n^id1\n- other\n',
+          { type: 'outdent' },
+          { caret: 14, config: { flavor: 'obsidian', indentUnit: 'tab' }, auto: [6] },
+        ),
+        [],
+      );
+    },
   },
-});
+);
 
 // B496 [P4]. A numbered quote pasted on a held padded line in an item loses the raised line's mark above
 //
@@ -1265,7 +1660,22 @@ openBug('B495', 'P4', "Shift-Tab on an item after a lone block-id line loses the
 openBug('B496', 'P4', "A numbered quote pasted on a held padded line in an item loses the raised line's mark above", {
   'the case reduced': () => {
     // kept: 6b85d1f16f66
-    assert.deepEqual(lostMarksOnText("3. third\n\n   \n   more\n", {"type":"paste","clipboard":{"text/plain":"2. > quote\n   > more\n","text/markdown":"2. > quote\n   > more\n","text/html":"<!-- ourus --><ol start=\"2\">\n<li>\n<blockquote>\n<p>quote\nmore</p>\n</blockquote>\n</li>\n</ol>\n"}}, {"caret":13,"config":{"flavor":"commonmark"},"auto":[9]}), []);
+    assert.deepEqual(
+      lostMarksOnText(
+        '3. third\n\n   \n   more\n',
+        {
+          type: 'paste',
+          clipboard: {
+            'text/plain': '2. > quote\n   > more\n',
+            'text/markdown': '2. > quote\n   > more\n',
+            'text/html':
+              '<!-- ourus --><ol start="2">\n<li>\n<blockquote>\n<p>quote\nmore</p>\n</blockquote>\n</li>\n</ol>\n',
+          },
+        },
+        { caret: 13, config: { flavor: 'commonmark' }, auto: [9] },
+      ),
+      [],
+    );
   },
 });
 
@@ -1283,7 +1693,14 @@ openBug('B496', 'P4', "A numbered quote pasted on a held padded line in an item 
 openBug('B520', 'P4', 'A move whose block lands beside a raised blank line writes the gap anew, unmarked', {
   'the case reduced': () => {
     // kept: 3a2841ad6abc 425ae7a0f476 46c7f5800d0e 685506cc39b0 7a9aeda9ab21
-    assert.deepEqual(lostMarksOnText("- nested bullet\n\nnested bullet\n\n3. third\n", {"type":"moveSubtreeDown"}, {"caret":15,"config":{"flavor":"obsidian","listParent":"container"},"auto":[31]}), []);
+    assert.deepEqual(
+      lostMarksOnText(
+        '- nested bullet\n\nnested bullet\n\n3. third\n',
+        { type: 'moveSubtreeDown' },
+        { caret: 15, config: { flavor: 'obsidian', listParent: 'container' }, auto: [31] },
+      ),
+      [],
+    );
   },
 });
 bugCluster('Drop preflight');

@@ -9,10 +9,23 @@ import { MdFlavor, MdTree } from '../../src/parser/index.ts';
 
 const { commonmark, gfm, obsidian } = MdFlavor;
 
-test('the positions: a line\'s first character, a number\'s delimiter, a label\'s colon, a delimiter row\'s first dash', () => {
+test("the positions: a line's first character, a number's delimiter, a label's colon, a delimiter row's first dash", () => {
   const at = (flavor: MdFlavor, line: string): boolean => flavor.markupEscapeAt(line, line.lastIndexOf('\\'));
-  for (const line of ['\\- a', '\\+ a', '\\> a', '\\# a', '\\=== ', '  \\- a', '1\\. a', '12\\) a', '[a]\\: /url', '[a\\]b]\\: x']) assert.ok(at(commonmark, line), line);
-  for (const line of ['a \\- b', '    \\- a', '\\* a', '\\<div>', '\\[a]: /url', '\\` x', 'x1\\. a', '[a]x\\: y']) assert.ok(!at(commonmark, line), line);
+  for (const line of [
+    '\\- a',
+    '\\+ a',
+    '\\> a',
+    '\\# a',
+    '\\=== ',
+    '  \\- a',
+    '1\\. a',
+    '12\\) a',
+    '[a]\\: /url',
+    '[a\\]b]\\: x',
+  ])
+    assert.ok(at(commonmark, line), line);
+  for (const line of ['a \\- b', '    \\- a', '\\* a', '\\<div>', '\\[a]: /url', '\\` x', 'x1\\. a', '[a]x\\: y'])
+    assert.ok(!at(commonmark, line), line);
   // tables only where tables are read
   assert.ok(at(gfm, '|\\---|'));
   assert.ok(at(gfm, '\\--- | ---'));
@@ -26,7 +39,7 @@ test('the positions: a line\'s first character, a number\'s delimiter, a label\'
   assert.ok(!at(obsidian, '\\=== '));
 });
 
-test('an inline escape is the parser\'s: not one in a code span, even across lines', () => {
+test("an inline escape is the parser's: not one in a code span, even across lines", () => {
   const tree = MdTree.parse('a \\- b\n`a\n\\- b`\n\nhttp\\://example.com', gfm);
   assert.ok(tree.inlineEscapeAt(tree.text.indexOf('\\-')));
   assert.ok(!tree.inlineEscapeAt(tree.text.indexOf('\\-', 8)), 'a code span crossing lines holds its backslash');
@@ -38,7 +51,10 @@ test('an inline escape is the parser\'s: not one in a code span, even across lin
 /** A line of the vocabulary the positions are about, and somewhere a backslash could go. */
 const arbLine = fc.tuple(
   fc.constantFrom('', ' ', '  '),
-  fc.array(fc.constantFrom('-', '+', '#', '>', '=', '1', '12', '.', ')', '[a]', ':', '|', '---', ' ', 'x', 'tag', '*', '`'), { minLength: 1, maxLength: 6 }),
+  fc.array(
+    fc.constantFrom('-', '+', '#', '>', '=', '1', '12', '.', ')', '[a]', ':', '|', '---', ' ', 'x', 'tag', '*', '`'),
+    { minLength: 1, maxLength: 6 },
+  ),
   fc.nat(),
 );
 

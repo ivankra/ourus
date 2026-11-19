@@ -3,9 +3,20 @@ import { test } from 'node:test';
 import { executeCommand, settlePlaceholders, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { appliedText, assertApplied, executeAfter, executeOnText, parseWithMarks, allNodes, nodePlainText } from './lib/index.ts';
+import {
+  appliedText,
+  assertApplied,
+  executeAfter,
+  executeOnText,
+  parseWithMarks,
+  allNodes,
+  nodePlainText,
+} from './lib/index.ts';
 
-const shape = (d: OurusDoc) => allNodes(d).map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${nodePlainText(d, n).replace(/\n/g, '|')}`).join('\n');
+const shape = (d: OurusDoc) =>
+  allNodes(d)
+    .map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${nodePlainText(d, n).replace(/\n/g, '|')}`)
+    .join('\n');
 const placeholders = (d: OurusDoc) => d.marks.placeholders;
 
 function indentNewItem(): OurusDoc {
@@ -84,9 +95,12 @@ test('Enter twice leaves a list, and typing makes the paragraph', () => {
   assert.equal(shape(typed), 'item:a\nparagraph:text');
 });
 
-test('an item\'s first word deleted, its space held, then Enter at its end: the new item lines up with its children, moved as the held space moves them', async () => {
+test("an item's first word deleted, its space held, then Enter at its end: the new item lines up with its children, moved as the held space moves them", async () => {
   const { playActions: play } = await import('./lib/index.ts');
-  let played: Parameters<typeof play>[0] = { view: OurusView.of(OurusDoc.parse('- x b\n  - c\n'), { selection: 3 }), clipboard: {} };
+  let played: Parameters<typeof play>[0] = {
+    view: OurusView.of(OurusDoc.parse('- x b\n  - c\n'), { selection: 3 }),
+    clipboard: {},
+  };
   for (const action of ['deleteContentBackward', 'cursorLineBoundaryForward', 'enter']) played = play(played, [action]);
   assert.equal(played.view.doc.text, '-  b\n   - \n   - c\n');
   const doc = OurusDoc.parse('- x b\n  - c\n').update({ changes: [{ from: 2, to: 3, insert: '' }], caret: 2 });
@@ -94,7 +108,7 @@ test('an item\'s first word deleted, its space held, then Enter at its end: the 
   assert.ok(pasted instanceof OurusSuccess, pasted instanceof OurusRejected ? (pasted.detail ?? '') : '');
 });
 
-test('a held last line moved to the note\'s end, with no final line break, stays held', () => {
+test("a held last line moved to the note's end, with no final line break, stays held", () => {
   const shifted = executeOnText('- t\n- u', { type: 'shiftEnter' }, { caret: 3 });
   assert.equal(appliedText(executeAfter(shifted, { type: 'moveSubtreeDown' })), '- u\n- t\n  ');
 });
@@ -122,7 +136,9 @@ test('settling gives the selection after it, mapped, where the view shows it: in
   // is on its line; the caret then on the blank line after it, settled: the host's own mapping put the
   // caret at 11, past the zoom's end, 10)
   const view = OurusView.of(OurusDoc.parse('# h\n\npara\n\n# z\n'), { zoom: 1 });
-  const selected = assertApplied(executeAfter(executeCommand(view.withSelection(9), { type: 'enter' }), { type: 'selectNode' }));
+  const selected = assertApplied(
+    executeAfter(executeCommand(view.withSelection(9), { type: 'enter' }), { type: 'selectNode' }),
+  );
   assert.equal(settlePlaceholders(selected.view), null);
   const settled = settlePlaceholders(selected.view.withSelection(12))!;
   assert.equal(settled.view.doc.text, '# h\n\npara\n\n# z\n');
@@ -133,7 +149,7 @@ test('settling gives the selection after it, mapped, where the view shows it: in
   assert.deepEqual(settlePlaceholders(OurusView.of(doc, { selection: 1 }))!.view.selection, { anchor: 1, head: 1 });
 });
 
-test('an empty paragraph left between blocks nothing set apart is a blank line, the author\'s separator; elsewhere it goes', () => {
+test("an empty paragraph left between blocks nothing set apart is a blank line, the author's separator; elsewhere it goes", () => {
   const settle = (text: string, caret: number, type: 'enter' | 'shiftEnter' = 'enter'): string => {
     const r = assertApplied(executeOnText(text, { type }, { caret, config: { flavor: 'gfm' } }));
     return (settlePlaceholders(r.view.withSelection(0))?.view ?? r.view).doc.text;
@@ -158,18 +174,48 @@ test('B237: held spaces and held last lines kept or settled where the writer lay
   assert.equal(appliedText(executeOnText(' p\n=', { type: 'indent' }, { caret: 1, placeholders: [0] })), 'p\n-');
   assertApplied(executeOnText(' p\n-', { type: 'enter' }, { caret: 3, placeholders: [0] }));
   // (a held empty last line the move takes first: held where it was named, the text's start)
-  const first = assertApplied(executeOnText('para one\n\n', { type: 'moveSubtreeDown' }, { anchor: 0, head: 10, config: { quotes: 'atom' }, placeholders: [10] }));
+  const first = assertApplied(
+    executeOnText(
+      'para one\n\n',
+      { type: 'moveSubtreeDown' },
+      { anchor: 0, head: 10, config: { quotes: 'atom' }, placeholders: [10] },
+    ),
+  );
   assert.deepEqual([first.view.doc.text, first.view.doc.marks.placeholders], ['\n\npara one\n', [0]]);
   // (a held line ending a text, no final line break, its item moved up: at its line's end)
   const up = assertApplied(executeOnText('2. \n3. > ', { type: 'moveSubtreeDown' }, { caret: 3, placeholders: [9] }));
   assert.deepEqual([up.view.doc.text, up.view.doc.marks.placeholders], ['2. > \n3. ', [5]]);
   // (a text left a line break alone, a blank line before the note kept: the empty paragraph held on
   // its own line, past it)
-  assertApplied(executeOnText('\nx\n\n', { type: 'paste', clipboard: { 'text/plain': 'Intro.\n' } }, { anchor: 1, head: 4, placeholders: [4] }));
+  assertApplied(
+    executeOnText(
+      '\nx\n\n',
+      { type: 'paste', clipboard: { 'text/plain': 'Intro.\n' } },
+      { anchor: 1, head: 4, placeholders: [4] },
+    ),
+  );
   // (an empty held item with a padded marker, `-  ◌`, outdented by Enter, the quote after it its child:
   // from the column `2. ` gives, as the item is written, its own three columns past it kept)
-  assert.equal(appliedText(executeOnText('1. num\n   1.  \n      > # quote\n', { type: 'enter' }, { caret: 14, config: { flavor: 'obsidian' }, placeholders: [14] })), '1. num\n2. \n      > # quote\n');
+  assert.equal(
+    appliedText(
+      executeOnText(
+        '1. num\n   1.  \n      > # quote\n',
+        { type: 'enter' },
+        { caret: 14, config: { flavor: 'obsidian' }, placeholders: [14] },
+      ),
+    ),
+    '1. num\n2. \n      > # quote\n',
+  );
   // (ourus's own held quote line copied without its mark, `> ⏎>⏎> - `, pasted on a held quote line: a
   // quote of its children, the blank lines before them no part of it)
-  assert.equal(appliedText(executeOnText('  > \n', { type: 'paste', clipboard: { 'text/plain': '> \n>\n> - \n' } }, { caret: 4, config: { quotes: 'container' }, placeholders: [4] })), '  > > - \n');
+  assert.equal(
+    appliedText(
+      executeOnText(
+        '  > \n',
+        { type: 'paste', clipboard: { 'text/plain': '> \n>\n> - \n' } },
+        { caret: 4, config: { quotes: 'container' }, placeholders: [4] },
+      ),
+    ),
+    '  > > - \n',
+  );
 });

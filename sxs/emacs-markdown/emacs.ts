@@ -52,7 +52,8 @@ export const BUFFER = '*ourus sxs*';
  * Lisp run before each key: what redisplay would have done since the last one, and the last command
  * handed to the key's first (the buffer's hooks record and give it: `PRELUDE`, `FRESH`).
  */
-const REDISPLAY = '(syntax-propertize (point-max)) (font-lock-ensure) (redisplay t) (setq ourus-sxs--carry ourus-sxs--last)';
+const REDISPLAY =
+  '(syntax-propertize (point-max)) (font-lock-ensure) (redisplay t) (setq ourus-sxs--carry ourus-sxs--last)';
 
 /** Lisp defining what the session uses, run once: the last command recorded, and given to the next. */
 const PRELUDE =
@@ -73,7 +74,15 @@ export const SELECT = (anchor: number, head: number): string =>
 
 /** Starts Emacs on a terminal of its own (installing both first if missing), and loads `init` (Lisp) into it. */
 export async function startEmacs(init: string, say: (line: string) => void): Promise<Emacs> {
-  ensureAptInstalled("Emacs's driver", [{ pkg: 'emacs-nox', command: 'emacs' }, { pkg: 'emacs-nox', command: 'emacsclient' }, { pkg: 'tmux', command: 'tmux' }], say);
+  ensureAptInstalled(
+    "Emacs's driver",
+    [
+      { pkg: 'emacs-nox', command: 'emacs' },
+      { pkg: 'emacs-nox', command: 'emacsclient' },
+      { pkg: 'tmux', command: 'tmux' },
+    ],
+    say,
+  );
   // (this container's: a pid is unique in one container only)
   const dir = join(stateDir, 'emacs-markdown', `server-${process.pid}`);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -86,13 +95,21 @@ export async function startEmacs(init: string, say: (line: string) => void): Pro
   await run('tmux', [...tmux, 'new-session', '-d', '-x', '80', '-y', '24', 'emacs', '-Q', '-nw', '--eval', start]);
   for (let i = 0; i < 100 && !existsSync(socket); i++) await new Promise((r) => setTimeout(r, 50));
   if (!existsSync(socket)) {
-    const screen = await run('tmux', [...tmux, 'capture-pane', '-p']).then((r) => r.stdout.trim(), () => '');
+    const screen = await run('tmux', [...tmux, 'capture-pane', '-p']).then(
+      (r) => r.stdout.trim(),
+      () => '',
+    );
     await run('tmux', [...tmux, 'kill-server']).catch(() => {});
-    throw new Error(`Emacs's server didn't start on its terminal: ${screen.split('\n').filter(Boolean).pop() ?? 'no screen'}`);
+    throw new Error(
+      `Emacs's server didn't start on its terminal: ${screen.split('\n').filter(Boolean).pop() ?? 'no screen'}`,
+    );
   }
   const evaluate = async (expr: string): Promise<string> => {
     try {
-      const { stdout } = await run('emacsclient', ['-s', socket, '--eval', expr], { encoding: 'utf8', maxBuffer: 1 << 26 });
+      const { stdout } = await run('emacsclient', ['-s', socket, '--eval', expr], {
+        encoding: 'utf8',
+        maxBuffer: 1 << 26,
+      });
       return unprint(stdout.replace(/\n$/, ''));
     } catch (e) {
       const err = e as { stderr?: string; message: string };
@@ -109,7 +126,9 @@ export async function startEmacs(init: string, say: (line: string) => void): Pro
   };
   // a key, as the command loop would take it; an error is the command's beep
   const key = (keys: string): Promise<string> =>
-    evaluate(`(with-current-buffer ${lisp(BUFFER)} ${REDISPLAY} (condition-case e (progn (execute-kbd-macro (kbd ${lisp(keys)})) "") (error (error-message-string e))))`);
+    evaluate(
+      `(with-current-buffer ${lisp(BUFFER)} ${REDISPLAY} (condition-case e (progn (execute-kbd-macro (kbd ${lisp(keys)})) "") (error (error-message-string e))))`,
+    );
   // (its socket made, the server may not answer yet on a busy machine: until it does, for 10 s)
   for (let t0 = Date.now(); ; ) {
     const answers = await run('emacsclient', ['-s', socket, '--eval', 't'], { encoding: 'utf8' }).then(
@@ -118,9 +137,14 @@ export async function startEmacs(init: string, say: (line: string) => void): Pro
     );
     if (answers) break;
     if (Date.now() - t0 > 10000) {
-      const screen = await run('tmux', [...tmux, 'capture-pane', '-p']).then((r) => r.stdout.trim(), () => '');
+      const screen = await run('tmux', [...tmux, 'capture-pane', '-p']).then(
+        (r) => r.stdout.trim(),
+        () => '',
+      );
       await run('tmux', [...tmux, 'kill-server']).catch(() => {});
-      throw new Error(`Emacs's server made its socket but doesn't answer on it: ${screen.split('\n').filter(Boolean).pop() ?? 'no screen'}`);
+      throw new Error(
+        `Emacs's server made its socket but doesn't answer on it: ${screen.split('\n').filter(Boolean).pop() ?? 'no screen'}`,
+      );
     }
     await new Promise((r) => setTimeout(r, 200));
   }
@@ -137,14 +161,19 @@ export async function startEmacs(init: string, say: (line: string) => void): Pro
       execFileSync('tmux', [...tmux, 'kill-server'], { stdio: 'ignore' });
     } catch {}
   });
-  say(`started Emacs ${await evaluate('emacs-version')} (-Q -nw, on a terminal of tmux's, 80x24, pid ${await evaluate('(emacs-pid)')})`);
+  say(
+    `started Emacs ${await evaluate('emacs-version')} (-Q -nw, on a terminal of tmux's, 80x24, pid ${await evaluate('(emacs-pid)')})`,
+  );
   return {
     eval: evaluate,
     stop,
     session: {
       press: async (keys) => void (await key(keys)),
       // the text as one run, each character a key: a user's typing, its undo one change
-      type: async (text) => void (await evaluate(`(with-current-buffer ${lisp(BUFFER)} ${REDISPLAY} (condition-case nil (execute-kbd-macro ${lisp(text)}) (error nil)) t)`)),
+      type: async (text) =>
+        void (await evaluate(
+          `(with-current-buffer ${lisp(BUFFER)} ${REDISPLAY} (condition-case nil (execute-kbd-macro ${lisp(text)}) (error nil)) t)`,
+        )),
       clipboard: {
         write: async (text) => void (await evaluate(`(progn (kill-new ${lisp(text)}) t)`)),
         read: () => evaluate('(substring-no-properties (or (current-kill 0 t) ""))'),

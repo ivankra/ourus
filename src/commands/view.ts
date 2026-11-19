@@ -105,7 +105,10 @@ export function unfoldedForCaret(outcome: OurusResult | null, id: number): Ourus
   const node = outcome.view.doc.node(id);
   const range = node && outcome.view.doc.foldRange(node);
   if (!range || ![anchor, head].some((p) => p > range.from && p <= range.to)) return outcome;
-  return new OurusSuccess({ ...outcome, view: outcome.view.withFolded([...outcome.view.folded].filter((f) => f !== id)) });
+  return new OurusSuccess({
+    ...outcome,
+    view: outcome.view.withFolded([...outcome.view.folded].filter((f) => f !== id)),
+  });
 }
 
 /** `outcome` with the nodes `ids` folded too, where it applied (a split's or a copy's fold, the writer's own). */

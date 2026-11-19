@@ -66,7 +66,12 @@ export function tolerateContextlessTargets(say: (line: string) => void): void {
   if (toleratingTargets) return;
   toleratingTargets = true;
   process.on('uncaughtException', (e) => {
-    if (e instanceof Error && e.message.startsWith('targetInfo: {') && /_onAttachedToTarget/.test(e.stack ?? '') && !/"browserContextId"/.test(e.message)) {
+    if (
+      e instanceof Error &&
+      e.message.startsWith('targetInfo: {') &&
+      /_onAttachedToTarget/.test(e.stack ?? '') &&
+      !/"browserContextId"/.test(e.message)
+    ) {
       const type = /"type": "([^"]+)"/.exec(e.message)?.[1] ?? 'a target';
       const url = /"url": "([^"]*)"/.exec(e.message)?.[1] ?? '';
       say(`(Playwright's assertion on a ${type} with no browser context let go: ${url.slice(0, 100)})`);
@@ -114,15 +119,21 @@ export async function pageOf(browser: Browser, targetId: string): Promise<Page> 
     for (const context of browser.contexts())
       for (const page of context.pages()) {
         const s = await context.newCDPSession(page).catch(() => null);
-        const info = (await s?.send('Target.getTargetInfo').catch(() => null)) as { targetInfo: { targetId: string } } | null;
+        const info = (await s?.send('Target.getTargetInfo').catch(() => null)) as {
+          targetInfo: { targetId: string };
+        } | null;
         await s?.detach().catch(() => {});
         if (info?.targetInfo.targetId === targetId) return page;
       }
   }
   const cdp = await browser.newBrowserCDPSession().catch(() => null);
-  const targets = ((await cdp?.send('Target.getTargets').catch(() => null)) as { targetInfos: { targetId: string }[] } | null)?.targetInfos ?? [];
+  const targets =
+    ((await cdp?.send('Target.getTargets').catch(() => null)) as { targetInfos: { targetId: string }[] } | null)
+      ?.targetInfos ?? [];
   const there = targets.some((t) => t.targetId === targetId);
-  throw new Error(`no page for the window's target ${targetId} in 30s (${there ? 'the target is there, Playwright never attached to it' : 'the target is gone'})`);
+  throw new Error(
+    `no page for the window's target ${targetId} in 30s (${there ? 'the target is there, Playwright never attached to it' : 'the target is gone'})`,
+  );
 }
 
 /** A page's target id. */
@@ -140,7 +151,12 @@ export async function targetOf(page: Page): Promise<string> {
  * (`reused`), if its `key` is this one's and not `fresh`; else a new one in a new context. Waits for
  * room; null once `gone` says the worker is no longer wanted.
  */
-export async function appWindow(app: string, key: string, opts: { fresh: boolean; who: string; gone?: () => boolean }, say: (line: string) => void): Promise<AppPage | null> {
+export async function appWindow(
+  app: string,
+  key: string,
+  opts: { fresh: boolean; who: string; gone?: () => boolean },
+  say: (line: string) => void,
+): Promise<AppPage | null> {
   ensureChromium(say);
   const got = await Lease.window({ app, key, fresh: opts.fresh }, opts.who, say, opts.gone);
   if (!got) return null;
@@ -178,8 +194,17 @@ export async function appWindow(app: string, key: string, opts: { fresh: boolean
 /** A visible browser of the worker's own (`--headed`), closed at its release. */
 export async function headedWindow(say: (line: string) => void): Promise<AppPage> {
   ensureChromium(say);
-  const browser = await chromium.launch({ executablePath, headless: false, proxy: { server: proxyUrl }, args: ['--ignore-certificate-errors'] });
-  const context = await browser.newContext({ viewport, ignoreHTTPSErrors: true, permissions: ['clipboard-read', 'clipboard-write'] });
+  const browser = await chromium.launch({
+    executablePath,
+    headless: false,
+    proxy: { server: proxyUrl },
+    args: ['--ignore-certificate-errors'],
+  });
+  const context = await browser.newContext({
+    viewport,
+    ignoreHTTPSErrors: true,
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
   return { page: await context.newPage(), reused: false, release: () => browser.close() };
 }
 

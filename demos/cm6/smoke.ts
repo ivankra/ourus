@@ -28,7 +28,10 @@ const status = () => page.textContent('#status');
 /** Sets the document from a drawing with a `┃` caret, presses keys, compares with the drawing after. */
 async function scenario(name: string, before: string, keys: string[], after: string): Promise<boolean> {
   const caret = before.indexOf('┃');
-  await page.evaluate(([t, c]) => (window as unknown as { ourusDemo: Demo }).ourusDemo.setText(t as string, c as number), [before.replace('┃', ''), caret]);
+  await page.evaluate(
+    ([t, c]) => (window as unknown as { ourusDemo: Demo }).ourusDemo.setText(t as string, c as number),
+    [before.replace('┃', ''), caret],
+  );
   await page.focus('.cm-content');
   for (const k of keys) {
     if (k.startsWith('type:')) await page.keyboard.type(k.slice(5));
@@ -36,38 +39,58 @@ async function scenario(name: string, before: string, keys: string[], after: str
       // a real copy or cut event, its formats kept for `paste:copied`
       await page.evaluate((type) => {
         const data = new DataTransfer();
-        document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent(type, { clipboardData: data, bubbles: true, cancelable: true }));
-        (window as unknown as { copied: Record<string, string> }).copied = Object.fromEntries(data.types.map((t) => [t, data.getData(t)]));
+        document
+          .querySelector('.cm-content')!
+          .dispatchEvent(new ClipboardEvent(type, { clipboardData: data, bubbles: true, cancelable: true }));
+        (window as unknown as { copied: Record<string, string> }).copied = Object.fromEntries(
+          data.types.map((t) => [t, data.getData(t)]),
+        );
       }, k);
     } else if (k === 'paste:copied') {
       await page.evaluate(() => {
         const data = new DataTransfer();
-        for (const [t, v] of Object.entries((window as unknown as { copied: Record<string, string> }).copied)) data.setData(t, v);
-        document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+        for (const [t, v] of Object.entries((window as unknown as { copied: Record<string, string> }).copied))
+          data.setData(t, v);
+        document
+          .querySelector('.cm-content')!
+          .dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
       });
     } else if (k.startsWith('paste:') || k.startsWith('pastePlain:')) {
       // a real paste event, as the browser fires it, carrying the text; Ctrl-Shift-V's keydown first
       const plain = k.startsWith('pastePlain:');
-      await page.evaluate(([text, plain]) => {
-        const content = document.querySelector('.cm-content')!;
-        if (plain) content.dispatchEvent(new KeyboardEvent('keydown', { key: 'V', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
-        const data = new DataTransfer();
-        data.setData('text/plain', text as string);
-        content.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
-      }, [k.slice(k.indexOf(':') + 1), plain] as const);
+      await page.evaluate(
+        ([text, plain]) => {
+          const content = document.querySelector('.cm-content')!;
+          if (plain)
+            content.dispatchEvent(
+              new KeyboardEvent('keydown', {
+                key: 'V',
+                ctrlKey: true,
+                shiftKey: true,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          const data = new DataTransfer();
+          data.setData('text/plain', text as string);
+          content.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+        },
+        [k.slice(k.indexOf(':') + 1), plain] as const,
+      );
     } else if (k.startsWith('click:')) {
       // a click on the page (a breadcrumb), which leaves the editor its focus
       await page.click(k.slice(6));
     } else if (k === 'focus') {
       // the editor's focus back, its selection as it was (after a click on its gutter)
       await page.focus('.cm-content');
-    }
-    else await page.keyboard.press(k);
+    } else await page.keyboard.press(k);
   }
   const got = await text();
   const want = after;
   const ok = got === want;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : `\n     want ${JSON.stringify(want)}\n     got  ${JSON.stringify(got)}\n     status: ${await status()}`}`);
+  console.log(
+    `${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : `\n     want ${JSON.stringify(want)}\n     got  ${JSON.stringify(got)}\n     status: ${await status()}`}`,
+  );
   return ok;
 }
 
@@ -77,78 +100,325 @@ const results = [
   await scenario('Alt-Up moves an item with its children', '- a\n- b┃\n  - c\n', ['Alt+ArrowUp'], '- b\n  - c\n- a\n'),
   await scenario('Alt-Down and back', '- a┃\n- b\n', ['Alt+ArrowDown', 'Alt+ArrowUp', 'Alt+ArrowDown'], '- b\n- a\n'),
   await scenario('Enter splits, typing goes into the new item', '- one┃two\n', ['Enter', 'type:X'], '- one\n- Xtwo\n'),
-  await scenario('Enter on an empty nested item outdents it', '- a\n  - b┃\n', ['Enter', 'Enter', 'type:c'], '- a\n  - b\n- c\n'),
+  await scenario(
+    'Enter on an empty nested item outdents it',
+    '- a\n  - b┃\n',
+    ['Enter', 'Enter', 'type:c'],
+    '- a\n  - b\n- c\n',
+  ),
   await scenario('Backspace at an item start joins it upward', '- one\n- two┃\n', ['Home', 'Backspace'], '- onetwo\n'),
-  await scenario('Delete at a parent\'s end joins its first child', '- abc┃\n  - def\n', ['Delete', 'type:X'], '- abcXdef\n'),
+  await scenario(
+    "Delete at a parent's end joins its first child",
+    '- abc┃\n  - def\n',
+    ['Delete', 'type:X'],
+    '- abcXdef\n',
+  ),
   await scenario('Enter in a paragraph makes a new paragraph', 'para┃\n', ['Enter', 'type:x'], 'para\n\nx\n'),
-  await scenario('Enter in a code block is CodeMirror\'s', '```\ncode┃\n```\n', ['Enter', 'type:x'], '```\ncode\nx\n```\n'),
+  await scenario(
+    "Enter in a code block is CodeMirror's",
+    '```\ncode┃\n```\n',
+    ['Enter', 'type:x'],
+    '```\ncode\nx\n```\n',
+  ),
   await scenario('Enter in an ordered list renumbers', '1. a┃\n2. b\n', ['Enter', 'type:x'], '1. a\n2. x\n3. b\n'),
-  await scenario('A typed fence gets its closing fence, in the item', '- a\n- ┃\n', ['type:```py', 'Enter', 'type:x'], '- a\n- ```py\n  x\n  ```\n'),
-  await scenario('A backtick on a closing fence lengthens both fences', '```\nx\n```┃\n', ['type:`'], '````\nx\n````\n'),
-  await scenario('The closing fence typed again closes the block once', '```\nx┃\n```\n', ['Enter', 'type:```'], '```\nx\n```\n'),
+  await scenario(
+    'A typed fence gets its closing fence, in the item',
+    '- a\n- ┃\n',
+    ['type:```py', 'Enter', 'type:x'],
+    '- a\n- ```py\n  x\n  ```\n',
+  ),
+  await scenario(
+    'A backtick on a closing fence lengthens both fences',
+    '```\nx\n```┃\n',
+    ['type:`'],
+    '````\nx\n````\n',
+  ),
+  await scenario(
+    'The closing fence typed again closes the block once',
+    '```\nx┃\n```\n',
+    ['Enter', 'type:```'],
+    '```\nx\n```\n',
+  ),
   await scenario('Backspace after a typed fence takes it back', 'a\n\n┃\n', ['type:```', 'Backspace'], 'a\n\n``\n'),
-  await scenario('Backspace on an empty block\'s closing fence takes the block', 'intro\n\n```c++\n\n\n```┃\n\nafter\n', ['Backspace', 'type:!'], 'intro!\n\nafter\n'),
-  await scenario('Enter on a task continues the checkbox', '- [x] done┃\n', ['Enter', 'type:next'], '- [x] done\n- [ ] next\n'),
+  await scenario(
+    "Backspace on an empty block's closing fence takes the block",
+    'intro\n\n```c++\n\n\n```┃\n\nafter\n',
+    ['Backspace', 'type:!'],
+    'intro!\n\nafter\n',
+  ),
+  await scenario(
+    'Enter on a task continues the checkbox',
+    '- [x] done┃\n',
+    ['Enter', 'type:next'],
+    '- [x] done\n- [ ] next\n',
+  ),
   await scenario('a rejected command leaves the text alone', '- a┃\n- b\n', ['Tab'], '- a┃\n- b\n'.replace('┃', '')),
-  await scenario('typing keeps the outline in sync for the next command', '- a\n- b┃\n', ['type: and more', 'Tab', 'Shift+Tab'], '- a\n- b and more\n'),
+  await scenario(
+    'typing keeps the outline in sync for the next command',
+    '- a\n- b┃\n',
+    ['type: and more', 'Tab', 'Shift+Tab'],
+    '- a\n- b and more\n',
+  ),
   await scenario('undo restores the text after a command', '- a\n- b┃\n', ['Tab', 'Control+z'], '- a\n- b\n'),
   await scenario('heading Tab demotes the section', '# A\n## B┃\n### C\n', ['Tab'], '# A\n### B\n#### C\n'),
   await scenario('Enter, Tab, type: a new child', '- a┃\n', ['Enter', 'Tab', 'type:x'], '- a\n  - x\n'),
-  await scenario('Enter, Tab, leave: the empty child stays, a blank line above it', '- a┃\n- b\n', ['Enter', 'Tab', 'ArrowDown', 'ArrowDown'], '- a\n\n  - \n- b\n'),
-  await scenario('Deleting a child\'s last character keeps it, also after leaving', '- a\n  - b┃\n', ['Backspace', 'ArrowUp'], '- a\n\n  - \n'),
-  await scenario('Undo after leaving brings the empty child back', '- a┃\n', ['Enter', 'Tab', 'ArrowUp', 'Control+z', 'type:x'], '- a\n  - x\n'),
-  await scenario('Delete at an item\'s text start keeps its child; typing fills the place', '- ┃a b\n  - c\n', ['Delete', 'type:x'], '- x b\n  - c\n'),
-  await scenario('Delete at an item\'s text start, then leave: the space stays, the item\'s padding, its child moved with it (`heldSpace: repair`, Placeholder17)', '- ┃a b\n  - c\n', ['Delete', 'ArrowDown'], '-  b\n   - c\n'),
+  await scenario(
+    'Enter, Tab, leave: the empty child stays, a blank line above it',
+    '- a┃\n- b\n',
+    ['Enter', 'Tab', 'ArrowDown', 'ArrowDown'],
+    '- a\n\n  - \n- b\n',
+  ),
+  await scenario(
+    "Deleting a child's last character keeps it, also after leaving",
+    '- a\n  - b┃\n',
+    ['Backspace', 'ArrowUp'],
+    '- a\n\n  - \n',
+  ),
+  await scenario(
+    'Undo after leaving brings the empty child back',
+    '- a┃\n',
+    ['Enter', 'Tab', 'ArrowUp', 'Control+z', 'type:x'],
+    '- a\n  - x\n',
+  ),
+  await scenario(
+    "Delete at an item's text start keeps its child; typing fills the place",
+    '- ┃a b\n  - c\n',
+    ['Delete', 'type:x'],
+    '- x b\n  - c\n',
+  ),
+  await scenario(
+    "Delete at an item's text start, then leave: the space stays, the item's padding, its child moved with it (`heldSpace: repair`, Placeholder17)",
+    '- ┃a b\n  - c\n',
+    ['Delete', 'ArrowDown'],
+    '-  b\n   - c\n',
+  ),
   await scenario('Enter twice ends the list', '- a┃\n', ['Enter', 'Enter', 'type:text'], '- a\n\ntext\n'),
-  await scenario('Enter on an empty item mid-list makes another', '- a┃\n- b\n', ['Enter', 'Enter', 'type:p'], '- a\n- \n- p\n- b\n'),
-  await scenario('Enter before a typed marker keeps it as text, the space before the caret the first half\'s (`enterSplitSpace: drop`)', '- abc ┃- def\n', ['Enter'], '- abc \n- \\- def\n'),
-  await scenario('Shift-Enter breaks a line inside the item, the space at the break starting the new line', '- one┃ two\n', ['Shift+Enter', 'type:x'], '- one\n  x two\n'),
-  await scenario('Shift-Enter at the end, then type: same item, two lines', '- one┃\n- b\n', ['Shift+Enter', 'type:two', 'Tab'], '- one\n  two\n- b\n'),
-  await scenario('Shift-Enter then leave: the empty line goes (B23)', '- one┃\n- b\n', ['Shift+Enter', 'ArrowDown'], '- one\n- b\n'),
+  await scenario(
+    'Enter on an empty item mid-list makes another',
+    '- a┃\n- b\n',
+    ['Enter', 'Enter', 'type:p'],
+    '- a\n- \n- p\n- b\n',
+  ),
+  await scenario(
+    "Enter before a typed marker keeps it as text, the space before the caret the first half's (`enterSplitSpace: drop`)",
+    '- abc ┃- def\n',
+    ['Enter'],
+    '- abc \n- \\- def\n',
+  ),
+  await scenario(
+    'Shift-Enter breaks a line inside the item, the space at the break starting the new line',
+    '- one┃ two\n',
+    ['Shift+Enter', 'type:x'],
+    '- one\n  x two\n',
+  ),
+  await scenario(
+    'Shift-Enter at the end, then type: same item, two lines',
+    '- one┃\n- b\n',
+    ['Shift+Enter', 'type:two', 'Tab'],
+    '- one\n  two\n- b\n',
+  ),
+  await scenario(
+    'Shift-Enter then leave: the empty line goes (B23)',
+    '- one┃\n- b\n',
+    ['Shift+Enter', 'ArrowDown'],
+    '- one\n- b\n',
+  ),
   await scenario('Backspace undoes Shift-Enter', '- one┃two\n', ['Shift+Enter', 'Backspace'], '- onetwo\n'),
-  await scenario('Backspace after Enter twice returns to the list', '- a┃\n', ['Enter', 'Enter', 'Backspace', 'type:b'], '- ab\n'),
-  await scenario('Shift-Enter twice: a second paragraph in the item', '- one┃\n- two\n', ['Shift+Enter', 'Shift+Enter', 'type:para'], '- one\n\n  para\n- two\n'),
-  await scenario('Home goes to the text start, again to the line start', '- [ ] task┃\n', ['Home', 'type:X', 'Home', 'Home', 'type:Y'], 'Y- [ ] Xtask\n'),
-  await scenario('Down from a text start lands at the nested item\'s text', '- ┃a\n  - b\n', ['ArrowDown', 'type:X'], '- a\n  - Xb\n'),
-  await scenario('Up into deeper indentation lands at the item\'s text', '- a\n    - b\n- c┃\n', ['ArrowUp', 'type:X'], '- a\n    - Xb\n- c\n'),
+  await scenario(
+    'Backspace after Enter twice returns to the list',
+    '- a┃\n',
+    ['Enter', 'Enter', 'Backspace', 'type:b'],
+    '- ab\n',
+  ),
+  await scenario(
+    'Shift-Enter twice: a second paragraph in the item',
+    '- one┃\n- two\n',
+    ['Shift+Enter', 'Shift+Enter', 'type:para'],
+    '- one\n\n  para\n- two\n',
+  ),
+  await scenario(
+    'Home goes to the text start, again to the line start',
+    '- [ ] task┃\n',
+    ['Home', 'type:X', 'Home', 'Home', 'type:Y'],
+    'Y- [ ] Xtask\n',
+  ),
+  await scenario(
+    "Down from a text start lands at the nested item's text",
+    '- ┃a\n  - b\n',
+    ['ArrowDown', 'type:X'],
+    '- a\n  - Xb\n',
+  ),
+  await scenario(
+    "Up into deeper indentation lands at the item's text",
+    '- a\n    - b\n- c┃\n',
+    ['ArrowUp', 'type:X'],
+    '- a\n    - Xb\n- c\n',
+  ),
   await scenario('Shift-Home selects to the text start', '- abc┃\n', ['Shift+Home', 'type:Z'], '- Z\n'),
-  await scenario('Enter at the end of a parent makes a first child', '- a┃\n  - b\n', ['Enter', 'type:new'], '- a\n  - new\n  - b\n'),
-  await scenario('Paste places a tab list as nodes in a two-space list', '- top\n  - sib┃\n', ['paste:- a\n\t- b\n'], '- top\n  - sib\n  - a\n    - b\n'),
+  await scenario(
+    'Enter at the end of a parent makes a first child',
+    '- a┃\n  - b\n',
+    ['Enter', 'type:new'],
+    '- a\n  - new\n  - b\n',
+  ),
+  await scenario(
+    'Paste places a tab list as nodes in a two-space list',
+    '- top\n  - sib┃\n',
+    ['paste:- a\n\t- b\n'],
+    '- top\n  - sib\n  - a\n    - b\n',
+  ),
   await scenario('Ctrl-Shift-V pastes lines into the item', '- a┃b\n', ['pastePlain:x\ny\n'], '- ax\n  y\n  b\n'),
-  await scenario('Paste of a code block into an empty item fills it', '- a\n- ┃\n', ['paste:```\ncode\n```\n'], '- a\n- ```\n  code\n  ```\n'),
-  await scenario('Paste of an ordered list into a bullet list takes its bullets', '- a┃\n  - kid\n', ['paste:1. x\n2. y\n'], '- a\n  - x\n  - y\n  - kid\n'),
+  await scenario(
+    'Paste of a code block into an empty item fills it',
+    '- a\n- ┃\n',
+    ['paste:```\ncode\n```\n'],
+    '- a\n- ```\n  code\n  ```\n',
+  ),
+  await scenario(
+    'Paste of an ordered list into a bullet list takes its bullets',
+    '- a┃\n  - kid\n',
+    ['paste:1. x\n2. y\n'],
+    '- a\n  - x\n  - y\n  - kid\n',
+  ),
   await scenario('Paste of one line is plain text', '- a┃\n', ['paste: and more'], '- a and more\n'),
-  await scenario('Cut at a caret takes the item and its children, paste puts them back', '- one┃\n  - kid\n- two\n', ['cut', 'End', 'paste:copied'], '- two\n- one\n  - kid\n'),
-  await scenario('Copy of a selection in an item\'s text pastes as its Markdown', '- a **b**┃\n', ['Shift+Home', 'copy', 'End', 'paste:copied'], '- a **b**a **b**\n'),
+  await scenario(
+    'Cut at a caret takes the item and its children, paste puts them back',
+    '- one┃\n  - kid\n- two\n',
+    ['cut', 'End', 'paste:copied'],
+    '- two\n- one\n  - kid\n',
+  ),
+  await scenario(
+    "Copy of a selection in an item's text pastes as its Markdown",
+    '- a **b**┃\n',
+    ['Shift+Home', 'copy', 'End', 'paste:copied'],
+    '- a **b**a **b**\n',
+  ),
   await scenario('Backspace joins text into an empty item above', '- \n- ┃b\n', ['Backspace', 'type:X'], '- Xb\n'),
-  await scenario('Delete on an empty item with children pulls its first child up', '- x\n- ┃\n  - a\n', ['Delete', 'type:X'], '- x\n- Xa\n'),
+  await scenario(
+    'Delete on an empty item with children pulls its first child up',
+    '- x\n- ┃\n  - a\n',
+    ['Delete', 'type:X'],
+    '- x\n- Xa\n',
+  ),
   await scenario('Mod-Backspace stops at the text start', '- alpha beta┃\n', ['Control+Backspace', 'type:x'], '- x\n'),
   // folds and the zoom (view.ts): the snapshot's, drawn by CodeMirror
-  await scenario('Mod-Up folds an item; Enter at its end makes a sibling after its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
-  await scenario('A folded item moved past one written the same, no character changed: the fold goes with it, Enter after its children', '- a┃\n  - x\n- a\n  - x\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Enter', 'type:y'], '- a\n  - x\n- a\n  - x\n- y\n'),
-  await scenario('A folded item moved and the move undone is folded still: Enter after its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
-  await scenario('Done again, it is folded still: Up from the end skips its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Control+y', 'ArrowUp', 'type:X'], '- c\n- Xa\n  - b\n'),
-  await scenario("A text of several lines folds from its last: CodeMirror's gutter folds ourus's node", '- alpha\n  beta┃\n  - child\n', ['click:.cm-foldGutter span[title="Fold line"]', 'focus', 'Enter', 'type:x'], '- alpha\n  beta\n  - child\n- x\n'),
-  await scenario('Its placeholder clicked unfolds it, in ourus too: Enter makes a first child', '- alpha\n  beta┃\n  - child\n', ['Control+ArrowUp', 'click:.cm-foldPlaceholder', 'Enter', 'type:x'], '- alpha\n  beta\n  - x\n  - child\n'),
-  await scenario('A move and the typing after it, one step of history, undone: folded still', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'type:X', 'Control+z', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
-  await scenario("CodeMirror's fold key folds ourus's node: Enter after it, too", '- a┃\n  - b\n', ['Control+Shift+BracketLeft', 'Enter', 'type:x'], '- a\n  - b\n- x\n'),
-  await scenario('Mod-. zooms in; Enter at the root\'s end makes its first child', '- a\n- b┃\n- c\n', ['Control+Period', 'Enter', 'type:x'], '- a\n- b\n  - x\n- c\n'),
-  await scenario('Zoomed, Backspace at the root\'s start changes nothing', '- a\n- ┃b\n', ['Control+Period', 'Backspace', 'type:x'], '- a\n- xb\n'),
-  await scenario('Zoomed out again, Backspace joins', '- a\n- ┃b\n', ['Control+Period', 'Control+Comma', 'Backspace'], '- ab\n'),
-  await scenario("A breadcrumb zooms out as the command does: the caret leaves the fold back in effect", '- A┃\n  - B\n', ['Control+ArrowUp', 'Control+Period', 'ArrowDown', 'Control+Period', 'click:.ourus-breadcrumbs a', 'type:x'], '- Ax\n  - B\n'),
-  await scenario('Escape selects the item with its child; Backspace deletes them', '- a\n- b┃\n  - c\n- d\n', ['Escape', 'Backspace'], '- a\n- d\n'),
-  await scenario('Typing over selected items does nothing, as in the outliners', '- a\n- b┃\n  - c\n- d\n', ['Escape', 'type:x'], '- a\n- b\n  - c\n- d\n'),
-  await scenario('Shift-Down twice selects two items; Backspace deletes them', '- a┃\n- b\n- c\n', ['Shift+ArrowDown', 'Shift+ArrowDown', 'Backspace'], '- c\n'),
-  await scenario('Ctrl-A climbs from the text to the item; Backspace deletes it', '- one\n  - t┃wo\n- four\n', ['Control+a', 'Control+a', 'Backspace'], '- one\n- four\n'),
-  await scenario('Tab and Shift-Tab keep two selected items selected', '- a\n- b┃\n- c\n', ['Shift+ArrowDown', 'Shift+ArrowDown', 'Tab', 'Shift+Tab', 'Tab'], '- a\n  - b\n  - c\n'),
-  await scenario('Shift-Up from a node with a sibling above takes the node on the line above, then their parent', '- one\n  - two\n    - deep\n  - th┃ree\n', ['Shift+ArrowUp', 'Shift+ArrowUp', 'Shift+ArrowUp', 'Backspace'], '- one\n'),
+  await scenario(
+    'Mod-Up folds an item; Enter at its end makes a sibling after its children',
+    '- a┃\n  - b\n- c\n',
+    ['Control+ArrowUp', 'Enter', 'type:x'],
+    '- a\n  - b\n- x\n- c\n',
+  ),
+  await scenario(
+    'A folded item moved past one written the same, no character changed: the fold goes with it, Enter after its children',
+    '- a┃\n  - x\n- a\n  - x\n',
+    ['Control+ArrowUp', 'Alt+ArrowDown', 'Enter', 'type:y'],
+    '- a\n  - x\n- a\n  - x\n- y\n',
+  ),
+  await scenario(
+    'A folded item moved and the move undone is folded still: Enter after its children',
+    '- a┃\n  - b\n- c\n',
+    ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Enter', 'type:x'],
+    '- a\n  - b\n- x\n- c\n',
+  ),
+  await scenario(
+    'Done again, it is folded still: Up from the end skips its children',
+    '- a┃\n  - b\n- c\n',
+    ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Control+y', 'ArrowUp', 'type:X'],
+    '- c\n- Xa\n  - b\n',
+  ),
+  await scenario(
+    "A text of several lines folds from its last: CodeMirror's gutter folds ourus's node",
+    '- alpha\n  beta┃\n  - child\n',
+    ['click:.cm-foldGutter span[title="Fold line"]', 'focus', 'Enter', 'type:x'],
+    '- alpha\n  beta\n  - child\n- x\n',
+  ),
+  await scenario(
+    'Its placeholder clicked unfolds it, in ourus too: Enter makes a first child',
+    '- alpha\n  beta┃\n  - child\n',
+    ['Control+ArrowUp', 'click:.cm-foldPlaceholder', 'Enter', 'type:x'],
+    '- alpha\n  beta\n  - x\n  - child\n',
+  ),
+  await scenario(
+    'A move and the typing after it, one step of history, undone: folded still',
+    '- a┃\n  - b\n- c\n',
+    ['Control+ArrowUp', 'Alt+ArrowDown', 'type:X', 'Control+z', 'Enter', 'type:x'],
+    '- a\n  - b\n- x\n- c\n',
+  ),
+  await scenario(
+    "CodeMirror's fold key folds ourus's node: Enter after it, too",
+    '- a┃\n  - b\n',
+    ['Control+Shift+BracketLeft', 'Enter', 'type:x'],
+    '- a\n  - b\n- x\n',
+  ),
+  await scenario(
+    "Mod-. zooms in; Enter at the root's end makes its first child",
+    '- a\n- b┃\n- c\n',
+    ['Control+Period', 'Enter', 'type:x'],
+    '- a\n- b\n  - x\n- c\n',
+  ),
+  await scenario(
+    "Zoomed, Backspace at the root's start changes nothing",
+    '- a\n- ┃b\n',
+    ['Control+Period', 'Backspace', 'type:x'],
+    '- a\n- xb\n',
+  ),
+  await scenario(
+    'Zoomed out again, Backspace joins',
+    '- a\n- ┃b\n',
+    ['Control+Period', 'Control+Comma', 'Backspace'],
+    '- ab\n',
+  ),
+  await scenario(
+    'A breadcrumb zooms out as the command does: the caret leaves the fold back in effect',
+    '- A┃\n  - B\n',
+    ['Control+ArrowUp', 'Control+Period', 'ArrowDown', 'Control+Period', 'click:.ourus-breadcrumbs a', 'type:x'],
+    '- Ax\n  - B\n',
+  ),
+  await scenario(
+    'Escape selects the item with its child; Backspace deletes them',
+    '- a\n- b┃\n  - c\n- d\n',
+    ['Escape', 'Backspace'],
+    '- a\n- d\n',
+  ),
+  await scenario(
+    'Typing over selected items does nothing, as in the outliners',
+    '- a\n- b┃\n  - c\n- d\n',
+    ['Escape', 'type:x'],
+    '- a\n- b\n  - c\n- d\n',
+  ),
+  await scenario(
+    'Shift-Down twice selects two items; Backspace deletes them',
+    '- a┃\n- b\n- c\n',
+    ['Shift+ArrowDown', 'Shift+ArrowDown', 'Backspace'],
+    '- c\n',
+  ),
+  await scenario(
+    'Ctrl-A climbs from the text to the item; Backspace deletes it',
+    '- one\n  - t┃wo\n- four\n',
+    ['Control+a', 'Control+a', 'Backspace'],
+    '- one\n- four\n',
+  ),
+  await scenario(
+    'Tab and Shift-Tab keep two selected items selected',
+    '- a\n- b┃\n- c\n',
+    ['Shift+ArrowDown', 'Shift+ArrowDown', 'Tab', 'Shift+Tab', 'Tab'],
+    '- a\n  - b\n  - c\n',
+  ),
+  await scenario(
+    'Shift-Up from a node with a sibling above takes the node on the line above, then their parent',
+    '- one\n  - two\n    - deep\n  - th┃ree\n',
+    ['Shift+ArrowUp', 'Shift+ArrowUp', 'Shift+ArrowUp', 'Backspace'],
+    '- one\n',
+  ),
 ];
 
 /** Every renderer renders the sample in every flavor: tables and math where it reads them, code highlighted. */
 async function renderers(): Promise<boolean[]> {
   await page.reload();
   await page.waitForFunction(() => 'ourusDemo' in window);
-  const names = await page.$$eval('#renderer option', (options) => options.map((o) => (o as HTMLOptionElement).value).filter((v) => v !== 'none'));
+  const names = await page.$$eval('#renderer option', (options) =>
+    options.map((o) => (o as HTMLOptionElement).value).filter((v) => v !== 'none'),
+  );
   const out: boolean[] = [];
   for (const flavor of ['obsidian', 'gfm', 'commonmark']) {
     await page.selectOption('#flavor', flavor);
@@ -157,13 +427,20 @@ async function renderers(): Promise<boolean[]> {
       await page.waitForTimeout(100); // the pane is rendered in an animation frame
       const got = await page.evaluate(() => {
         const count = (selector: string) => document.querySelectorAll('#preview ' + selector).length;
-        return { title: document.getElementById('preview-title')!.textContent, katex: count('.katex'), hljs: count('.hljs'), tables: count('table') };
+        return {
+          title: document.getElementById('preview-title')!.textContent,
+          katex: count('.katex'),
+          hljs: count('.hljs'),
+          tables: count('table'),
+        };
       });
       const math = flavor === 'obsidian' && ['ourus', 'micromark', 'remark'].includes(name);
       // showdown's delimiter cells need two dashes: the sample's `:-:` isn't one
       const tables = flavor !== 'commonmark' && name !== 'commonmark' && name !== 'showdown';
       const ok = got.hljs > 0 && got.katex > 0 === math && got.tables > 0 === tables;
-      console.log(`${ok ? 'ok  ' : 'FAIL'} ${flavor}, ${name}: ${got.title} (math ${got.katex}, highlighted ${got.hljs}, tables ${got.tables})`);
+      console.log(
+        `${ok ? 'ok  ' : 'FAIL'} ${flavor}, ${name}: ${got.title} (math ${got.katex}, highlighted ${got.hljs}, tables ${got.tables})`,
+      );
       out.push(ok);
     }
   }
@@ -185,12 +462,18 @@ await page.evaluate(() => (window as unknown as { ourusDemo: Demo }).ourusDemo.s
 await page.focus('.cm-content');
 await page.keyboard.press('Escape');
 const blocks = await page.locator('.cm-line.ourus-block').count();
-console.log(`${blocks === 2 ? 'ok  ' : 'FAIL'} Escape draws the item and its child as blocks${blocks === 2 ? '' : ` (${blocks} lines)`}`);
+console.log(
+  `${blocks === 2 ? 'ok  ' : 'FAIL'} Escape draws the item and its child as blocks${blocks === 2 ? '' : ` (${blocks} lines)`}`,
+);
 results.push(blocks === 2);
 // and the outline pane shows them selected, the item and its child (it renders in the next frame)
-await page.waitForFunction(() => document.querySelectorAll('#outline .node.selected').length > 0, undefined, { timeout: 2000 }).catch(() => {});
+await page
+  .waitForFunction(() => document.querySelectorAll('#outline .node.selected').length > 0, undefined, { timeout: 2000 })
+  .catch(() => {});
 const listed = await page.locator('#outline .node.selected').count();
-console.log(`${listed === 2 ? 'ok  ' : 'FAIL'} the outline pane shows the selected item and its child${listed === 2 ? '' : ` (${listed} nodes)`}`);
+console.log(
+  `${listed === 2 ? 'ok  ' : 'FAIL'} the outline pane shows the selected item and its child${listed === 2 ? '' : ` (${listed} nodes)`}`,
+);
 results.push(listed === 2);
 
 if (screenshot) {

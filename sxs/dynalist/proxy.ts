@@ -9,11 +9,13 @@ import type { ProxyRequest, ProxyResponse, ProxyRules } from '../proxy.ts';
 export const rules: ProxyRules = {
   hosts: ['dynalist.io', 'dynlst.com'],
   key(req: ProxyRequest) {
-    if (req.method === 'POST' && /^\/api\/(file\/load|bundle_binary)$/.test(req.url.pathname)) return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
+    if (req.method === 'POST' && /^\/api\/(file\/load|bundle_binary)$/.test(req.url.pathname))
+      return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
     return undefined;
   },
   respond(req: ProxyRequest): ProxyResponse | undefined {
-    if (req.url.hostname === 'dynlst.com' || req.url.pathname.startsWith('/cdn-cgi/rum')) return { status: 204, headers: [], body: Buffer.alloc(0) };
+    if (req.url.hostname === 'dynlst.com' || req.url.pathname.startsWith('/cdn-cgi/rum'))
+      return { status: 204, headers: [], body: Buffer.alloc(0) };
     return undefined;
   },
 };

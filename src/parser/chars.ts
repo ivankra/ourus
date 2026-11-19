@@ -63,7 +63,10 @@ function entityMap(): Map<string, string> {
   entities = new Map();
   for (const entry of ENTITY_DATA.split(',')) {
     const colon = entry.indexOf(':');
-    const cps = entry.slice(colon + 1).split('.').map((c) => parseInt(c, 36));
+    const cps = entry
+      .slice(colon + 1)
+      .split('.')
+      .map((c) => parseInt(c, 36));
     // (bounded: an entity's code points, one or two)
     entities.set(entry.slice(0, colon), String.fromCodePoint(...cps));
   }
@@ -125,7 +128,8 @@ export function normalizeUri(uri: string): string {
       out += uri.slice(i, i + 3);
       i += 2;
     } else if (c < 128) {
-      out += isAsciiAlnum(c) || URL_SAFE.has(uri[i]!) ? uri[i] : '%' + (c < 16 ? '0' : '') + c.toString(16).toUpperCase();
+      out +=
+        isAsciiAlnum(c) || URL_SAFE.has(uri[i]!) ? uri[i] : '%' + (c < 16 ? '0' : '') + c.toString(16).toUpperCase();
     } else if (c >= 0xd800 && c <= 0xdfff) {
       const next = uri.charCodeAt(i + 1);
       if (c <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {

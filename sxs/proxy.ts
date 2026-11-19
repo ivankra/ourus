@@ -35,7 +35,17 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { accessSync, constants, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import {
+  accessSync,
+  constants,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
 import { hostname, tmpdir, userInfo } from 'node:os';
@@ -178,7 +188,14 @@ export function fromDirectory(root: string, req: ProxyRequest): ProxyResponse | 
   if (file !== dir && !file.startsWith(dir + sep)) return undefined;
   const candidate = existsSync(file) && statSync(file).isDirectory() ? join(file, 'index.html') : file;
   if (!existsSync(candidate) || !statSync(candidate).isFile()) return undefined;
-  return { status: 200, headers: [['content-type', TYPES[extname(candidate)] ?? 'application/octet-stream'], ['cache-control', 'no-cache']], body: readFileSync(candidate) };
+  return {
+    status: 200,
+    headers: [
+      ['content-type', TYPES[extname(candidate)] ?? 'application/octet-stream'],
+      ['cache-control', 'no-cache'],
+    ],
+    body: readFileSync(candidate),
+  };
 }
 
 /** Whether `host` is one of `hosts` (`.example.com` covering example.com and its subdomains). */
@@ -193,9 +210,12 @@ export function header(res: ProxyResponse, name: string): string | undefined {
 
 /** `res` with its body replaced (and its length header dropped: the proxy sets it). */
 export function withBody(res: ProxyResponse, body: string | Buffer): ProxyResponse {
-  return { ...res, headers: res.headers.filter(([k]) => k.toLowerCase() !== 'content-length'), body: Buffer.isBuffer(body) ? body : Buffer.from(body) };
+  return {
+    ...res,
+    headers: res.headers.filter(([k]) => k.toLowerCase() !== 'content-length'),
+    body: Buffer.isBuffer(body) ? body : Buffer.from(body),
+  };
 }
-
 
 export const DEFAULT_PORT = 8899;
 /** Where the side-by-side runs keep what containers on one checkout can share: the HTTP cache, the certificate, the apps' downloads, the results, logs. */
@@ -211,7 +231,10 @@ export const cacheDir = process.env.OURUS_SXS_DIR || fileURLToPath(new URL('../.
  */
 export const stateDir = ((): string => {
   if (process.env.OURUS_SXS_STATE) return resolve(process.env.OURUS_SXS_STATE);
-  const id = createHash('sha1').update(`${resolve(cacheDir)}\0${hostname()}`).digest('hex').slice(0, 8);
+  const id = createHash('sha1')
+    .update(`${resolve(cacheDir)}\0${hostname()}`)
+    .digest('hex')
+    .slice(0, 8);
   let base = '/var/tmp';
   try {
     accessSync(base, constants.W_OK);
@@ -229,8 +252,13 @@ export const CACHE_MODES: readonly CacheMode[] = ['use', 'offline', 'refresh'];
 
 /** The last `--cache=<mode>` among `args` (a script's own, then the user's), `use` without one; throws on a mode it doesn't know. */
 export function cacheMode(args: readonly string[]): CacheMode {
-  const mode = [...args].reverse().find((a) => a.startsWith('--cache='))?.slice('--cache='.length) ?? 'use';
-  if (!(CACHE_MODES as readonly string[]).includes(mode)) throw new Error(`--cache=${mode}: one of ${CACHE_MODES.join(', ')}`);
+  const mode =
+    [...args]
+      .reverse()
+      .find((a) => a.startsWith('--cache='))
+      ?.slice('--cache='.length) ?? 'use';
+  if (!(CACHE_MODES as readonly string[]).includes(mode))
+    throw new Error(`--cache=${mode}: one of ${CACHE_MODES.join(', ')}`);
   return mode as CacheMode;
 }
 const sxsDir = fileURLToPath(new URL('./', import.meta.url));
@@ -282,7 +310,8 @@ async function currentRules(): Promise<ProxyRules[]> {
   return rules;
 }
 
-const rulesFor = (rules: ProxyRules[], host: string): ProxyRules | undefined => rules.find((r) => hostMatches(host, r.hosts));
+const rulesFor = (rules: ProxyRules[], host: string): ProxyRules | undefined =>
+  rules.find((r) => hostMatches(host, r.hosts));
 
 // ------------------------------------------------------------------ cache
 
@@ -295,7 +324,20 @@ interface Entry {
 }
 
 /** Headers that describe one connection or one encoding of the body, not the resource. */
-const HOP = new Set(['connection', 'keep-alive', 'proxy-connection', 'proxy-authorization', 'proxy-authenticate', 'transfer-encoding', 'te', 'trailer', 'upgrade', 'content-encoding', 'content-length', 'alt-svc']);
+const HOP = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-connection',
+  'proxy-authorization',
+  'proxy-authenticate',
+  'transfer-encoding',
+  'te',
+  'trailer',
+  'upgrade',
+  'content-encoding',
+  'content-length',
+  'alt-svc',
+]);
 
 /** A cache file's base path: the host's directory, the path made readable, and a hash of the key. */
 function cachePath(url: URL, key: string): string {
@@ -318,7 +360,13 @@ function readCache(base: string): ProxyResponse | null {
 
 function writeCache(base: string, req: ProxyRequest, res: ProxyResponse): void {
   mkdirSync(join(base, '..'), { recursive: true });
-  const entry: Entry = { url: req.url.href, method: req.method, status: res.status, headers: res.headers, fetched: new Date().toISOString() };
+  const entry: Entry = {
+    url: req.url.href,
+    method: req.method,
+    status: res.status,
+    headers: res.headers,
+    fetched: new Date().toISOString(),
+  };
   // written aside and renamed, so a concurrent reader never sees half a file
   const tmp = `${base}.${process.pid}.tmp`;
   writeFileSync(tmp + '.body', res.body);
@@ -337,7 +385,12 @@ async function fetchUpstream(req: ProxyRequest): Promise<ProxyResponse> {
     for (const one of Array.isArray(v) ? v : [v]) headers.append(k, one);
   }
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-  const res = await fetch(req.url, { method: req.method, headers, body: hasBody ? new Uint8Array(req.body) : undefined, redirect: 'manual' });
+  const res = await fetch(req.url, {
+    method: req.method,
+    headers,
+    body: hasBody ? new Uint8Array(req.body) : undefined,
+    redirect: 'manual',
+  });
   const out: [string, string][] = [];
   res.headers.forEach((value, name) => {
     if (!HOP.has(name) && name !== 'set-cookie') out.push([name, value]);
@@ -377,8 +430,16 @@ const log = (line: string): void => {
   if (!options.quiet) console.log(`${new Date().toISOString().slice(11, 23)} ${line}`);
 };
 
-const empty = (status: number): ProxyResponse => ({ status, headers: [['content-type', 'text/plain']], body: Buffer.alloc(0) });
-const text = (status: number, body: string): ProxyResponse => ({ status, headers: [['content-type', 'text/plain; charset=utf-8']], body: Buffer.from(body) });
+const empty = (status: number): ProxyResponse => ({
+  status,
+  headers: [['content-type', 'text/plain']],
+  body: Buffer.alloc(0),
+});
+const text = (status: number, body: string): ProxyResponse => ({
+  status,
+  headers: [['content-type', 'text/plain; charset=utf-8']],
+  body: Buffer.from(body),
+});
 
 /** What the proxy answers a request with, and how it came by it (for the log). */
 async function answer(req: ProxyRequest): Promise<{ res: ProxyResponse; how: string }> {
@@ -389,13 +450,21 @@ async function answer(req: ProxyRequest): Promise<{ res: ProxyResponse; how: str
   if (stub) return { res: stub, how: 'local' };
   const ruled = rules?.key?.(req);
   const key = ruled !== undefined ? ruled : req.method === 'GET' || req.method === 'HEAD' ? req.url.href : null;
-  if (key === null && options.cache === 'offline') return { res: text(504, `ourus proxy: offline, and never cached: ${req.method} ${req.url.href}\n`), how: 'offline-live' };
+  if (key === null && options.cache === 'offline')
+    return {
+      res: text(504, `ourus proxy: offline, and never cached: ${req.method} ${req.url.href}\n`),
+      how: 'offline-live',
+    };
   if (key === null) return { res: await fetchUpstream(req), how: 'live' };
   const base = cachePath(req.url, `${req.method} ${key}`);
   const fresh = options.cache === 'refresh' && !refreshed.has(base);
   const cached = fresh ? null : readCache(base);
   if (cached) return { res: cached, how: 'hit' };
-  if (options.cache === 'offline') return { res: text(504, `ourus proxy: offline, and not cached: ${req.method} ${req.url.href}\n`), how: 'offline-miss' };
+  if (options.cache === 'offline')
+    return {
+      res: text(504, `ourus proxy: offline, and not cached: ${req.method} ${req.url.href}\n`),
+      how: 'offline-miss',
+    };
   let pending = inflight.get(base);
   if (!pending) {
     pending = fetchUpstream(req).then((res) => {
@@ -428,7 +497,9 @@ async function serve(url: URL, req: http.IncomingMessage, out: http.ServerRespon
     res = text(502, `ourus proxy: ${request.method} ${url.href}: ${String(e)}\n`);
     how = 'error';
   }
-  log(`${how.padEnd(12)} ${res.status} ${request.method} ${url.href.slice(0, 300)}${how === 'error' ? ' ' + res.body.toString().trim() : ''}`);
+  log(
+    `${how.padEnd(12)} ${res.status} ${request.method} ${url.href.slice(0, 300)}${how === 'error' ? ' ' + res.body.toString().trim() : ''}`,
+  );
   count(url.href, url.host, how.replace(/\+patched$/, ''), res.body.length);
   const headers: [string, string][] = res.headers.filter(([k]) => !HOP.has(k.toLowerCase()));
   headers.push(['content-length', String(res.body.length)], ['x-ourus-proxy', how]);
@@ -446,7 +517,12 @@ function tunnelUpgrade(secure: boolean, req: http.IncomingMessage, client: Duple
     return void client.destroy();
   }
   // an app's rules may answer the upgrade request too, which refuses the socket
-  const stub = rulesFor(loaded.rules, host)?.respond?.({ url: new URL(url.replace(/^ws/, 'http')), method: req.method ?? 'GET', headers: req.headers, body: Buffer.alloc(0) });
+  const stub = rulesFor(loaded.rules, host)?.respond?.({
+    url: new URL(url.replace(/^ws/, 'http')),
+    method: req.method ?? 'GET',
+    headers: req.headers,
+    body: Buffer.alloc(0),
+  });
   if (stub) {
     log(`${'local-ws'.padEnd(12)} ${stub.status} ${url}`);
     count(url, host, 'local-ws', 0);
@@ -484,9 +560,32 @@ function certificate(): { key: Buffer; cert: Buffer } {
   const key = join(dir, 'key.pem');
   const cert = join(dir, 'cert.pem');
   if (!existsSync(key) || !existsSync(cert)) {
-    if (options.cache === 'offline') throw new Error(`--cache=offline, and no certificate in ${dir}: run once online first`);
+    if (options.cache === 'offline')
+      throw new Error(`--cache=offline, and no certificate in ${dir}: run once online first`);
     mkdirSync(dir, { recursive: true });
-    execFileSync('openssl', ['req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes', '-keyout', key, '-out', cert, '-days', '3650', '-subj', '/CN=ourus sxs proxy', '-addext', 'subjectAltName=DNS:localhost'], { stdio: 'ignore' });
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'ec',
+        '-pkeyopt',
+        'ec_paramgen_curve:prime256v1',
+        '-nodes',
+        '-keyout',
+        key,
+        '-out',
+        cert,
+        '-days',
+        '3650',
+        '-subj',
+        '/CN=ourus sxs proxy',
+        '-addext',
+        'subjectAltName=DNS:localhost',
+      ],
+      { stdio: 'ignore' },
+    );
   }
   return { key: readFileSync(key), cert: readFileSync(cert) };
 }
@@ -509,7 +608,9 @@ export async function startProxy(opts: Partial<ProxyOptions> = {}): Promise<http
     // asked of the proxy itself
     if (url === '/__proxy/health') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      return void res.end(JSON.stringify({ pid: process.pid, version, started, cacheDir, httpDir, cache: options.cache }));
+      return void res.end(
+        JSON.stringify({ pid: process.pid, version, started, cacheDir, httpDir, cache: options.cache }),
+      );
     }
     if (url === '/__proxy/stats' || url === '/__proxy/stats?reset') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -522,7 +623,9 @@ export async function startProxy(opts: Partial<ProxyOptions> = {}): Promise<http
       log('stopping');
       return void setImmediate(() => process.exit(0));
     }
-    res.writeHead(400, { 'content-type': 'text/plain' }).end('ourus sxs proxy: point a browser at it as its HTTP proxy\n');
+    res
+      .writeHead(400, { 'content-type': 'text/plain' })
+      .end('ourus sxs proxy: point a browser at it as its HTTP proxy\n');
   });
   server.on('connect', (req, socket: Duplex, head: Buffer) => {
     socket.on('error', () => {});
@@ -540,7 +643,10 @@ export async function startProxy(opts: Partial<ProxyOptions> = {}): Promise<http
   });
   log(`ourus sxs proxy ${version} on ${options.host}:${options.port}`);
   // it intercepts TLS and answers anyone: on a port others reach, it is theirs too, /__proxy/stop included
-  if (!/^(127\.|::1$|localhost$)/.test(options.host)) log(`listening beyond the loopback: whoever reaches port ${options.port} can use it (in a container, publish it as -p 127.0.0.1:${options.port}:${options.port})`);
+  if (!/^(127\.|::1$|localhost$)/.test(options.host))
+    log(
+      `listening beyond the loopback: whoever reaches port ${options.port} can use it (in a container, publish it as -p 127.0.0.1:${options.port}:${options.port})`,
+    );
   log(`cache: ${httpDir} (${options.cache})`);
   return server;
 }
@@ -556,9 +662,12 @@ async function sayApps(): Promise<void> {
     const file = join(sxsDir, d.name, 'driver.ts');
     if (!d.isDirectory() || !existsSync(file)) continue;
     try {
-      const { driver } = (await import(pathToFileURL(file).href)) as { driver?: { url: string; login?: string; launch?: unknown; serve?: unknown } };
+      const { driver } = (await import(pathToFileURL(file).href)) as {
+        driver?: { url: string; login?: string; launch?: unknown; serve?: unknown };
+      };
       // lib/driver.ts says what a driver is, and is none
-      if (driver && !driver.launch && !driver.serve) rows.push([d.name, driver.url + (driver.login ? `  (signed in: ${driver.login} once)` : '')]);
+      if (driver && !driver.launch && !driver.serve)
+        rows.push([d.name, driver.url + (driver.login ? `  (signed in: ${driver.login} once)` : '')]);
     } catch (e) {
       rows.push([d.name, `(its driver didn't load: ${String(e).split('\n')[0]})`]);
     }
@@ -570,7 +679,9 @@ async function sayApps(): Promise<void> {
   console.log(table.map((r) => `  ${r[0].padEnd(width(0))}  ${r[1]}`).join('\n'));
   // a profile of its own: Chromium handed a profile another one holds ignores the flags
   log('start chromium to browse them as:');
-  console.log(`  ${process.env.CHROMIUM ?? 'chromium'} --proxy-server=http://127.0.0.1:${options.port} --ignore-certificate-errors --user-data-dir=${join(stateDir, 'browse')} --no-first-run`);
+  console.log(
+    `  ${process.env.CHROMIUM ?? 'chromium'} --proxy-server=http://127.0.0.1:${options.port} --ignore-certificate-errors --user-data-dir=${join(stateDir, 'browse')} --no-first-run`,
+  );
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
@@ -579,16 +690,23 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   // being taken for nothing (`--help` started a proxy, or found the shared one listening)
   if (args.includes('--help') || args.includes('-h')) {
     const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
-    const usage = lines.slice(1, lines.findIndex((line, i) => i > 0 && !line.startsWith('//')));
+    const usage = lines.slice(
+      1,
+      lines.findIndex((line, i) => i > 0 && !line.startsWith('//')),
+    );
     console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(0);
   }
-  const unknown = args.filter((a) => a !== '--quiet' && !['--port', '--host', '--cache'].some((o) => a.startsWith(`${o}=`)));
+  const unknown = args.filter(
+    (a) => a !== '--quiet' && !['--port', '--host', '--cache'].some((o) => a.startsWith(`${o}=`)),
+  );
   if (unknown.length) {
     console.error(`no such option: ${unknown.join(', ')} (--help lists them)`);
     process.exit(2);
   }
-  const port = Number(args.find((a) => a.startsWith('--port='))?.slice(7) ?? process.env.OURUS_PROXY_PORT ?? DEFAULT_PORT);
+  const port = Number(
+    args.find((a) => a.startsWith('--port='))?.slice(7) ?? process.env.OURUS_PROXY_PORT ?? DEFAULT_PORT,
+  );
   const host = args.find((a) => a.startsWith('--host='))?.slice(7) ?? '127.0.0.1';
   // not awaited at the top level: app rules importing from this module (silverbullet's) would wait
   // for it to finish evaluating, and it for them, and Node would exit with the proxy never listening
@@ -600,7 +718,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     })
     .catch((e) => {
       // the shared proxy a run started (lib/browser.ts) holds the port until stopped
-      if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE') console.error(`Proxy already listens on ${host}:${port}: \`node sxs/run.ts --stop\` stops the shared one, or give another --port=`);
+      if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE')
+        console.error(
+          `Proxy already listens on ${host}:${port}: \`node sxs/run.ts --stop\` stops the shared one, or give another --port=`,
+        );
       else console.error(e instanceof Error ? e.message : e);
       process.exit(1);
     });

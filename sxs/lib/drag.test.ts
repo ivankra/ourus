@@ -7,17 +7,60 @@ import { resolveDrop } from './drag.ts';
 
 const F = '```';
 const drop = (buffer: string[], actions: string) => {
-  const [t] = readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: rare', F, '', `${F}markdown`, ...buffer, F, '', `> ${actions}`, '', `${F}markdown`, '- x', F].join('\n'));
+  const [t] = readSpec(
+    'x.md',
+    [
+      '## A',
+      '',
+      `${F}yaml`,
+      'tags: rare',
+      F,
+      '',
+      `${F}markdown`,
+      ...buffer,
+      F,
+      '',
+      `> ${actions}`,
+      '',
+      `${F}markdown`,
+      '- x',
+      F,
+    ].join('\n'),
+  );
   return resolveDrop(t!, 'gfm');
 };
 
 test("a drop resolves to the rows it presses, carries and lands between, and the place's depths", () => {
   // MoveSubtree1: to the top, its child with it
-  assert.deepEqual(drop(['▸', '- one', '  - two', '- three┃③'], 'moveSubtree ③'), { action: 'moveSubtree', press: 2, rows: [2], seam: { above: null, below: 0 }, depth: 0, listDepth: 0, to: { parent: 'root', after: null } });
+  assert.deepEqual(drop(['▸', '- one', '  - two', '- three┃③'], 'moveSubtree ③'), {
+    action: 'moveSubtree',
+    press: 2,
+    rows: [2],
+    seam: { above: null, below: 0 },
+    depth: 0,
+    listDepth: 0,
+    to: { parent: 'root', after: null },
+  });
   // MoveSubtree3: into an item, its child
-  assert.deepEqual(drop(['- one┃①', '- two②', '  ▸', '- three'], 'moveSubtree ①'), { action: 'moveSubtree', press: 0, rows: [0], seam: { above: 1, below: 2 }, depth: 1, listDepth: 1, to: { parent: 1, after: null } });
+  assert.deepEqual(drop(['- one┃①', '- two②', '  ▸', '- three'], 'moveSubtree ①'), {
+    action: 'moveSubtree',
+    press: 0,
+    rows: [0],
+    seam: { above: 1, below: 2 },
+    depth: 1,
+    listDepth: 1,
+    to: { parent: 1, after: null },
+  });
   // the cover rule: a press on a selected node carries the selection's
-  assert.deepEqual(drop(['- «a', '- b»②', '- c', '▸'], 'moveSubtree ②'), { action: 'moveSubtree', press: 1, rows: [0, 1], seam: { above: 2, below: null }, depth: 0, listDepth: 0, to: { parent: 'root', after: 2 } });
+  assert.deepEqual(drop(['- «a', '- b»②', '- c', '▸'], 'moveSubtree ②'), {
+    action: 'moveSubtree',
+    press: 1,
+    rows: [0, 1],
+    seam: { above: 2, below: null },
+    depth: 0,
+    listDepth: 0,
+    to: { parent: 'root', after: 2 },
+  });
   // in a heading's section, a depth that is no list's; one in an item there, both
   const section = drop(['# A', '- y', '  ▸', '', 'b┃②'], 'moveSubtree ②');
   assert.ok(typeof section !== 'string' && section.depth === 1 && section.listDepth === 0, JSON.stringify(section));

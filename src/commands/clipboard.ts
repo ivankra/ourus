@@ -27,7 +27,10 @@ const SOURCE_MARK = /<!--\s*(?:ourus(?:\s+\[?text\]?)?\s*-->|data-siyuan=)/;
  * VS Code's marked so); else HTML with structure, converted; else HTML with inline formatting,
  * converted, a phrase (`phrase`: one line of text, which keeps its formatting); else the text.
  */
-export function clipboardMarkdown(clipboard: OurusClipboard, config?: Pick<OurusConfig, 'pasteHtmlBreak'> & Partial<Pick<OurusConfig, 'flavor'>>): { markdown: string; phrase: boolean; ours?: boolean; nodes?: boolean; ends?: ClipboardTextEnds } | null {
+export function clipboardMarkdown(
+  clipboard: OurusClipboard,
+  config?: Pick<OurusConfig, 'pasteHtmlBreak'> & Partial<Pick<OurusConfig, 'flavor'>>,
+): { markdown: string; phrase: boolean; ours?: boolean; nodes?: boolean; ends?: ClipboardTextEnds } | null {
   const text = clipboard['text/plain'];
   const html = clipboard['text/html'];
   // (ourus's own, its HTML marked so, whichever format holds its source: Markdown out of the containers
@@ -35,11 +38,22 @@ export function clipboardMarkdown(clipboard: OurusClipboard, config?: Pick<Ourus
   const own = html === undefined ? {} : ourMark(html);
   if (clipboard['text/markdown'] !== undefined) return { markdown: clipboard['text/markdown'], phrase: false, ...own };
   if (own.ours && text !== undefined) return { markdown: text, phrase: false, ...own };
-  if (html !== undefined && clipboard['vscode-editor-data'] === undefined && !(text !== undefined && SOURCE_MARK.test(html))) {
+  if (
+    html !== undefined &&
+    clipboard['vscode-editor-data'] === undefined &&
+    !(text !== undefined && SOURCE_MARK.test(html))
+  ) {
     // (in the note's flavor: an Obsidian callout's, wiki link's, math's HTML read back as their syntax)
-    const converted = MdHtmlParser.parse(html, { hardBreaks: config?.pasteHtmlBreak === 'hard', ...(config?.flavor ? { flavor: MdFlavor.named(config.flavor) } : {}) });
+    const converted = MdHtmlParser.parse(html, {
+      hardBreaks: config?.pasteHtmlBreak === 'hard',
+      ...(config?.flavor ? { flavor: MdFlavor.named(config.flavor) } : {}),
+    });
     // (one block of one line, a heading or a rule, ends with a line break: a node, not inline text)
-    if (converted.structured) return { markdown: converted.markdown.includes('\n') ? converted.markdown : `${converted.markdown}\n`, phrase: false };
+    if (converted.structured)
+      return {
+        markdown: converted.markdown.includes('\n') ? converted.markdown : `${converted.markdown}\n`,
+        phrase: false,
+      };
     if (text === undefined) return { markdown: converted.markdown, phrase: false };
     if (converted.formatted && converted.markdown !== '') return { markdown: converted.markdown, phrase: true };
   }
@@ -77,10 +91,17 @@ function ourMark(html: string): { ours?: boolean; nodes?: boolean; ends?: Clipbo
 }
 
 /** The clipboard ourus writes for `markdown`: the Markdown as text and as itself, and its rendering, marked as ourus's, and as text, with how a paste takes its ends, where it isn't whole nodes (`across`: from inside one node into another). */
-export function clipboardOf(markdown: string, from: OurusDoc, ends: ClipboardTextEnds | null = null, across = false): OurusClipboard {
+export function clipboardOf(
+  markdown: string,
+  from: OurusDoc,
+  ends: ClipboardTextEnds | null = null,
+  across = false,
+): OurusClipboard {
   // (text from inside one node into another: its first line a text's, the lines after it the blocks
   // they are)
   const html = renderedHtml(markdown, from, ends === null ? false : across ? 'firstLine' : true);
-  const mark = ends ? `<!-- ourus ${ends.start === 'edge' ? '[' : ''}text${ends.end === 'edge' ? ']' : ''} -->` : '<!-- ourus -->';
+  const mark = ends
+    ? `<!-- ourus ${ends.start === 'edge' ? '[' : ''}text${ends.end === 'edge' ? ']' : ''} -->`
+    : '<!-- ourus -->';
   return { 'text/plain': markdown, 'text/markdown': markdown, 'text/html': mark + html };
 }

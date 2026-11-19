@@ -85,7 +85,10 @@ function inFences(lines: string[]): boolean[] {
 }
 
 /** Spaces of indentation as Obsidian's tabs beyond what the list structure says: each two a tab, an odd one a space. */
-const paired = (n: number): Pieces => [...Array.from({ length: n >> 1 }, (): [string, number] => ['\t', 2]), ...(n & 1 ? [[' ', 1] as [string, number]] : [])];
+const paired = (n: number): Pieces => [
+  ...Array.from({ length: n >> 1 }, (): [string, number] => ['\t', 2]),
+  ...(n & 1 ? [[' ', 1] as [string, number]] : []),
+];
 const spaced = (n: number): Pieces => Array.from({ length: n }, (): [string, number] => [' ', 1]);
 
 /**
@@ -109,7 +112,9 @@ export const asTabs = (d: TextDoc): TextDoc =>
       // a blank line or a code block's ends no item
       const parent = blank || fenced[i] ? [...open].reverse().find((o) => o.text <= w) : open.at(-1);
       if (it) {
-        const now: Pieces = parent ? [...parent.now, ['\t', parent.text - parent.at], ...paired(w - parent.text)] : paired(w);
+        const now: Pieces = parent
+          ? [...parent.now, ['\t', parent.text - parent.at], ...paired(w - parent.text)]
+          : paired(w);
         open.push({ at: w, text: w + it.width, now });
         return now;
       }
@@ -127,7 +132,8 @@ export const asSpaces = (d: TextDoc): TextDoc =>
     const fenced = inFences(lines);
     /** The items a line may be in: their indentation's tabs and spaces (after the tabs), their marker's width, their new indentation and text's column. */
     const open: { tabs: number; spaces: number; width: number; now: number }[] = [];
-    const within = (o: (typeof open)[number], tabs: number, spaces: number): boolean => tabs > o.tabs || (tabs === o.tabs && spaces >= o.spaces + o.width);
+    const within = (o: (typeof open)[number], tabs: number, spaces: number): boolean =>
+      tabs > o.tabs || (tabs === o.tabs && spaces >= o.spaces + o.width);
     return lines.map((line, i) => {
       const ws = /^[ \t]*/.exec(line)![0];
       // tabs, then spaces, as Obsidian writes them; any other mix, each tab two spaces
@@ -145,8 +151,16 @@ export const asSpaces = (d: TextDoc): TextDoc =>
       else if (tabs > parent.tabs) {
         // the parent's own indentation, the tab into it, then the rest
         const into = parent.now + parent.width;
-        now = [[' '.repeat(into), parent.tabs + 1], ...Array.from({ length: tabs - parent.tabs - 1 }, (): [string, number] => ['  ', 1]), ...spaced(spaces)];
-      } else now = [[' '.repeat(parent.now + parent.width), tabs + parent.spaces + parent.width], ...spaced(spaces - parent.spaces - parent.width)];
+        now = [
+          [' '.repeat(into), parent.tabs + 1],
+          ...Array.from({ length: tabs - parent.tabs - 1 }, (): [string, number] => ['  ', 1]),
+          ...spaced(spaces),
+        ];
+      } else
+        now = [
+          [' '.repeat(parent.now + parent.width), tabs + parent.spaces + parent.width],
+          ...spaced(spaces - parent.spaces - parent.width),
+        ];
       if (it) open.push({ tabs, spaces, width: it.width, now: now.reduce((n, [s]) => n + s.length, 0) });
       return now;
     });

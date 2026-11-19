@@ -78,8 +78,19 @@ export function readOutline(
   identity?: ReadonlyMap<number, number>,
   config: ReadConfig = OurusConfig.defaults,
 ): PersistentNode {
-  const build = new Build(tree, previous, previous && identity?.size ? touched.with(identityLines(tree, previous, identity)) : touched, config);
-  const root = build.container('root', tree.root, 0, tree.lineCount, previous ? { node: previous.root, start: 0 } : null);
+  const build = new Build(
+    tree,
+    previous,
+    previous && identity?.size ? touched.with(identityLines(tree, previous, identity)) : touched,
+    config,
+  );
+  const root = build.container(
+    'root',
+    tree.root,
+    0,
+    tree.lineCount,
+    previous ? { node: previous.root, start: 0 } : null,
+  );
   build.assignIds(root, identity, lineage);
   return root;
 }
@@ -153,38 +164,71 @@ class Build {
    * A root, an item or a quote on `[start, end)`, from its old node where one is known. Built without
    * recursion (`run`): a document nests as deep as its lines go, past the call stack.
    */
-  container(kind: 'root' | 'item' | 'quote', block: MdBlock, start: number, end: number, old: Located | null): PersistentNode {
+  container(
+    kind: 'root' | 'item' | 'quote',
+    block: MdBlock,
+    start: number,
+    end: number,
+    old: Located | null,
+  ): PersistentNode {
     return run(this.containerOf(kind, block, start, end, old));
   }
 
   /** `container`'s steps: each node under it, built as a step `run` takes in turn. */
-  private *containerOf(kind: 'root' | 'item' | 'quote', block: MdBlock, start: number, end: number, old: Located | null): Steps {
+  private *containerOf(
+    kind: 'root' | 'item' | 'quote',
+    block: MdBlock,
+    start: number,
+    end: number,
+    old: Located | null,
+  ): Steps {
     if (old && old.node.block === block && this.untouched(old.node, start, end)) return this.reuse(old.node);
     let head: MdBlock | null = null;
     if (kind === 'item') head = itemHead(block, this.tree.flavor, this.config.quotes, () => this.contentOf(start));
-    else if (kind === 'quote') head = quoteHead(block, () => this.contentOf(start + block.offsets[0]!), this.tree.flavor.has('callouts'));
+    else if (kind === 'quote')
+      head = quoteHead(block, () => this.contentOf(start + block.offsets[0]!), this.tree.flavor.has('callouts'));
     // the same stored block holds the same blocks, grouped the same: only the nodes on touched lines change
     // (but a quote that is of another kind now, read anew)
     // (and not where the old one was grouped under other settings: `listParent`, `quotes`, `headings`)
     // (nor where a block-id paragraph may attach otherwise now: blocks are stored by their shapes, and
     // what a one-line paragraph says, and the line after it, aren't theirs)
-    const copied = old && !this.previous?.regroup && old.node.block === block && old.node.head === head && !this.blockIdsTouched(block, start) ? yield this.copy(old, start, end) : null;
+    const copied =
+      old &&
+      !this.previous?.regroup &&
+      old.node.block === block &&
+      old.node.head === head &&
+      !this.blockIdsTouched(block, start)
+        ? yield this.copy(old, start, end)
+        : null;
     if (copied) return copied;
     const entries: Entry[] = [];
     // what a block-id paragraph next would attach to: this item (`self`), the entry before, or nothing
     const blockIds = this.tree.flavor.has('blockIds');
     // (an item whose text is nothing, `-`, carries no line: `-` and a blank line end it)
-    let host: Entry | 'self' | null = kind === 'item' && head && trimMd(this.contentOf(start + block.offsets[0]!)) !== '' ? 'self' : null;
+    let host: Entry | 'self' | null =
+      kind === 'item' && head && trimMd(this.contentOf(start + block.offsets[0]!)) !== '' ? 'self' : null;
     let own = 0;
     for (let k = head ? 1 : 0; k < block.children.length; k++) {
       const child = block.children[k]!;
       const at = start + block.offsets[k]!;
       if (child.type === 'list') {
-        for (let j = 0; j < child.children.length; j++) entries.push({ block: child.children[j]!, kind: 'item', start: at + child.offsets[j]!, level: 0, carried: 0 });
+        for (let j = 0; j < child.children.length; j++)
+          entries.push({
+            block: child.children[j]!,
+            kind: 'item',
+            start: at + child.offsets[j]!,
+            level: 0,
+            carried: 0,
+          });
         host = null;
         continue;
       }
-      const childKind = nodeKindOf(child, this.config.quotes, () => this.contentOf(at), this.tree.flavor.has('callouts'));
+      const childKind = nodeKindOf(
+        child,
+        this.config.quotes,
+        () => this.contentOf(at),
+        this.tree.flavor.has('callouts'),
+      );
       const lone = blockIds && childKind === 'paragraph' && this.blockIdParagraph(child, at);
       if (lone && host && this.attaches(block, at, end, host)) {
         // (its lines from the host's text's end: the blank lines before it, and the line)
@@ -192,7 +236,15 @@ class Build {
         else host.carried = at - (host.start + textHead(host).lines - 1);
         continue;
       }
-      const entry: Entry | null = childKind ? { block: child, kind: childKind, start: at, level: child.type === 'heading' ? child.attrs.level! : 0, carried: 0 } : null;
+      const entry: Entry | null = childKind
+        ? {
+            block: child,
+            kind: childKind,
+            start: at,
+            level: child.type === 'heading' ? child.attrs.level! : 0,
+            carried: 0,
+          }
+        : null;
       if (entry) entries.push(entry);
       // (a quote that is a container ends with its children, and carries nothing; nor does a block-id
       // paragraph left alone, nor an empty paragraph a placeholder holds, which is nothing on disk)
@@ -200,19 +252,30 @@ class Build {
       host = entry && entry.kind !== 'quote' && !lone && !held ? entry : null;
     }
     const candidates = old ? this.candidates(old) : null;
-    const { nodes, starts } = yield* this.nodes(outlineChildren(entries, kind === 'root', this.config), end, candidates);
+    const { nodes, starts } = yield* this.nodes(
+      outlineChildren(entries, kind === 'root', this.config),
+      end,
+      candidates,
+    );
     return this.make(kind, block, head, start, end, nodes, starts, own);
   }
 
   /** Whether the flavor has block ids and a touched line is a one-line paragraph of `block` (at line `start`), or the line after one: what attaches may differ. */
   private blockIdsTouched(block: MdBlock, start: number): boolean {
     if (!this.tree.flavor.has('blockIds')) return false;
-    return block.children.some((child, k) => child.type === 'paragraph' && child.lines === 1 && this.touched.any(start + block.offsets[k]!, start + block.offsets[k]! + 1));
+    return block.children.some(
+      (child, k) =>
+        child.type === 'paragraph' &&
+        child.lines === 1 &&
+        this.touched.any(start + block.offsets[k]!, start + block.offsets[k]! + 1),
+    );
   }
 
   /** Whether `block`, at line `at`, is a paragraph of nothing but a block id, written exactly (past its indentation). */
   private blockIdParagraph(block: MdBlock, at: number): boolean {
-    return block.type === 'paragraph' && block.lines === 1 && reBlockIdLine.test(this.contentOf(at).replace(/^[ \t]+/, ''));
+    return (
+      block.type === 'paragraph' && block.lines === 1 && reBlockIdLine.test(this.contentOf(at).replace(/^[ \t]+/, ''))
+    );
   }
 
   /**
@@ -235,7 +298,11 @@ class Build {
   }
 
   /** Nodes for `shells`, which tile `[their first start, end)`. */
-  private *nodes(shells: readonly Shell[], end: number, candidates: Candidates | null): Generator<Steps, { nodes: PersistentNode[]; starts: number[] }, PersistentNode | null> {
+  private *nodes(
+    shells: readonly Shell[],
+    end: number,
+    candidates: Candidates | null,
+  ): Generator<Steps, { nodes: PersistentNode[]; starts: number[] }, PersistentNode | null> {
     const nodes = new Array<PersistentNode>(shells.length);
     const starts = new Array<number>(shells.length);
     for (let i = 0; i < shells.length; i++) {
@@ -273,8 +340,14 @@ class Build {
       const next = i + 1 < n ? start + node.offsets[i + 1]! : end;
       const located = { node: child, start: old.start + node.offsets[i]! };
       if (this.untouched(child, at, next)) children[i] = this.reuse(child);
-      else if (child.block!.type === 'blockquote' && nodeKindOf(child.block!, this.config.quotes, () => this.contentOf(at), this.tree.flavor.has('callouts')) !== child.kind) return null;
-      else if (child.kind === 'item' || child.kind === 'quote') children[i] = (yield this.containerOf(child.kind, child.block!, at, next, located))!;
+      else if (
+        child.block!.type === 'blockquote' &&
+        nodeKindOf(child.block!, this.config.quotes, () => this.contentOf(at), this.tree.flavor.has('callouts')) !==
+          child.kind
+      )
+        return null;
+      else if (child.kind === 'item' || child.kind === 'quote')
+        children[i] = (yield this.containerOf(child.kind, child.block!, at, next, located))!;
       else {
         const copied = yield this.copy(located, at, next);
         if (!copied) return null;
@@ -294,7 +367,16 @@ class Build {
     return node;
   }
 
-  private make(kind: OurusNodeKind, block: MdBlock, head: MdBlock | null, start: number, end: number, children: PersistentNode[], starts: readonly number[], blockIdCount = 0): PersistentNode {
+  private make(
+    kind: OurusNodeKind,
+    block: MdBlock,
+    head: MdBlock | null,
+    start: number,
+    end: number,
+    children: PersistentNode[],
+    starts: readonly number[],
+    blockIdCount = 0,
+  ): PersistentNode {
     const offsets = starts.map((s) => s - start);
     const node = new PersistentNode(kind, block, head, end - start, offsets, children, blockIdCount);
     this.made.add(node);
@@ -347,7 +429,10 @@ class Build {
     const from = tree.starts[line]!;
     const to = tree.ends[line]!;
     const over = index.covering(from, to);
-    if (over) return writtenOver && over.from === from && over.insert ? lineIndexAt(this.tree.starts, index.mapPos(from, -1)) : -1;
+    if (over)
+      return writtenOver && over.from === from && over.insert
+        ? lineIndexAt(this.tree.starts, index.mapPos(from, -1))
+        : -1;
     return lineIndexAt(this.tree.starts, index.mapPos(from, 1));
   }
 
@@ -364,7 +449,11 @@ class Build {
   assignIds(root: PersistentNode, identity: ReadonlyMap<number, number> | undefined, lineage: Lineage): void {
     const made: Located[] = [];
     // (in document order, iteratively: nesting past the call stack)
-    preorder(root, (node) => this.made.has(node), (node, start) => made.push({ node, start }));
+    preorder(
+      root,
+      (node) => this.made.has(node),
+      (node, start) => made.push({ node, start }),
+    );
     const set = (node: PersistentNode, id: number): void => {
       (node as { id: number }).id = id;
     };
@@ -377,15 +466,19 @@ class Build {
     const claimed = new Set(identity?.values());
     const carried = new Map<string, number>();
     const oldRanks = new Map<string, number>();
-    preorder(this.previous.root, (node) => !this.reused.has(node), (node, start) => {
-      if (node.kind === 'root') return;
-      const line = this.mapLine(start, true);
-      // a node `identity` names keeps its rank among those nested on its line, but carries nothing
-      if (line >= 0) {
-        const key = ranked(oldRanks, `${node.kind}@${line}`);
-        if (!claimed.has(node.id) && !carried.has(key)) carried.set(key, node.id);
-      }
-    });
+    preorder(
+      this.previous.root,
+      (node) => !this.reused.has(node),
+      (node, start) => {
+        if (node.kind === 'root') return;
+        const line = this.mapLine(start, true);
+        // a node `identity` names keeps its rank among those nested on its line, but carries nothing
+        if (line >= 0) {
+          const key = ranked(oldRanks, `${node.kind}@${line}`);
+          if (!claimed.has(node.id) && !carried.has(key)) carried.set(key, node.id);
+        }
+      },
+    );
     // an id `identity` gives may be one a node taken whole still has: that node keeps it
     const kept = identity?.size ? this.reusedIds() : null;
     const used = new Set<number>([Lineage.ROOT]);
@@ -397,7 +490,9 @@ class Build {
       }
       // (a quote whose line is indented past its container's column, `2. q⏎    > r`: its piece takes the
       // spaces before its `>`, which the writer, copying the line, names it at)
-      const explicit = identity?.size ? (identity.get(this.headStartOffset(node, start)) ?? identity.get(this.headStartOffset(node, start, true))) : undefined;
+      const explicit = identity?.size
+        ? (identity.get(this.headStartOffset(node, start)) ?? identity.get(this.headStartOffset(node, start, true)))
+        : undefined;
       const key = ranked(ranks, `${node.kind}@${start}`);
       let id = explicit !== undefined && !kept!.has(explicit) ? explicit : carried.get(key);
       if (id === undefined || used.has(id)) id = lineage.take();
@@ -409,7 +504,12 @@ class Build {
   /** The ids of every node taken whole. */
   private reusedIds(): Set<number> {
     const ids = new Set<number>();
-    for (const node of this.reused) preorder(node, () => true, (n) => ids.add(n.id));
+    for (const node of this.reused)
+      preorder(
+        node,
+        () => true,
+        (n) => ids.add(n.id),
+      );
     return ids;
   }
 
@@ -466,7 +566,11 @@ function ranked(seen: Map<string, number>, key: string): string {
  * somewhere else than its old node's first line went to, both lines. An entry that agrees with
  * where the old node went changes nothing (a writer names every node it placed, most where they were).
  */
-function identityLines(tree: MdTree, previous: OutlinePrevious, identity: ReadonlyMap<number, number>): [number, number][] {
+function identityLines(
+  tree: MdTree,
+  previous: OutlinePrevious,
+  identity: ReadonlyMap<number, number>,
+): [number, number][] {
   const index = new ChangeIndex(previous.changes);
   /** Where in the new text the old node with `id`'s first line went, or -1 where it was deleted, or undefined for no such node. */
   const wentTo = (id: number): number | undefined => {
@@ -493,7 +597,11 @@ function identityLines(tree: MdTree, previous: OutlinePrevious, identity: Readon
  * `visit` on `root` and its descendants in document order, each with its start (its offsets' sum),
  * but a node `enter` refuses and what is below it: iteratively, nesting past the call stack.
  */
-function preorder(root: PersistentNode, enter: (node: PersistentNode) => boolean, visit: (node: PersistentNode, start: number) => void): void {
+function preorder(
+  root: PersistentNode,
+  enter: (node: PersistentNode) => boolean,
+  visit: (node: PersistentNode, start: number) => void,
+): void {
   const stack: [PersistentNode, number][] = [[root, 0]];
   while (stack.length) {
     const [node, start] = stack.pop()!;

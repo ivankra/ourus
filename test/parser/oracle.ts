@@ -21,8 +21,16 @@ import type { MdBlock } from '../../src/parser/types.ts';
  */
 type CmNode = commonmark.Node;
 
-function listAttrs(type: string, bullet: string | null, delim: string | null, start: number | null, tight: boolean): string {
-  return type === 'bullet' ? `ul${bullet}-${tight ? 'tight' : 'loose'}` : `ol${start}${delim}-${tight ? 'tight' : 'loose'}`;
+function listAttrs(
+  type: string,
+  bullet: string | null,
+  delim: string | null,
+  start: number | null,
+  tight: boolean,
+): string {
+  return type === 'bullet'
+    ? `ul${bullet}-${tight ? 'tight' : 'loose'}`
+    : `ol${start}${delim}-${tight ? 'tight' : 'loose'}`;
 }
 
 const range = (start: number | null, end: number) => `[${start === null ? '?' : start}-${end}]`;
@@ -33,8 +41,16 @@ const reader = new commonmark.Parser();
 // does it): a line indented as far as the item's content continues it before blankness is looked at,
 // so a blank line with that indentation goes on even in an empty item. ourus reads items that way.
 type ItemNode = { _firstChild: unknown; _listData: { markerOffset: number; padding: number } };
-type ParserState = { indent: number; blank: boolean; advanceOffset(n: number, columns: boolean): void; advanceNextNonspace(): void };
-(reader as unknown as { blocks: { item: { continue(p: ParserState, c: ItemNode): number } } }).blocks.item.continue = (parser, container) => {
+type ParserState = {
+  indent: number;
+  blank: boolean;
+  advanceOffset(n: number, columns: boolean): void;
+  advanceNextNonspace(): void;
+};
+(reader as unknown as { blocks: { item: { continue(p: ParserState, c: ItemNode): number } } }).blocks.item.continue = (
+  parser,
+  container,
+) => {
   if (parser.indent >= container._listData.markerOffset + container._listData.padding) {
     parser.advanceOffset(container._listData.markerOffset + container._listData.padding, true);
   } else if (parser.blank && container._firstChild != null) parser.advanceNextNonspace();
@@ -109,7 +125,10 @@ export function ourusSkeleton(root: MdBlock): string {
     const b = at.block;
     const start = at.line;
     const end = at.lastLine;
-    const children = at.children().map(walk).filter((s): s is string => s !== null);
+    const children = at
+      .children()
+      .map(walk)
+      .filter((s): s is string => s !== null);
     const inner = children.length ? `(${children.join(',')})` : '';
     const r = (from: number | null) => range(from, end);
     switch (b.type) {

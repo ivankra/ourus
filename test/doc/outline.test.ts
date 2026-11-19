@@ -24,11 +24,28 @@ function snapshot(doc: OurusDoc): string {
       const line = doc.mdTree.line(l);
       return line.leaf?.block === b || line.containers.some((c) => c.block === b);
     };
-    assert.ok(node.kind === 'root' ? block === doc.mdTree.root : holds(block, node.startLine), `the ${node.kind} at ${node.startLine} holds a block of another snapshot`);
-    assert.ok(!head || holds(head, node.textFirstLine), `the ${node.kind} at ${node.startLine} holds a head of another snapshot`);
+    assert.ok(
+      node.kind === 'root' ? block === doc.mdTree.root : holds(block, node.startLine),
+      `the ${node.kind} at ${node.startLine} holds a block of another snapshot`,
+    );
+    assert.ok(
+      !head || holds(head, node.textFirstLine),
+      `the ${node.kind} at ${node.startLine} holds a head of another snapshot`,
+    );
     const text = doc.textOf(node);
-    const read = text && JSON.stringify([text.type, text.item, text.text, [text.marks.placeholders, text.marks.auto], text.frame.map((p) => `${p.part}@${p.from}-${p.to}`), text.blockIdLines]);
-    out.push(`${'  '.repeat(node.depth)}${node.kind} ${node.startLine}-${node.textLastLine}-${node.ownLastLine}-${node.endLine} gap ${node.gap} ${block.type}${head ? ` head ${head.type}@${node.textFirstLine}` : ''} lines ${node.persistentNode.lines} text ${read}`);
+    const read =
+      text &&
+      JSON.stringify([
+        text.type,
+        text.item,
+        text.text,
+        [text.marks.placeholders, text.marks.auto],
+        text.frame.map((p) => `${p.part}@${p.from}-${p.to}`),
+        text.blockIdLines,
+      ]);
+    out.push(
+      `${'  '.repeat(node.depth)}${node.kind} ${node.startLine}-${node.textLastLine}-${node.ownLastLine}-${node.endLine} gap ${node.gap} ${block.type}${head ? ` head ${head.type}@${node.textFirstLine}` : ''} lines ${node.persistentNode.lines} text ${read}`,
+    );
     node.children.forEach(visit);
   };
   visit(doc.rootNode);
@@ -54,7 +71,9 @@ function assertSameOutline(next: OurusDoc, context: string): void {
 /** Placeholders at `fractions` of the places one can be read at in `text`. */
 function pick(text: string, fractions: readonly number[]) {
   const spots = sentinelSpots(text);
-  return fractions.flatMap((f) => (spots.length ? [spots[Math.min(spots.length - 1, Math.floor(f * spots.length))]!] : []));
+  return fractions.flatMap((f) =>
+    spots.length ? [spots[Math.min(spots.length - 1, Math.floor(f * spots.length))]!] : [],
+  );
 }
 
 const fractions = fc.array(fc.double({ min: 0, max: 1, noNaN: true }), { maxLength: 3 });
@@ -62,15 +81,19 @@ const fractions = fc.array(fc.double({ min: 0, max: 1, noNaN: true }), { maxLeng
 for (const flavor of FLAVORS) {
   test(`${flavor}: an update's outline equals a fresh parse's, one edit at a time`, () => {
     fc.assert(
-      fc.property(arbDoc(BLOCKS, { frontmatter: flavor === 'obsidian' }), fc.array(arbEdit, { minLength: 1, maxLength: 4 }), (text, edits) => {
-        let doc = OurusDoc.parse(text, { config: { flavor } });
-        for (const edit of edits) {
-          const change = changeOf(doc.text, edit);
-          const next = doc.update({ changes: [change] });
-          assertSameOutline(next, `${JSON.stringify(doc.text)} + ${JSON.stringify(change)}`);
-          doc = next;
-        }
-      }),
+      fc.property(
+        arbDoc(BLOCKS, { frontmatter: flavor === 'obsidian' }),
+        fc.array(arbEdit, { minLength: 1, maxLength: 4 }),
+        (text, edits) => {
+          let doc = OurusDoc.parse(text, { config: { flavor } });
+          for (const edit of edits) {
+            const change = changeOf(doc.text, edit);
+            const next = doc.update({ changes: [change] });
+            assertSameOutline(next, `${JSON.stringify(doc.text)} + ${JSON.stringify(change)}`);
+            doc = next;
+          }
+        },
+      ),
       { numRuns: RUNS },
     );
   });
@@ -91,9 +114,14 @@ for (const flavor of FLAVORS) {
       fc.property(arbDoc(BLOCKS), fractions, fractions, fc.option(arbEdit), (text, before, after, edit) => {
         const doc = OurusDoc.parse(text, { config: { flavor }, marks: { placeholders: pick(text, before) } });
         const changes = edit ? [changeOf(text, edit)] : [];
-        const newText = changes.length ? text.slice(0, changes[0]!.from) + changes[0]!.insert + text.slice(changes[0]!.to) : text;
+        const newText = changes.length
+          ? text.slice(0, changes[0]!.from) + changes[0]!.insert + text.slice(changes[0]!.to)
+          : text;
         const next = doc.update({ changes, marks: { placeholders: pick(newText, after) } });
-        assertSameOutline(next, `${JSON.stringify(text)} + ${JSON.stringify(changes)} placeholders ${JSON.stringify(pick(newText, after))}`);
+        assertSameOutline(
+          next,
+          `${JSON.stringify(text)} + ${JSON.stringify(changes)} placeholders ${JSON.stringify(pick(newText, after))}`,
+        );
       }),
       { numRuns: RUNS },
     );
@@ -108,7 +136,29 @@ const arbBlockIdDoc = fc
   .array(
     fc.tuple(
       fc.constantFrom('', '', '', '- ', '  ', '  - ', '> ', '1. '),
-      fc.constantFrom('^id', '^id', '^id', '^id', '^b-2', '^b-2', '^id ', 'x ^id', 'a', 'b c', '## h', 'Title', '===', '| a |', '|---|', '```', 'code', '---', '[!note] T', '> q', '- x'),
+      fc.constantFrom(
+        '^id',
+        '^id',
+        '^id',
+        '^id',
+        '^b-2',
+        '^b-2',
+        '^id ',
+        'x ^id',
+        'a',
+        'b c',
+        '## h',
+        'Title',
+        '===',
+        '| a |',
+        '|---|',
+        '```',
+        'code',
+        '---',
+        '[!note] T',
+        '> q',
+        '- x',
+      ),
       fc.constantFrom('\n', '\n', '\n\n', '\n\n'),
     ),
     { maxLength: 12 },
@@ -149,7 +199,10 @@ function madeAnew(old: OurusDoc, next: OurusDoc): number {
 }
 
 test('an edit in a long document makes only the path to it anew', () => {
-  const sections = Array.from({ length: 100 }, (_, i) => `# Section ${i}\n\npara ${i}\n- a\n  - b\n- c\n\n> quote ${i}\n`).join('\n');
+  const sections = Array.from(
+    { length: 100 },
+    (_, i) => `# Section ${i}\n\npara ${i}\n- a\n  - b\n- c\n\n> quote ${i}\n`,
+  ).join('\n');
   const doc = OurusDoc.parse(sections);
   const at = sections.indexOf('para 50') + 4;
   // Enter in a paragraph: a line more, everything after it moved down
@@ -165,16 +218,31 @@ test('an edit in a long document makes only the path to it anew', () => {
   assert.equal(enter.node(doc.nodeAtLine(enter.rootNode.children[50]!.startLine)!.id)?.kind, 'heading');
 });
 
-test('ids: carried by where a node\'s first line went, named by `identity`, swapped with no change written', () => {
+test("ids: carried by where a node's first line went, named by `identity`, swapped with no change written", () => {
   const doc = OurusDoc.parse('- a\n- a\n- c\n');
   const [a1, a2, c] = doc.rootNode.children.map((n) => n.id);
   // a paragraph opened above: it owns the list now, and every item keeps its id
   const opened = doc.update({ changes: [{ from: 0, to: 0, insert: 'p\n\n' }] });
-  assert.deepEqual(opened.rootNode.children[0]!.children.map((n) => n.id), [a1, a2, c]);
+  assert.deepEqual(
+    opened.rootNode.children[0]!.children.map((n) => n.id),
+    [a1, a2, c],
+  );
   // two equal items exchanged: no change to write, the ids swapped by `identity` (offsets of their markers)
-  const swapped = doc.update({ identity: new Map([[0, a2!], [4, a1!]]) });
-  assert.deepEqual(swapped.rootNode.children.map((n) => n.id), [a2, a1, c]);
-  assert.equal(swapped.rootNode.children[2]!.persistentNode, doc.rootNode.children[2]!.persistentNode, 'the third item is the same node');
+  const swapped = doc.update({
+    identity: new Map([
+      [0, a2!],
+      [4, a1!],
+    ]),
+  });
+  assert.deepEqual(
+    swapped.rootNode.children.map((n) => n.id),
+    [a2, a1, c],
+  );
+  assert.equal(
+    swapped.rootNode.children[2]!.persistentNode,
+    doc.rootNode.children[2]!.persistentNode,
+    'the third item is the same node',
+  );
 });
 
 test('ids: a line written over from its start keeps its node, of its kind; a line deleted whole does not', () => {
@@ -183,7 +251,10 @@ test('ids: a line written over from its start keeps its node, of its kind; a lin
   const [abc, de] = doc.rootNode.children[0]!.children.map((n) => n.id);
   // a paragraph's whole text typed over, a caret given or not
   const typed = doc.update({ changes: [{ from: 5, to: 8, insert: 'xyz' }], caret: 8 });
-  assert.deepEqual(typed.rootNode.children[0]!.children.map((n) => n.id), [abc, de]);
+  assert.deepEqual(
+    typed.rootNode.children[0]!.children.map((n) => n.id),
+    [abc, de],
+  );
   assert.equal(typed.rootNode.children[0]!.id, h);
   // a paragraph of two lines, both written over by one line: the first line's node
   const both = doc.update({ changes: [{ from: 10, to: 13, insert: 'x' }] });
@@ -193,23 +264,32 @@ test('ids: a line written over from its start keeps its node, of its kind; a lin
   assert.notEqual(item.rootNode.children[0]!.children[0]!.id, abc);
   // the text deleted, its line with it: the node goes
   const gone = doc.update({ changes: [{ from: 5, to: 10, insert: '' }] });
-  assert.deepEqual(gone.rootNode.children[0]!.children.map((n) => n.id), [de]);
+  assert.deepEqual(
+    gone.rootNode.children[0]!.children.map((n) => n.id),
+    [de],
+  );
 });
 
-test('gaps: the blank lines after a node\'s own text, a subtree\'s after its last descendant', () => {
+test("gaps: the blank lines after a node's own text, a subtree's after its last descendant", () => {
   const doc = OurusDoc.parse('- [ ] foo\n  bar\n\n  # hello\n\n  - baz\n\n\npara\n');
   const lines = (node: OurusNode): string[] => [`${node.kind}:${node.gap}`, ...node.children.flatMap(lines)];
   // a text ends where its children begin; and two blank lines after `baz`, before `para`
   assert.deepEqual(lines(doc.rootNode).slice(1), ['item:1', 'heading:1', 'item:2', 'paragraph:0']);
 });
 
-test('a document nested deeper than the call stack goes is read, and a command on it doesn\'t throw: done, refused, or failed as too deep', () => {
-  for (const text of ['> '.repeat(5000) + 'a', '> '.repeat(20000) + 'a', Array.from({ length: 3000 }, (_, i) => ' '.repeat(2 * i) + '- a').join('\n')]) {
+test("a document nested deeper than the call stack goes is read, and a command on it doesn't throw: done, refused, or failed as too deep", () => {
+  for (const text of [
+    '> '.repeat(5000) + 'a',
+    '> '.repeat(20000) + 'a',
+    Array.from({ length: 3000 }, (_, i) => ' '.repeat(2 * i) + '- a').join('\n'),
+  ]) {
     const doc = OurusDoc.parse(text);
     assert.equal(doc.rootNode.children.length, 1);
     const typed = doc.update({ changes: [{ from: text.length, to: text.length, insert: 'x' }] });
     assert.equal(typed.text, text + 'x');
     const r = executeCommand(OurusView.of(doc, { selection: text.length }), { type: 'enter' });
-    assert.ok(r instanceof OurusSuccess || r instanceof OurusRejected || (r instanceof OurusFailed && r.code === 'too-deep'));
+    assert.ok(
+      r instanceof OurusSuccess || r instanceof OurusRejected || (r instanceof OurusFailed && r.code === 'too-deep'),
+    );
   }
 });

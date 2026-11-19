@@ -1,32 +1,73 @@
 {
   "name": "ourus",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Editor-agnostic core for outliner editing of plain-text Markdown",
   "license": "MIT",
-  "type": "module",
-  "private": true,
-  "exports": {
-    ".": "./src/index.ts",
-    "./extend": "./src/parser/extend.ts"
+  "keywords": [
+    "markdown",
+    "outliner",
+    "editor",
+    "codemirror",
+    "commonmark",
+    "gfm",
+    "obsidian",
+    "parser"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ivankra/ourus.git"
   },
+  "homepage": "https://github.com/ivankra/ourus",
+  "bugs": {
+    "url": "https://github.com/ivankra/ourus/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./extend": {
+      "source": "./src/parser/extend.ts",
+      "types": "./dist/parser/extend.d.ts",
+      "default": "./dist/parser/extend.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "!src/parser/tools",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
   "scripts": {
     "bench": "node test/bench.ts",
     "bugs": "node test/bugs.ts",
+    "build": "tsc -p tsconfig.build.json",
     "demo:cm6": "node demos/cm6/build.ts",
     "demo:textarea": "node demos/textarea/build.ts",
     "demo:gtk": "node demos/gtk/build.ts",
+    "format": "biome format --write .",
     "probe": "node sxs/probe.ts",
     "proxy": "node sxs/proxy.ts --cache=offline",
     "redraw": "node test/redraw.ts",
     "sxs": "node sxs/run.ts",
     "test": "node test/heavy.ts",
-    "test:fast": "tsc -p . && node --import ./test/lib/fc-seed.ts --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
-    "test:fuzz": "FC_SEED=random node --import ./test/lib/fc-seed.ts --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
+    "test:fast": "biome format . && tsc -p . && node --conditions=source --import ./test/lib/fc-seed.ts --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
+    "test:fuzz": "FC_SEED=random node --conditions=source --import ./test/lib/fc-seed.ts --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:model": "node test/model/run.ts",
     "test:volume": "node test/volume.ts",
-    "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea && tsc -p demos/gtk"
+    "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea && tsc -p demos/gtk",
+    "prepack": "npm run build"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.5",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.13.1",

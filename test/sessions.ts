@@ -25,7 +25,19 @@
 
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
-import { CASES_PER_GROUP, generatedStarts, readBaseline, recordUntriaged, staleBaseline, sessionFailures, sessionWheel, shrinkSession, writeBaseline, type SessionFound, type UntriagedCase } from './lib/index.ts';
+import {
+  CASES_PER_GROUP,
+  generatedStarts,
+  readBaseline,
+  recordUntriaged,
+  staleBaseline,
+  sessionFailures,
+  sessionWheel,
+  shrinkSession,
+  writeBaseline,
+  type SessionFound,
+  type UntriagedCase,
+} from './lib/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const examples = Number(process.env.SESSIONS_EXAMPLES ?? 2);
@@ -33,14 +45,19 @@ const total = Number(process.env.SESSIONS ?? 2000);
 const seed = Number(process.env.SESSIONS_SEED ?? 1);
 const length = 20;
 const starts = generatedStarts(Math.max(40, Math.ceil(total / 5)), 31);
-const hash = createHash('sha256').update(JSON.stringify([starts.map((s) => [s.text, s.config]), total, seed, length])).digest('hex').slice(0, 16);
+const hash = createHash('sha256')
+  .update(JSON.stringify([starts.map((s) => [s.text, s.config]), total, seed, length]))
+  .digest('hex')
+  .slice(0, 16);
 
 const wheel = sessionWheel();
 let state = seed >>> 0;
-const below = (n: number): number => Math.floor(((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32) * n);
+const below = (n: number): number =>
+  Math.floor(((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32) * n);
 
 /** Plays `actions` from start `startIndex`; the kinds of failure it finds, each with the step it shows at. */
-const run = (startIndex: number, caret: number, actions: readonly string[]): SessionFound[] => sessionFailures(starts[startIndex]!.text, starts[startIndex]!.config, caret, actions);
+const run = (startIndex: number, caret: number, actions: readonly string[]): SessionFound[] =>
+  sessionFailures(starts[startIndex]!.text, starts[startIndex]!.config, caret, actions);
 
 const groups = new Map<string, { runs: number; examples: string[] }>();
 const fails: string[] = [];
@@ -56,7 +73,9 @@ for (let n = 0; n < total; n++) {
     if (kinds.has(f.kind)) continue;
     kinds.add(f.kind);
     if (f.kind.includes(' threw')) {
-      fails.push(`${f.kind}: ${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${caret} ${JSON.stringify(actions)}`);
+      fails.push(
+        `${f.kind}: ${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${caret} ${JSON.stringify(actions)}`,
+      );
       continue;
     }
     const group = groups.get(f.kind) ?? { runs: 0, examples: [] };
@@ -64,8 +83,12 @@ for (let n = 0; n < total; n++) {
     // (shrunk for the examples shown, and on an update for the cases kept: shrinking is slow)
     if (group.examples.length < examples || (updating && group.runs <= CASES_PER_GROUP)) {
       const small = shrinkSession(s.text, s.config, caret, actions.slice(0, f.at + 1), f.kind);
-      if (group.examples.length < examples) group.examples.push(`${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${caret}\n         ${small.join(' ')}`);
-      if (updating) cases.push({ check: 'session', group: f.kind, text: s.text, config: s.config, caret, actions: small });
+      if (group.examples.length < examples)
+        group.examples.push(
+          `${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${caret}\n         ${small.join(' ')}`,
+        );
+      if (updating)
+        cases.push({ check: 'session', group: f.kind, text: s.text, config: s.config, caret, actions: small });
     }
     groups.set(f.kind, group);
   }
@@ -87,11 +110,16 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].runs - x[1].runs || (
 }
 for (const failure of fails) console.log(`FAIL ${failure}`);
 if (rose.length) console.log(`\nmore failures than the baseline: ${rose.join('; ')}`);
-if (baseline && !sameCorpus && !counted) console.log('\nthe sessions changed since the baseline: its counts are not held to it; SESSIONS_UPDATE=1 records them');
+if (baseline && !sameCorpus && !counted)
+  console.log(
+    '\nthe sessions changed since the baseline: its counts are not held to it; SESSIONS_UPDATE=1 records them',
+  );
 const stale = updating ? [] : staleBaseline(baseline, hash, groups, counted, 'SESSIONS_UPDATE');
 for (const line of stale) console.log(`\n${line}`);
 if (updating) {
   writeBaseline(baselineFile, hash, groups);
-  console.log(`baseline updated: ${baselineFile}; ${recordUntriaged('sessions', cases)} cases kept untriaged (test/bugs-untriaged.json)`);
+  console.log(
+    `baseline updated: ${baselineFile}; ${recordUntriaged('sessions', cases)} cases kept untriaged (test/bugs-untriaged.json)`,
+  );
 }
 process.exitCode = fails.length === 0 && rose.length === 0 && stale.length === 0 ? 0 : 1;

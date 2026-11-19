@@ -163,7 +163,8 @@ function legacySpan(view: OurusView, sel: OurusSelection): OurusSelection | null
       if (!text) continue;
       const to = Math.max(from, doc.posOf(node, textEnd(text), -1));
       const back = view.selectionOf(view.touchedSubtrees({ anchor: from, head: to }), up ? 'up' : 'down');
-      if (back.anchor === sel.anchor && back.head === sel.head) return up ? { anchor: to, head: from } : { anchor: from, head: to };
+      if (back.anchor === sel.anchor && back.head === sel.head)
+        return up ? { anchor: to, head: from } : { anchor: from, head: to };
     }
   }
   return null;
@@ -187,7 +188,12 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   // (quotes read as containers, whatever ourus's `quotes`: which of them a block holds, and how, is
   // the projection's, `quoted`)
   // and a list after a block under it or beside it as the app's blocks have it (`listParent`)
-  const doc = parseWithMarks(text, drawing.placeholders.map(at), { ...options.config, flavor, quotes: 'container', ...(options.listParent && { listParent: options.listParent }) });
+  const doc = parseWithMarks(text, drawing.placeholders.map(at), {
+    ...options.config,
+    flavor,
+    quotes: 'container',
+    ...(options.listParent && { listParent: options.listParent }),
+  });
   const view = OurusView.of(doc);
   if (doc.mdTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
@@ -195,7 +201,14 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   // an empty document is an app's empty page: one empty block, the caret in it
   if (!nodes.length && text.trim() === '' && /┃/.test(drawn)) {
     notes.add('empty document');
-    return { outline: { blocks: [{ depth: 0, text: '', ...(options.freeForm && { free: true as const }) }], sel: { block: 0, anchor: 0, head: 0 } }, notes, sections: [] };
+    return {
+      outline: {
+        blocks: [{ depth: 0, text: '', ...(options.freeForm && { free: true as const }) }],
+        sel: { block: 0, anchor: 0, head: 0 },
+      },
+      notes,
+      sections: [],
+    };
   }
   if (!nodes.length) throw new Unsupported('no nodes');
   const blocks: Block[] = [];
@@ -220,13 +233,30 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     const quote = atom ? (node.kind === 'quote' ? node : null) : quoted(doc, node);
     const bare = (n: OurusNode): boolean => !n.children.length || (atom ? n.kind === 'quote' : !!quoted(doc, n));
     // (after a block in the item's block: merged into it, or its first block on its marker's line, `- > q`)
-    const inItsBlock = (n: OurusNode): boolean => merged.has(n.id) || (blockOf.has(n.id) && blockOf.get(n.id) === blockOf.get(parent!.id));
-    const into = options.paragraphsInBlock && (node.kind === 'paragraph' || !!quote) && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (inItsBlock(prev) && bare(prev)));
+    const inItsBlock = (n: OurusNode): boolean =>
+      merged.has(n.id) || (blockOf.has(n.id) && blockOf.get(n.id) === blockOf.get(parent!.id));
+    const into =
+      options.paragraphsInBlock &&
+      (node.kind === 'paragraph' || !!quote) &&
+      parent?.kind === 'item' &&
+      blockOf.has(parent.id) &&
+      (!prev || (inItsBlock(prev) && bare(prev)));
     const own = new Set<string>();
-    let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false, options.headingBlocks ?? false);
+    let { text, lines } =
+      quote && atom
+        ? asWritten(doc, node)
+        : blockText(
+            doc,
+            quote ?? node,
+            own,
+            options.ordered ?? false,
+            options.freeForm ?? false,
+            options.headingBlocks ?? false,
+          );
     // (an item whose first block is a quote the app holds as its text, `- > a⏎  > - b`: no list there)
     const first = node.children[0];
-    if (atom && node.kind === 'item' && first?.kind === 'quote' && first.startLine === node.startLine) own.delete("list as an item's first block");
+    if (atom && node.kind === 'item' && first?.kind === 'quote' && first.startLine === node.startLine)
+      own.delete("list as an item's first block");
     if (quote) {
       // a quote of one paragraph is a block's text, `> ` before the paragraph's, as a heading's is
       // `# ` before its title; where the app's block holds any quote (`quotes: atom`), its lines as written
@@ -238,7 +268,10 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
       }
       for (const d of atom ? descendants(node) : [quote]) quotedParagraphs.add(d.id);
       // an item whose first block it is, on its marker's line (`- > q`), has no text but it
-      const host = parent?.kind === 'item' && !parent.head && node.index === 0 && node.startLine === parent.startLine ? blockOf.get(parent.id) : undefined;
+      const host =
+        parent?.kind === 'item' && !parent.head && node.index === 0 && node.startLine === parent.startLine
+          ? blockOf.get(parent.id)
+          : undefined;
       if (host !== undefined) {
         for (const n of own) notes.add(n);
         const block = blocks[host]!;
@@ -269,7 +302,11 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     }
     if (node.kind === 'heading') sections.push(blocks.length);
     blockOf.set(node.id, blocks.length);
-    blocks.push({ depth: node.depth - 1 - up, text, ...(options.freeForm && node.kind !== 'item' && { free: true as const }) });
+    blocks.push({
+      depth: node.depth - 1 - up,
+      text,
+      ...(options.freeForm && node.kind !== 'item' && { free: true as const }),
+    });
     maps.push(lines);
   }
   // the caret on a blank line at its node's text column, right after its text (where Shift-Enter
@@ -285,11 +322,18 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   if (!span && /┃/.test(drawn) && anchor === head) {
     const p = head;
     const where = view.locate(p);
-    const i = where.zone === 'gap' && !where.owner.children.length && doc.atTextColumn(p, where.owner) ? blockOf.get(where.owner.id) : undefined;
+    const i =
+      where.zone === 'gap' && !where.owner.children.length && doc.atTextColumn(p, where.owner)
+        ? blockOf.get(where.owner.id)
+        : undefined;
     const line = doc.lineAt(p).index;
     // (but the gap's last line where a paragraph is on either side of it: the blank line setting them apart)
     const next = where.zone === 'gap' ? where.owner.afterSubtree : null;
-    const apart = where.zone === 'gap' && !!next && line === where.owner.textLastLine + where.owner.gap && (where.owner.kind === 'paragraph' || next.kind === 'paragraph');
+    const apart =
+      where.zone === 'gap' &&
+      !!next &&
+      line === where.owner.textLastLine + where.owner.gap &&
+      (where.owner.kind === 'paragraph' || next.kind === 'paragraph');
     if (where.zone === 'gap' && i !== undefined && !apart) {
       const lines = new Set<number>();
       for (let k = where.owner.textLastLine + 1; k <= line; k++) lines.add(k);
@@ -326,16 +370,25 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   };
   const hasCaret = /┃|«/.test(drawn) || !!roots;
   const rows = new Map<number, number>();
-  for (const node of nodes) if (blockOf.has(node.id) && !rows.has(node.startLine)) rows.set(node.startLine, blockOf.get(node.id)!);
+  for (const node of nodes)
+    if (blockOf.has(node.id) && !rows.has(node.startLine)) rows.set(node.startLine, blockOf.get(node.id)!);
   if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections, rows };
   // a subtree selection (`⟦selected⟧`, or a run's `««…»»`): its roots, or the nodes its span touches,
   // selected whole (a selection drawn `«…»`, whole lines or not, is the text drawn)
   if (options.blockSelection && drawing.subtrees) {
     const whole = view.touchedSubtrees({ anchor, head });
     // (a node no block is, read otherwise than the blocks are, `quotes: atom`'s quote holding it: the block it is in)
-    const blockIn = (n: (typeof whole)[number] | null): number[] => (!n ? [] : blockOf.has(n.id) ? [blockOf.get(n.id)!] : blockIn(n.parent));
+    const blockIn = (n: (typeof whole)[number] | null): number[] =>
+      !n ? [] : blockOf.has(n.id) ? [blockOf.get(n.id)!] : blockIn(n.parent);
     const selected = [...new Set(whole.flatMap(blockIn))].sort((x, y) => x - y);
-    if (gapped(selected)) return { outline: { blocks, sel: null }, notes, caretLost: 'a selection of blocks with one unselected between', sections, rows };
+    if (gapped(selected))
+      return {
+        outline: { blocks, sel: null },
+        notes,
+        caretLost: 'a selection of blocks with one unselected between',
+        sections,
+        rows,
+      };
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   const h = locate(head);
@@ -351,9 +404,21 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
       if (where.zone !== 'text' && where.zone !== 'frame') return false;
       return p === doc.posOf(where.node, end ? textEnd(where.text) : textStart(where.text), end ? -1 : 1);
     };
-    if (!options.blockSelection || !edge(from, false) || !edge(to, true)) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
-    const selected = [...new Set(view.touchedSubtrees({ anchor, head }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
-    if (gapped(selected)) return { outline: { blocks, sel: null }, notes, caretLost: 'a selection of blocks with one unselected between', sections, rows };
+    if (!options.blockSelection || !edge(from, false) || !edge(to, true))
+      return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
+    const selected = [
+      ...new Set(
+        view.touchedSubtrees({ anchor, head }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])),
+      ),
+    ].sort((x, y) => x - y);
+    if (gapped(selected))
+      return {
+        outline: { blocks, sel: null },
+        notes,
+        caretLost: 'a selection of blocks with one unselected between',
+        sections,
+        rows,
+      };
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections, rows };
@@ -402,14 +467,29 @@ function quoted(doc: OurusDoc, node: OurusNode): OurusNode | null {
   const first = doc.mdTree.line(node.startLine);
   if (/^\s*>\s*\[!/.test(doc.text.slice(first.from, first.to))) return null;
   const p = node.children.length === 1 ? node.children[0]! : null;
-  return p?.kind === 'paragraph' && !p.children.length && p.textFirstLine === node.startLine && p.textLastLine === node.endLine ? p : null;
+  return p?.kind === 'paragraph' &&
+    !p.children.length &&
+    p.textFirstLine === node.startLine &&
+    p.textLastLine === node.endLine
+    ? p
+    : null;
 }
 
 /** A node's own text as a block holds it, and where each of its lines came from. */
-function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: boolean, freeForm: boolean, headings: boolean): { text: string; lines: LineMap[] } {
+function blockText(
+  doc: OurusDoc,
+  node: OurusNode,
+  notes: Set<string>,
+  ordered: boolean,
+  freeForm: boolean,
+  headings: boolean,
+): { text: string; lines: LineMap[] } {
   const source = doc.text;
   const lineOf = (l: number) => doc.mdTree.line(l);
-  if (node.kind === 'quote') throw new Unsupported(/^\s*>\s*\[!/.test(source.slice(lineOf(node.startLine).from, lineOf(node.startLine).to)) ? 'callout' : 'quote');
+  if (node.kind === 'quote')
+    throw new Unsupported(
+      /^\s*>\s*\[!/.test(source.slice(lineOf(node.startLine).from, lineOf(node.startLine).to)) ? 'callout' : 'quote',
+    );
   const lines: LineMap[] = [];
   const parts: string[] = [];
   const add = (line: number, from: number, to: number, prefix = '', unescape = false): void => {
@@ -422,7 +502,12 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
     // starting any block where a block starting `# ` is a heading (`headings`: Enter9)
     // (after spaces a split kept before the text, `enterSplitSpace: start`, as at its start)
     const heading = ((freeForm && node.kind === 'paragraph') || headings) && !parts.length && /^[ \t]*\\#/.test(s);
-    const m = !unescape || heading ? null : ordered && !parts.length ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s) : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
+    const m =
+      !unescape || heading
+        ? null
+        : ordered && !parts.length
+          ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s)
+          : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
     const cuts: number[] = [];
     if (m) {
       notes.add('escape');
@@ -433,7 +518,13 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
     if (unescape) {
       for (let p = from; p < to; p++) {
         // (one at the line's start is the rule above's, its exceptions kept)
-        if (source[p] !== '\\' || cuts.includes(p) || /^[ \t]*\d{0,9}$/.test(source.slice(from, p)) || doc.offsetOf(node, p) !== doc.offsetOf(node, p + 1)) continue;
+        if (
+          source[p] !== '\\' ||
+          cuts.includes(p) ||
+          /^[ \t]*\d{0,9}$/.test(source.slice(from, p)) ||
+          doc.offsetOf(node, p) !== doc.offsetOf(node, p + 1)
+        )
+          continue;
         notes.add('escape');
         cuts.push(p);
       }
@@ -450,7 +541,10 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
   // an ordered item, where blocks are numbered: its number as a reader sees it (the list's start,
   // counted on), canonical `1. ` before its text
   const inList = doc.listOf(node)?.block;
-  const number = ordered && inList?.attrs.list?.type === 'ordered' ? `${(inList.attrs.list.start ?? 1) + inList.children.indexOf(node.block)}. ` : '';
+  const number =
+    ordered && inList?.attrs.list?.type === 'ordered'
+      ? `${(inList.attrs.list.start ?? 1) + inList.children.indexOf(node.block)}. `
+      : '';
   if (node.kind === 'item') {
     const list = inList?.attrs.list ?? node.block.attrs.list;
     if (list?.type === 'ordered' && !ordered) notes.add('numbered list');
@@ -470,8 +564,10 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
   const text = doc.textOf(node);
   // a block id (`^x`, a flavor's that has them): to a block app without them it is the block's text,
   // which ourus keeps with its block through a split or a join, as no such app does (`Driver.blockIds`)
-  if (text instanceof OurusProse && (text.frame.some((p) => p.part === 'blockId') || text.blockIdLines.length)) notes.add('block id');
-  if (head?.type === 'heading' && text instanceof OurusProse && text.frame.some((p) => p.part === 'close')) throw new Unsupported("heading's closing #s");
+  if (text instanceof OurusProse && (text.frame.some((p) => p.part === 'blockId') || text.blockIdLines.length))
+    notes.add('block id');
+  if (head?.type === 'heading' && text instanceof OurusProse && text.frame.some((p) => p.part === 'close'))
+    throw new Unsupported("heading's closing #s");
   if (head?.type === 'code_block' && !head.attrs.fenced) throw new Unsupported('indented code');
   if (!head && node.kind === 'item' && node.block.children.length && node.block.offsets[0] === 0) {
     // an item whose first block is a list (`- - a`): it has no text, and the rest of its marker's line
@@ -492,7 +588,13 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
     notes.add('setext heading');
     for (let l = headStart; l < headEnd; l++) {
       const line = lineOf(l);
-      add(l, skipSpaces(line.contentFrom, line.to), line.to, l === headStart ? number + '#'.repeat(head.attrs.level!) + ' ' : '', true);
+      add(
+        l,
+        skipSpaces(line.contentFrom, line.to),
+        line.to,
+        l === headStart ? number + '#'.repeat(head.attrs.level!) + ' ' : '',
+        true,
+      );
     }
     return { text: parts.join('\n'), lines };
   }
@@ -507,7 +609,12 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
   // paragraph has it: Regression181, Regression44)
   const belowPart = text instanceof OurusProse ? text.frame.find((p) => p.part === 'below') : undefined;
   const taskEnd = text instanceof OurusProse ? (text.frame.find((p) => p.part === 'task')?.to ?? 0) : 0;
-  const below = node.kind === 'item' && belowPart && (belowPart.from === 0 || (!!node.block.attrs.task && belowPart.from === taskEnd)) ? '\n' : '';
+  const below =
+    node.kind === 'item' &&
+    belowPart &&
+    (belowPart.from === 0 || (!!node.block.attrs.task && belowPart.from === taskEnd))
+      ? '\n'
+      : '';
   for (let l = headStart; l <= headEnd; l++) {
     const line = lineOf(l);
     // (a later line's spaces past its content column are its text, as ourus's and the apps' are:
@@ -517,7 +624,9 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
     // space a placeholder holds as text (`- ◌ x`), what a split kept (`enterSplitSpace: start`: an
     // item's padding, a paragraph's leading spaces, where ourus's text start is before them)
     if (l === headStart) {
-      const held = doc.marks.placeholders.find((pos) => pos >= line.from && pos < from && (source[pos] === ' ' || source[pos] === '\t'));
+      const held = doc.marks.placeholders.find(
+        (pos) => pos >= line.from && pos < from && (source[pos] === ' ' || source[pos] === '\t'),
+      );
       from = Math.min(held ?? from, node.kind === 'item' || node.kind === 'paragraph' ? doc.textStart(l) : from);
     }
     add(l, from, line.to, l === headStart ? number + below : '', trim);
@@ -543,7 +652,10 @@ const escapeLine = (s: string): string =>
  * `bars`, as runs stored before drew them, `««` before the first's text and `»»` after the last's own
  * (a span to each run with nothing unselected between), and `▮` before each one's text.
  */
-export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { readonly bars?: boolean; readonly spans?: boolean } = {}): string {
+export function draw(
+  o: Outline,
+  options: Pick<ProjectOptions, 'ordered'> & { readonly bars?: boolean; readonly spans?: boolean } = {},
+): string {
   const out: string[] = [];
   /** Where the text of the last block at each depth starts: its children's indentation. */
   const cols: number[] = [];
@@ -567,7 +679,10 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { re
     if (sel) {
       const from = Math.min(sel.anchor, sel.head);
       const to = Math.max(sel.anchor, sel.head);
-      t = from === to ? t.slice(0, from) + '┃' + t.slice(from) : t.slice(0, from) + (sel.head === from ? '┃«' : '«') + t.slice(from, to) + '»' + t.slice(to);
+      t =
+        from === to
+          ? t.slice(0, from) + '┃' + t.slice(from)
+          : t.slice(0, from) + (sel.head === from ? '┃«' : '«') + t.slice(from, to) + '»' + t.slice(to);
     }
     const mark = options.bars && o.selected?.includes(i) ? '▮ ' : '';
     // a caret or selection inside the number leaves it text, under a bullet
@@ -579,12 +694,15 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { re
     cols.length = b.depth;
     cols[b.depth] = at + marker.length + 1;
     firstLine.push(out.length);
-    t.split('\n').forEach((line, k) => out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`));
+    t.split('\n').forEach((line, k) =>
+      out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`),
+    );
   });
   // (its view on its blocks' first lines: `⟦folded⟧`, `⟦zoomed⟧`; then the blocks selected whole, `⟦selected⟧`)
   const drawn = out.join('\n').replace(/\t/g, '→');
   const viewed = (o.view ? drawView(drawn, o.view, (row) => firstLine[row] ?? -1) : drawn).split('\n');
-  if (!options.spans && !options.bars) for (const i of o.selected ?? []) if (firstLine[i] !== undefined) viewed[firstLine[i]!] += '⟦selected⟧';
+  if (!options.spans && !options.bars)
+    for (const i of o.selected ?? []) if (firstLine[i] !== undefined) viewed[firstLine[i]!] += '⟦selected⟧';
   return viewed.join('\n') + '\n';
 }
 
@@ -663,7 +781,12 @@ export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: numb
 export function listOwner(listParent: OurusConfig['listParent'] = 'paragraph'): (b: Block) => boolean {
   if (listParent === 'container') return () => false;
   const paragraph = listParent === 'paragraph';
-  return (b) => !!b.free && !/^#{1,6}(?=[ \t]|$)/.test(b.text) && !b.text.startsWith('> ') && (!paragraph || (!/^(`{3,}|~{3,})/.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text) && !/^\|/.test(b.text)));
+  return (b) =>
+    !!b.free &&
+    !/^#{1,6}(?=[ \t]|$)/.test(b.text) &&
+    !b.text.startsWith('> ') &&
+    (!paragraph ||
+      (!/^(`{3,}|~{3,})/.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text) && !/^\|/.test(b.text)));
 }
 
 /**
@@ -672,7 +795,10 @@ export function listOwner(listParent: OurusConfig['listParent'] = 'paragraph'): 
  * a` is the list after it, as `Intro⏎- a` is), then owned as `listParent` says (`liftOwned`,
  * `ownBlocks`).
  */
-export function asMarkdownReads(blocks: readonly Block[], listParent: OurusConfig['listParent'] = 'paragraph'): Block[] {
+export function asMarkdownReads(
+  blocks: readonly Block[],
+  listParent: OurusConfig['listParent'] = 'paragraph',
+): Block[] {
   return ownBlocks(liftOwned(blocks), listOwner(listParent));
 }
 
@@ -723,14 +849,28 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   // no blocks at all draw as one empty line
   /** The blocks drawn `⟦selected⟧`, by line. */
   const selectedLines = new Set<number>();
-  for (const [lineNo, read] of (drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')).entries()) {
+  for (const [lineNo, read] of (drawn === '\n'
+    ? []
+    : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')
+  ).entries()) {
     const line = read.endsWith('⟦selected⟧') ? read.slice(0, -'⟦selected⟧'.length) : read;
     if (line !== read) selectedLines.add(lineNo);
     const item = /^( *)(?:([-¶])|(\d{1,9}\.)) (▮ )?(.*)$/.exec(line);
     const spaces = item?.[1]!.length ?? 0;
     // a block's depth: where blocks are numbered, it starts where its parent's text does; else two
     // spaces a level
-    const depth = !item || (item[3] && !options.ordered) ? -1 : !spaces ? 0 : options.ordered ? (cols.includes(spaces) ? cols.indexOf(spaces) + 1 : -1) : spaces % 2 ? -1 : spaces / 2;
+    const depth =
+      !item || (item[3] && !options.ordered)
+        ? -1
+        : !spaces
+          ? 0
+          : options.ordered
+            ? cols.includes(spaces)
+              ? cols.indexOf(spaces) + 1
+              : -1
+            : spaces % 2
+              ? -1
+              : spaces / 2;
     // (deeper than a child of the block above, it is a line of that block's text: `- > - q⏎      - g`,
     // its text's `    - g`, as `draw` indents it)
     if (item && depth >= 0 && depth <= (blocks.at(-1)?.depth ?? -1) + 1) {
@@ -774,7 +914,13 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
     t = t
       .split('\n')
       .map((line, k) => {
-        const unescaped = k === 0 ? line : line.replace(/^\\([-*+](?=[ \t]|$))/, '$1').replace(/^(\d{1,9})\\([.)](?=[ \t]|$))/, '$1$2').replace(/^\\(#{1,6}(?=[ \t]|$))/, '$1');
+        const unescaped =
+          k === 0
+            ? line
+            : line
+                .replace(/^\\([-*+](?=[ \t]|$))/, '$1')
+                .replace(/^(\d{1,9})\\([.)](?=[ \t]|$))/, '$1$2')
+                .replace(/^\\(#{1,6}(?=[ \t]|$))/, '$1');
         if (unescaped.length < line.length && sel?.block === i) {
           const cut = at + line.indexOf('\\');
           if (sel.anchor > cut) sel.anchor--;
@@ -796,7 +942,13 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   }
   // (a view marked by line, on blocks' first lines: those blocks; one on no block's first line reads as none)
   const toBlock = (line: number): number => blockAt.get(line) ?? -1;
-  const view = marked && byLine ? { folded: marked.folded.map(toBlock).filter((b) => b >= 0), zoom: marked.zoom === null ? null : toBlock(marked.zoom) } : marked;
+  const view =
+    marked && byLine
+      ? {
+          folded: marked.folded.map(toBlock).filter((b) => b >= 0),
+          zoom: marked.zoom === null ? null : toBlock(marked.zoom),
+        }
+      : marked;
   if (view && view.zoom !== null && view.zoom < 0) return null;
   const o: Outline = { blocks, sel, ...(selected.length && { selected }), ...(view && { view }) };
   // (read back as drawn: a stored run's view, its last line, checked apart, the rest as drawn without it)
@@ -840,7 +992,8 @@ export function endFenceOptional(text: string): string {
     const close = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
     if (close && close[1]![0] === open.char && close[1]!.length >= open.length) {
       // (blank lines after it stay, a difference of whitespace)
-      if (lines.slice(i + 1).every((l) => l.trim() === '')) return [...lines.slice(0, i), ...lines.slice(i + 1)].join('\n');
+      if (lines.slice(i + 1).every((l) => l.trim() === ''))
+        return [...lines.slice(0, i), ...lines.slice(i + 1)].join('\n');
       open = null;
     }
   }
@@ -887,18 +1040,28 @@ export function lazyQuotes(o: Outline): Outline {
 /** How `got` compares with `want`; a selection is compared only where `want` has one. */
 export function compareOutlines(want: Outline, got: Outline, sections: readonly number[] = []): Verdict {
   // a code block's closing fence at a block's end is the block's own end; a quote's later lines lazy
-  const ended = (o: Outline): Outline => lazyQuotes({ ...o, blocks: o.blocks.map((b) => ({ ...b, text: endFenceOptional(b.text) })) });
+  const ended = (o: Outline): Outline =>
+    lazyQuotes({ ...o, blocks: o.blocks.map((b) => ({ ...b, text: endFenceOptional(b.text) })) });
   // (a page with no blocks is an empty document, as one empty block with the caret is: the app's
   // empty page, Quote82)
-  const empty = (o: Outline): Outline => (o.blocks.length ? o : { ...o, blocks: [{ depth: 0, text: '' }], sel: { block: 0, anchor: 0, head: 0 } });
+  const empty = (o: Outline): Outline =>
+    o.blocks.length ? o : { ...o, blocks: [{ depth: 0, text: '' }], sel: { block: 0, anchor: 0, head: 0 } };
   [want, got] = [empty(want), empty(got)];
   // (`sections` are `want`'s blocks: in `got`, its headings in the same order, a block more or fewer
   // before them, an empty paragraph the app keeps, not shifting which own sections)
   const headings = (o: Outline): number[] => o.blocks.flatMap((b, i) => (/^#{1,6}(?: |$)/.test(b.text) ? [i] : []));
   const [wantHeadings, gotHeadings] = [headings(want), headings(got)];
-  const gotSections = wantHeadings.length === gotHeadings.length ? sections.flatMap((i) => (wantHeadings.includes(i) ? [gotHeadings[wantHeadings.indexOf(i)]!] : [])) : sections;
+  const gotSections =
+    wantHeadings.length === gotHeadings.length
+      ? sections.flatMap((i) => (wantHeadings.includes(i) ? [gotHeadings[wantHeadings.indexOf(i)]!] : []))
+      : sections;
   [want, got] = [sectioned(ended(want), sections), sectioned(ended(got), gotSections)];
-  const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && sameText(b.text, got.blocks[i]!.text));
+  const same =
+    want.blocks.length === got.blocks.length &&
+    want.blocks.every(
+      (b, i) =>
+        b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && sameText(b.text, got.blocks[i]!.text),
+    );
   if (!same) {
     // (an empty free block is an empty paragraph, which Markdown has only as blank lines: Placeholder3;
     // what it owns comes up a level with it gone, as the text has it: Backspace17)
@@ -920,15 +1083,18 @@ export function compareOutlines(want: Outline, got: Outline, sections: readonly 
     const sel = outline.sel;
     const text = sel ? outline.blocks[sel.block]?.text : undefined;
     if (!sel || text === undefined) return sel;
-    const escapesBefore = (offset: number): number => [...text.matchAll(/\\[!-/:-@[-`{-~]/g)].filter((m) => m.index! < offset).length;
+    const escapesBefore = (offset: number): number =>
+      [...text.matchAll(/\\[!-/:-@[-`{-~]/g)].filter((m) => m.index! < offset).length;
     return { ...sel, anchor: sel.anchor - escapesBefore(sel.anchor), head: sel.head - escapesBefore(sel.head) };
   };
-  if (want.sel && (JSON.stringify(plainSel(want)) !== JSON.stringify(plainSel(got)) || got.selected?.length)) return 'caret';
+  if (want.sel && (JSON.stringify(plainSel(want)) !== JSON.stringify(plainSel(got)) || got.selected?.length))
+    return 'caret';
   // blocks selected whole, as a caret: other blocks, or a caret instead (a block selected with what it
   // holds, its subtree's blocks selected or not: the roots of a flat run, `headings: block`, sectioned)
   const withSubtrees = (o: Outline): string => {
     const all = new Set<number>();
-    for (const i of o.selected ?? []) for (let j = i; j < o.blocks.length && (j === i || o.blocks[j]!.depth > o.blocks[i]!.depth); j++) all.add(j);
+    for (const i of o.selected ?? [])
+      for (let j = i; j < o.blocks.length && (j === i || o.blocks[j]!.depth > o.blocks[i]!.depth); j++) all.add(j);
     return JSON.stringify([...all].sort((x, y) => x - y));
   };
   if (want.selected?.length && (withSubtrees(want) !== withSubtrees(got) || got.sel)) return 'caret';
@@ -994,7 +1160,16 @@ export function runsAsMarkdown(runs: readonly Run[]): { text: string; at: (p: nu
       open.push(k);
       if (k === 'link') href = r.href;
       if (k === 'code') code = ticks(r);
-      out += k === 'link' ? '[' : k === 'bold' ? '**' : k === 'italic' ? '*' : k === 'strike' ? '~~' : code + (/^`|`$/.test(r.text) ? ' ' : '');
+      out +=
+        k === 'link'
+          ? '['
+          : k === 'bold'
+            ? '**'
+            : k === 'italic'
+              ? '*'
+              : k === 'strike'
+                ? '~~'
+                : code + (/^`|`$/.test(r.text) ? ' ' : '');
     }
     starts.push({ plain, md: out.length, boundary });
     out += r.text;
@@ -1053,9 +1228,19 @@ export function sameText(a: string, b: string): boolean {
   const heading = (text: string): string | undefined => /^#{1,6}(?=[ \t]|$)/.exec(text)?.[0];
   if (heading(a) !== heading(b)) return false;
   const unescaped = (text: string): string => text.replace(/\\([!-/:-@[-`{-~])/g, '$1');
-  const spelled = (text: string): string => text.replace(/(?<![\w_])_(?=[^\s_])([^_\n]*?[^\s_])_(?![\w_])/g, '*$1*').replace(/(?<!~)~(?=[^\s~])([^~\n]*?[^\s~])~(?!~)/g, '~~$1~~');
+  const spelled = (text: string): string =>
+    text
+      .replace(/(?<![\w_])_(?=[^\s_])([^_\n]*?[^\s_])_(?![\w_])/g, '*$1*')
+      .replace(/(?<!~)~(?=[^\s~])([^~\n]*?[^\s~])~(?!~)/g, '~~$1~~');
   if (unescaped(spelled(a)) !== unescaped(spelled(b))) return false;
-  const inline = (text: string): string => micromark(text.split('\n').map((line) => `\uFFFD${line}`).join('\n'), { extensions: [gfm()], htmlExtensions: [gfmHtml()] });
+  const inline = (text: string): string =>
+    micromark(
+      text
+        .split('\n')
+        .map((line) => `\uFFFD${line}`)
+        .join('\n'),
+      { extensions: [gfm()], htmlExtensions: [gfmHtml()] },
+    );
   return inline(a) === inline(b);
 }
 
@@ -1070,7 +1255,8 @@ export function sameText(a: string, b: string): boolean {
 export function sectioned(o: Outline, sections: readonly number[]): Outline {
   type Node = { block: Block; index: number; children: Node[] };
   const owners = new Set(sections);
-  const level = (n: Node): number => (owners.has(n.index) ? (/^(#{1,6})(?: |$)/.exec(n.block.text)?.[1]!.length ?? 0) : 0);
+  const level = (n: Node): number =>
+    owners.has(n.index) ? (/^(#{1,6})(?: |$)/.exec(n.block.text)?.[1]!.length ?? 0) : 0;
   const root: Node[] = [];
   const path: Node[] = [];
   for (const [index, block] of o.blocks.entries()) {
@@ -1083,7 +1269,10 @@ export function sectioned(o: Outline, sections: readonly number[]): Outline {
   // its blocks in order, a heading's children only what follows it; then each heading takes what
   // follows it up to a heading of its level or above, so the nesting is the levels' alone (a heading
   // an app nests in a section of its level or below is that section's sibling)
-  const flat = (list: Node[]): Node[] => list.flatMap((n) => (level(n) ? [{ ...n, children: [] }, ...flat(n.children)] : [{ ...n, children: arrange(n.children) }]));
+  const flat = (list: Node[]): Node[] =>
+    list.flatMap((n) =>
+      level(n) ? [{ ...n, children: [] }, ...flat(n.children)] : [{ ...n, children: arrange(n.children) }],
+    );
   const arrange = (list: Node[]): Node[] => {
     const out: Node[] = [];
     const open: Node[] = [];
@@ -1106,4 +1295,6 @@ export function sectioned(o: Outline, sections: readonly number[]): Outline {
 }
 
 /** Whether two outlines are the same, selection included. */
-export const sameOutline = (a: Outline, b: Outline): boolean => JSON.stringify([a.blocks, a.sel, a.selected ?? [], a.view ?? null]) === JSON.stringify([b.blocks, b.sel, b.selected ?? [], b.view ?? null]);
+export const sameOutline = (a: Outline, b: Outline): boolean =>
+  JSON.stringify([a.blocks, a.sel, a.selected ?? [], a.view ?? null]) ===
+  JSON.stringify([b.blocks, b.sel, b.selected ?? [], b.view ?? null]);

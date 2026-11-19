@@ -4,7 +4,13 @@
 // fails in (`kind`, the report's group name), with what an example adds (`detail`); a throw from
 // `src/` propagates, always a failure.
 
-import { executeCommand, OurusFailed, OurusRejected, OurusSuccess, type OurusCommand } from '../../src/commands/index.ts';
+import {
+  executeCommand,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+  type OurusCommand,
+} from '../../src/commands/index.ts';
 import { textStart } from '../../src/commands/util.ts';
 import { OurusAtom, OurusDoc, VERBATIM, type OurusNode } from '../../src/doc/index.ts';
 import { MdFlavor, MdHtmlParser, MdTree } from '../../src/index.ts';
@@ -32,14 +38,43 @@ export interface SessionFound extends Found {
 
 /** The actions a session draws from, as often as a user takes them. */
 export const SESSION_ACTIONS: readonly (readonly [string, number])[] = [
-  ['"x"', 6], ['" "', 3], ['"- "', 1], ['"# "', 1], ['"`"', 1],
-  ['enter', 8], ['shiftEnter', 2], ['deleteContentBackward', 6], ['deleteContentForward', 2], ['deleteSoftLineBackward', 1],
-  ['indent', 4], ['outdent', 4], ['moveSubtreeUp', 3], ['moveSubtreeDown', 3],
-  ['cut', 2], ['copy', 1], ['paste', 4], ['pastePlain', 1], ['duplicateSubtree', 2], ['deleteSubtree', 2],
-  ['selectNode', 2], ['expandSelection', 1], ['fold', 1], ['unfold', 1], ['toggleFold', 1], ['zoomIn', 1], ['zoomOut', 1],
-  ['undo', 3], ['redo', 1],
-  ['cursorLineUp', 5], ['cursorLineDown', 6], ['cursorCharLeft', 2], ['cursorCharRight', 2], ['cursorLineBoundaryBackward', 2], ['cursorLineBoundaryForward', 2],
-  ['selectCharRight', 1], ['selectLineDown', 1],
+  ['"x"', 6],
+  ['" "', 3],
+  ['"- "', 1],
+  ['"# "', 1],
+  ['"`"', 1],
+  ['enter', 8],
+  ['shiftEnter', 2],
+  ['deleteContentBackward', 6],
+  ['deleteContentForward', 2],
+  ['deleteSoftLineBackward', 1],
+  ['indent', 4],
+  ['outdent', 4],
+  ['moveSubtreeUp', 3],
+  ['moveSubtreeDown', 3],
+  ['cut', 2],
+  ['copy', 1],
+  ['paste', 4],
+  ['pastePlain', 1],
+  ['duplicateSubtree', 2],
+  ['deleteSubtree', 2],
+  ['selectNode', 2],
+  ['expandSelection', 1],
+  ['fold', 1],
+  ['unfold', 1],
+  ['toggleFold', 1],
+  ['zoomIn', 1],
+  ['zoomOut', 1],
+  ['undo', 3],
+  ['redo', 1],
+  ['cursorLineUp', 5],
+  ['cursorLineDown', 6],
+  ['cursorCharLeft', 2],
+  ['cursorCharRight', 2],
+  ['cursorLineBoundaryBackward', 2],
+  ['cursorLineBoundaryForward', 2],
+  ['selectCharRight', 1],
+  ['selectLineDown', 1],
 ];
 /** `SESSION_ACTIONS` each as often as its weight: a session's actions are drawn from it uniformly. */
 export function sessionWheel(): string[] {
@@ -53,14 +88,20 @@ const motion = (a: string): boolean => /^(cursor|select)(?!Node)/.test(a) && a !
  * player; after every step: a throw, a write failure, the selection off the text, the view's rules;
  * at the end, undoing every step gives the note back. A throw ends the session, as a `… threw` kind.
  */
-export function sessionFailures(text: string, config: Record<string, unknown>, caret: number, actions: readonly string[]): SessionFound[] {
+export function sessionFailures(
+  text: string,
+  config: Record<string, unknown>,
+  caret: number,
+  actions: readonly string[],
+): SessionFound[] {
   const found: SessionFound[] = [];
   const doc = OurusDoc.parse(text, { config });
   let played: PlayedState = { view: OurusView.of(doc, { selection: caret }), clipboard: {} };
   for (let k = 0; k < actions.length; k++) {
     const action = actions[k]!;
     const prior = played.view;
-    const hidden = JSON.stringify(prior.visibleSelection(played.view.selection)) !== JSON.stringify(played.view.selection);
+    const hidden =
+      JSON.stringify(prior.visibleSelection(played.view.selection)) !== JSON.stringify(played.view.selection);
     try {
       played = playActions(played, [action]);
     } catch (e) {
@@ -74,16 +115,24 @@ export function sessionFailures(text: string, config: Record<string, unknown>, c
     }
     const after = played.view.doc.text;
     const { anchor, head } = played.view.selection;
-    if (anchor < 0 || head < 0 || anchor > after.length || head > after.length) found.push({ kind: `${action}: selection off the text`, at: k });
+    if (anchor < 0 || head < 0 || anchor > after.length || head > after.length)
+      found.push({ kind: `${action}: selection off the text`, at: k });
     // (what only the host does, a motion and a history step, can leave the caret in a hidden line: not checked, nor a command that starts from one)
     if (!hidden && last instanceof OurusSuccess && !motion(action) && action !== 'undo' && action !== 'redo') {
       try {
         assertViewHolds(prior, played, `step ${k + 1} ${action}`);
       } catch (e) {
-        found.push({ kind: `${action}: view invariant (${(e as Error).message.split('\n')[0]!.replace(/^step \d+ \S+: /, '').slice(0, 60)})`, at: k });
+        found.push({
+          kind: `${action}: view invariant (${(e as Error).message
+            .split('\n')[0]!
+            .replace(/^step \d+ \S+: /, '')
+            .slice(0, 60)})`,
+          at: k,
+        });
       }
     }
-    if (last instanceof OurusSuccess) for (const kind of lostMarks(prior, last)) found.push({ kind: `${action}: ${kind}`, at: k });
+    if (last instanceof OurusSuccess)
+      for (const kind of lostMarks(prior, last)) found.push({ kind: `${action}: ${kind}`, at: k });
   }
   // undo everything: the note comes back
   let back = played;
@@ -91,9 +140,13 @@ export function sessionFailures(text: string, config: Record<string, unknown>, c
     for (let n = 0; n < actions.length + 5 && (back.undone?.length ?? 0) > 0; n++) back = playActions(back, ['undo']);
     // (an undo that leaves steps behind is a failure of its own, not a reason to skip the comparison)
     if ((back.undone?.length ?? 0) > 0) found.push({ kind: 'undo all: history not exhausted', at: actions.length - 1 });
-    else if (back.view.doc.text.replace(/[ \t]+$/gm, '') !== text.replace(/[ \t]+$/gm, '')) found.push({ kind: 'undo all: not the note back', at: actions.length - 1 });
+    else if (back.view.doc.text.replace(/[ \t]+$/gm, '') !== text.replace(/[ \t]+$/gm, ''))
+      found.push({ kind: 'undo all: not the note back', at: actions.length - 1 });
   } catch (e) {
-    found.push({ kind: `undo all threw: ${(e as Error).message.split('\n')[0]!.slice(0, 80)}`, at: actions.length - 1 });
+    found.push({
+      kind: `undo all threw: ${(e as Error).message.split('\n')[0]!.slice(0, 80)}`,
+      at: actions.length - 1,
+    });
   }
   return found;
 }
@@ -101,7 +154,10 @@ export function sessionFailures(text: string, config: Record<string, unknown>, c
 /** The marks `command` played on `text` from `start` loses on lines it didn't change (`lostMarks`); a result not applied, its summary. */
 export function lostMarksOnText(text: string, command: OurusCommand, start: CommandStart = {}): string[] {
   const { caret = 0, anchor = caret, head = anchor, config = {}, placeholders = [], auto = [] } = start;
-  const view = OurusView.of(OurusDoc.parse(text, { config, marks: { placeholders, auto } })).withSelection({ anchor, head });
+  const view = OurusView.of(OurusDoc.parse(text, { config, marks: { placeholders, auto } })).withSelection({
+    anchor,
+    head,
+  });
   const result = executeOnText(text, command, start);
   return result instanceof OurusSuccess ? lostMarks(view, result) : [`not applied: ${result.constructor.name}`];
 }
@@ -123,10 +179,15 @@ export function lostMarks(view: OurusView, result: OurusSuccess): string[] {
   const lost = new Set<string>();
   const line = (pos: number): number => before.lineAt(pos).index;
   const { anchor, head } = view.selection;
-  const touched = [...changes.map((c) => [line(c.from), line(c.to ?? c.from)] as const), [line(Math.min(anchor, head)), line(Math.max(anchor, head))] as const];
+  const touched = [
+    ...changes.map((c) => [line(c.from), line(c.to ?? c.from)] as const),
+    [line(Math.min(anchor, head)), line(Math.max(anchor, head))] as const,
+  ];
   const reached = (pos: number): boolean => touched.some(([a, b]) => line(pos) >= a && line(pos) <= b);
   const placeholders = new Set(after.placeholders);
-  for (const pos of before.marks.placeholders) if (!reached(pos) && !placeholders.has(mapPos(changes, pos))) lost.add('placeholder lost on a line it didn\'t change');
+  for (const pos of before.marks.placeholders)
+    if (!reached(pos) && !placeholders.has(mapPos(changes, pos)))
+      lost.add("placeholder lost on a line it didn't change");
   // (a line of code, math or a comment nothing closes, in the result: a raised line there is that
   // block's text by B205's rule, no mark of a gap to keep)
   const tree = result.view.doc.mdTree;
@@ -135,7 +196,20 @@ export function lostMarks(view: OurusView, result: OurusSuccess): string[] {
     const leaf = tree.line(k).leaf;
     return !!leaf && VERBATIM.has(leaf.block.type);
   };
-  if (autoLost(before.text, before.marks.auto, before.marks.auto.filter((pos) => !reached(pos)), result.view.doc.text, after.auto, after.placeholders, changes, [anchor, head], opaque)) lost.add('auto mark lost on a line it didn\'t change');
+  if (
+    autoLost(
+      before.text,
+      before.marks.auto,
+      before.marks.auto.filter((pos) => !reached(pos)),
+      result.view.doc.text,
+      after.auto,
+      after.placeholders,
+      changes,
+      [anchor, head],
+      opaque,
+    )
+  )
+    lost.add("auto mark lost on a line it didn't change");
   return [...lost];
 }
 
@@ -147,7 +221,17 @@ export function lostMarks(view: OurusView, result: OurusSuccess): string[] {
  * author's lines than the runs it came from did, and the lines the change made there. `marks`: the
  * marks of `beforeAuto` on lines no change touched.
  */
-function autoLost(beforeText: string, beforeAuto: readonly number[], marks: readonly number[], afterText: string, afterAuto: readonly number[], afterHeld: readonly number[], changes: Parameters<typeof mapPos>[0], selection: readonly number[], opaque: (line: number) => boolean = () => false): boolean {
+function autoLost(
+  beforeText: string,
+  beforeAuto: readonly number[],
+  marks: readonly number[],
+  afterText: string,
+  afterAuto: readonly number[],
+  afterHeld: readonly number[],
+  changes: Parameters<typeof mapPos>[0],
+  selection: readonly number[],
+  opaque: (line: number) => boolean = () => false,
+): boolean {
   // (lines as alike past their trailing blanks: a blank line `` and `  `, a quote's `>` and `> `)
   const linesOf = (text: string): { starts: number[]; lines: string[] } => {
     const raw = text.split('\n');
@@ -158,7 +242,10 @@ function autoLost(beforeText: string, beforeAuto: readonly number[], marks: read
       at += l.length + 1;
     }
     // (past a final line break, the empty piece `split` gives is no line: like no other, in no run)
-    return { starts, lines: raw.map((l, k) => (k > 0 && k === raw.length - 1 && l === '' ? '\u0000end' : l.replace(/[ \t]+$/, ''))) };
+    return {
+      starts,
+      lines: raw.map((l, k) => (k > 0 && k === raw.length - 1 && l === '' ? '\u0000end' : l.replace(/[ \t]+$/, ''))),
+    };
   };
   const index = (starts: readonly number[], pos: number): number => {
     let k = 0;
@@ -179,7 +266,8 @@ function autoLost(beforeText: string, beforeAuto: readonly number[], marks: read
   // raised line that became one, the line of the block Enter made there, is no mark lost)
   const held = new Set(afterHeld.map((pos) => index(now.starts, pos)));
   for (const k of held) now.lines[k] = `\u0000held ${k}`;
-  const marked = (starts: readonly number[], auto: readonly number[], [a, b]: [number, number]): number => auto.filter((pos) => index(starts, pos) >= a && index(starts, pos) <= b).length;
+  const marked = (starts: readonly number[], auto: readonly number[], [a, b]: [number, number]): number =>
+    auto.filter((pos) => index(starts, pos) >= a && index(starts, pos) <= b).length;
   // (a line of `before` a change put text on, its first line's, a paste on the author's blank line,
   // is that text now: none of the run's; not one it joins to the next, which the diff of like lines
   // puts either way)
@@ -188,7 +276,10 @@ function autoLost(beforeText: string, beforeAuto: readonly number[], marks: read
   const selected = new Set(selection.map((pos) => index(was.starts, pos)));
   const filled = new Set(
     changes
-      .filter((c) => /[^\s>]/.test((c.insert ?? '').split('\n')[0]!) && !beforeText.slice(c.from, c.to ?? c.from).includes('\n'))
+      .filter(
+        (c) =>
+          /[^\s>]/.test((c.insert ?? '').split('\n')[0]!) && !beforeText.slice(c.from, c.to ?? c.from).includes('\n'),
+      )
       .map((c) => index(was.starts, c.from))
       .filter((k) => selected.has(k)),
   );
@@ -225,7 +316,8 @@ function autoLost(beforeText: string, beforeAuto: readonly number[], marks: read
     const ahead = mapPos(changes, was.starts[k]!, 1);
     let at = index(now.starts, ahead);
     if (now.lines[at] !== was.lines[k]) at = index(now.starts, mapPos(changes, was.starts[k]!, -1));
-    if (now.lines[at] !== was.lines[k] && /^\r?\n/.test(afterText.slice(ahead))) at = index(now.starts, afterText.indexOf('\n', ahead) + 1);
+    if (now.lines[at] !== was.lines[k] && /^\r?\n/.test(afterText.slice(ahead)))
+      at = index(now.starts, afterText.indexOf('\n', ahead) + 1);
     if (now.lines[at] !== was.lines[k]) continue;
     const into = `a${run(now.lines, at).join(':')}`;
     if (group.has(into)) join(key, into);
@@ -254,7 +346,9 @@ function autoLost(beforeText: string, beforeAuto: readonly number[], marks: read
     // (what the check can't judge, reported as nothing: a run inside code nothing closes, its lines
     // the code's; a run beside an identical block that another run of the result is beside too,
     // which the diff of like lines puts either way)
-    const runs = keys.filter((key) => key[0] === 'a').map((key) => key.slice(1).split(':').map(Number) as [number, number]);
+    const runs = keys
+      .filter((key) => key[0] === 'a')
+      .map((key) => key.slice(1).split(':').map(Number) as [number, number]);
     if (runs.some(([x, y]) => opaque(x) || opaque(y))) continue;
     if (runs.some(([x, y]) => twinned(now.lines, x, y))) continue;
     // (or a run of blank lines between two blocks alike, on either side of the change: a move past
@@ -266,11 +360,14 @@ function autoLost(beforeText: string, beforeAuto: readonly number[], marks: read
       const want = block.split('\n');
       return bareNow.filter((_, k) => want.every((l, j) => bareNow[k + j] === l)).length > 1;
     };
-    if (keys.some((key) => {
-      if (key[0] !== 'b') return false;
-      const block = between(was.lines, ...(key.slice(1).split(':').map(Number) as [number, number]));
-      return block !== null && twice(block);
-    })) continue;
+    if (
+      keys.some((key) => {
+        if (key[0] !== 'b') return false;
+        const block = between(was.lines, ...(key.slice(1).split(':').map(Number) as [number, number]));
+        return block !== null && twice(block);
+      })
+    )
+      continue;
     if (size - ours > authors + made) return true;
   }
   return false;
@@ -290,7 +387,11 @@ function twinned(lines: readonly string[], x: number, y: number): boolean {
     let end = k;
     while (end + 1 < lines.length && blank(lines[end + 1])) end++;
     if (k === x) continue;
-    if ((above !== undefined && !blank(above) && lines[k - 1] === above) || (below !== undefined && !blank(below) && lines[end + 1] === below)) return true;
+    if (
+      (above !== undefined && !blank(above) && lines[k - 1] === above) ||
+      (below !== undefined && !blank(below) && lines[end + 1] === below)
+    )
+      return true;
   }
   return false;
 }
@@ -309,13 +410,20 @@ function between(lines: readonly string[], x: number, y: number): string | null 
 }
 
 /** A line of no text (`linesOf`'s end, a held line), or of blanks and `>`s. */
-const blankLine = (l: string | undefined): boolean => l === undefined || l === '\u0000end' || l.startsWith('\u0000held') || /^[ \t>]*$/.test(l);
+const blankLine = (l: string | undefined): boolean =>
+  l === undefined || l === '\u0000end' || l.startsWith('\u0000held') || /^[ \t>]*$/.test(l);
 
 /** A line past its prefix: its indentation, `>`s, a list marker and its number. */
 const bare = (l: string): string => l.replace(/^[ \t>]*(?:(?:[-*+]|\d+[.)])(?=[ \t]|$)[ \t]*)?/, '');
 
 /** The fewest of `actions` (dropping one at a time) that still fail in `kind`. */
-export function shrinkSession(text: string, config: Record<string, unknown>, caret: number, actions: readonly string[], kind: string): string[] {
+export function shrinkSession(
+  text: string,
+  config: Record<string, unknown>,
+  caret: number,
+  actions: readonly string[],
+  kind: string,
+): string[] {
   let cur = [...actions];
   for (let changed = true; changed; ) {
     changed = false;
@@ -350,11 +458,15 @@ export function commandFailures(view: OurusView, pos: number, command: OurusComm
   if (!(result instanceof OurusSuccess)) return found;
   const after = result.view.doc.text;
   const { anchor, head } = result.view.selection;
-  if (anchor < 0 || head < 0 || anchor > after.length || head > after.length) found.push({ kind: `${label}: selection off the text` });
-  if (command.type !== 'cut' && applyChanges(text, result.changes) !== after) found.push({ kind: `${label}: changes don't give the text` });
+  if (anchor < 0 || head < 0 || anchor > after.length || head > after.length)
+    found.push({ kind: `${label}: selection off the text` });
+  if (command.type !== 'cut' && applyChanges(text, result.changes) !== after)
+    found.push({ kind: `${label}: changes don't give the text` });
   const before = endings(text);
-  if (before && endings(after) !== before && after.length) found.push({ kind: `${label}: line endings changed`, detail: `→ ${JSON.stringify(after)}` });
-  if (text.endsWith('\n') && after && !after.endsWith('\n')) found.push({ kind: `${label}: final newline lost`, detail: `→ ${JSON.stringify(after)}` });
+  if (before && endings(after) !== before && after.length)
+    found.push({ kind: `${label}: line endings changed`, detail: `→ ${JSON.stringify(after)}` });
+  if (text.endsWith('\n') && after && !after.endsWith('\n'))
+    found.push({ kind: `${label}: final newline lost`, detail: `→ ${JSON.stringify(after)}` });
   return found;
 }
 
@@ -390,10 +502,18 @@ export function copyPasteFailures(view: OurusView, node: OurusNode): Found[] {
   const empty = OurusView.of(OurusDoc.parse('', { config: doc.config }));
   const pasted = executeCommand(empty.withSelection(0), { type: 'paste', clipboard: copied.clipboard });
   const clip = JSON.stringify(copied.clipboard['text/plain']);
-  if (pasted instanceof OurusFailed) found.push({ kind: `copy→paste: ${node.kind}: paste ${writeFailedKind(pasted)}`, detail: clip });
+  if (pasted instanceof OurusFailed)
+    found.push({ kind: `copy→paste: ${node.kind}: paste ${writeFailedKind(pasted)}`, detail: clip });
   if (!(pasted instanceof OurusSuccess)) return found;
-  const got = allNodes(pasted.view.doc).filter((n) => n.depth === 1).flatMap(kindsOf).join();
-  if (got !== kindsOf(node).join()) found.push({ kind: `copy→paste: ${node.kind} comes back as other blocks`, detail: `${clip} → ${JSON.stringify(pasted.view.doc.text)}` });
+  const got = allNodes(pasted.view.doc)
+    .filter((n) => n.depth === 1)
+    .flatMap(kindsOf)
+    .join();
+  if (got !== kindsOf(node).join())
+    found.push({
+      kind: `copy→paste: ${node.kind} comes back as other blocks`,
+      detail: `${clip} → ${JSON.stringify(pasted.view.doc.text)}`,
+    });
   return found;
 }
 
@@ -413,8 +533,10 @@ export function cutPasteFailures(view: OurusView, node: OurusNode): Found[] {
   if (back instanceof OurusFailed) found.push({ kind: `cut→paste: ${node.kind}: paste write-failed`, detail: left });
   if (!(back instanceof OurusSuccess)) return found;
   const after = `${left} → ${JSON.stringify(back.view.doc.text)}`;
-  if (letters(back.view.doc.text) !== letters(doc.text)) found.push({ kind: `cut→paste: ${node.kind}: letters lost or doubled`, detail: after });
-  if (atomTexts(back.view.doc) !== atomTexts(doc)) found.push({ kind: `cut→paste: ${node.kind}: a code, math or table block's text changed`, detail: after });
+  if (letters(back.view.doc.text) !== letters(doc.text))
+    found.push({ kind: `cut→paste: ${node.kind}: letters lost or doubled`, detail: after });
+  if (atomTexts(back.view.doc) !== atomTexts(doc))
+    found.push({ kind: `cut→paste: ${node.kind}: a code, math or table block's text changed`, detail: after });
   return found;
 }
 
@@ -436,7 +558,10 @@ export const CLIPS: Readonly<Record<string, Clipboard>> = {
   quote: { 'text/plain': '> quote one\n> quote two' },
   callout: { 'text/plain': '> [!note] call\n> body' },
   indented: { 'text/plain': '    indent one\n    indent two' },
-  htmlList: { 'text/html': '<ul><li>hl one</li><li>hl two<ul><li>hl three</li></ul></li></ul>', 'text/plain': 'hl one\nhl two\nhl three' },
+  htmlList: {
+    'text/html': '<ul><li>hl one</li><li>hl two<ul><li>hl three</li></ul></li></ul>',
+    'text/plain': 'hl one\nhl two\nhl three',
+  },
   htmlPara: { 'text/html': '<p>hp one</p><p>hp two</p>', 'text/plain': 'hp one\n\nhp two' },
   markdown: { 'text/markdown': '- md one\n  - md two', 'text/plain': '- md one\n  - md two' },
 };
@@ -463,7 +588,8 @@ const norm = (h: string): string =>
     )
     .join('')
     .trim();
-const mdFlavor = (flavor: unknown): MdFlavor => (flavor === 'obsidian' ? MdFlavor.obsidian : flavor === 'commonmark' ? MdFlavor.commonmark : MdFlavor.gfm);
+const mdFlavor = (flavor: unknown): MdFlavor =>
+  flavor === 'obsidian' ? MdFlavor.obsidian : flavor === 'commonmark' ? MdFlavor.commonmark : MdFlavor.gfm;
 
 /** `text` rendered to HTML and read back: it renders to the same HTML again. */
 export function htmlFailures(text: string, config: Record<string, unknown>): Found[] {
@@ -471,7 +597,9 @@ export function htmlFailures(text: string, config: Record<string, unknown>): Fou
   const first = MdTree.parse(text, flavor).renderHtml();
   // (read back in the note's flavor, as a paste into it reads HTML)
   const back = MdHtmlParser.parse(first, { flavor }).markdown;
-  return norm(MdTree.parse(back, flavor).renderHtml()) !== norm(first) ? [{ kind: 'html: renders differently after a round trip', detail: `→ ${JSON.stringify(back)}` }] : [];
+  return norm(MdTree.parse(back, flavor).renderHtml()) !== norm(first)
+    ? [{ kind: 'html: renders differently after a round trip', detail: `→ ${JSON.stringify(back)}` }]
+    : [];
 }
 
 /** Clipboard `name` pasted over `[from, to)` of `view`: every letter of the note left and of the clipboard kept. */
@@ -485,7 +613,9 @@ export function pasteFailures(view: OurusView, name: string, from: number, to: n
   if (result instanceof OurusRejected || !(result instanceof OurusSuccess)) return [];
   const after = result.view.doc.text;
   const { anchor, head } = result.view.selection;
-  if (anchor < 0 || head < 0 || anchor > after.length || head > after.length) return [{ kind: `paste ${name}: selection off the text` }];
-  if (letters(after) !== letters(kept + (clip['text/plain'] ?? ''))) return [{ kind: `paste ${name}: letters lost or doubled`, detail: `→ ${JSON.stringify(after)}` }];
+  if (anchor < 0 || head < 0 || anchor > after.length || head > after.length)
+    return [{ kind: `paste ${name}: selection off the text` }];
+  if (letters(after) !== letters(kept + (clip['text/plain'] ?? '')))
+    return [{ kind: `paste ${name}: letters lost or doubled`, detail: `→ ${JSON.stringify(after)}` }];
   return [];
 }

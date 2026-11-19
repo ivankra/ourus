@@ -12,7 +12,10 @@ import * as esbuild from 'esbuild';
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
     const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
-    const usage = lines.slice(1, lines.findIndex((line, i) => i > 0 && !line.startsWith('//')));
+    const usage = lines.slice(
+      1,
+      lines.findIndex((line, i) => i > 0 && !line.startsWith('//')),
+    );
     console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(0);
   }
@@ -25,4 +28,10 @@ import * as esbuild from 'esbuild';
 
 const here = new URL('.', import.meta.url).pathname;
 // a classic script, not a module: browsers refuse module scripts from file:// URLs
-await esbuild.build({ entryPoints: [here + 'main.ts'], bundle: true, format: 'iife', target: 'es2022', outfile: here + 'dist/main.js' });
+await esbuild.build({
+  entryPoints: [here + 'main.ts'],
+  bundle: true,
+  format: 'iife',
+  target: 'es2022',
+  outfile: here + 'dist/main.js',
+});

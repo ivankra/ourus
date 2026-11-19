@@ -40,7 +40,8 @@ export interface IdleResult {
 }
 
 /** This script's version, so a page loaded by an earlier run with another version isn't reused. */
-export const idleVersion = (): string => String([...installIdle.toString()].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 0));
+export const idleVersion = (): string =>
+  String([...installIdle.toString()].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 0));
 
 /** The init script: run in the page before any of its own scripts (`version`: `idleVersion()`). */
 export function installIdle(version: string): void {
@@ -183,12 +184,15 @@ export function installIdle(version: string): void {
     new MutationObserver((records) => {
       const r = records[records.length - 1]!;
       const el = r.target as Element;
-      changed(`${r.type}${r.attributeName ? ` ${r.attributeName}` : ''} of <${el.tagName?.toLowerCase() ?? '#text'}${el.className && typeof el.className === 'string' ? `.${el.className.trim().split(/\s+/)[0]}` : ''}>`);
+      changed(
+        `${r.type}${r.attributeName ? ` ${r.attributeName}` : ''} of <${el.tagName?.toLowerCase() ?? '#text'}${el.className && typeof el.className === 'string' ? `.${el.className.trim().split(/\s+/)[0]}` : ''}>`,
+      );
     }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
   };
   if (document.documentElement) observe();
   else document.addEventListener('DOMContentLoaded', observe);
-  for (const type of ['focusin', 'focusout', 'selectionchange', 'input']) document.addEventListener(type, () => changed(type), true);
+  for (const type of ['focusin', 'focusout', 'selectionchange', 'input'])
+    document.addEventListener(type, () => changed(type), true);
   // a trace of the keys and what they did, the last 40: each key, input and focus change, with the
   // focused editor's text then, for a step that comes out otherwise than ourus to say where its key went
   // (`trace`, run.ts's second look)
@@ -196,11 +200,18 @@ export function installIdle(version: string): void {
   const t0 = performance.now();
   const note = (what: string): void => {
     const a = document.activeElement as HTMLTextAreaElement | HTMLElement | null;
-    const value = a && 'value' in a && typeof a.value === 'string' ? JSON.stringify(a.value.slice(0, 40)) : a?.isContentEditable ? JSON.stringify((a.textContent ?? '').slice(0, 40)) : '';
+    const value =
+      a && 'value' in a && typeof a.value === 'string'
+        ? JSON.stringify(a.value.slice(0, 40))
+        : a?.isContentEditable
+          ? JSON.stringify((a.textContent ?? '').slice(0, 40))
+          : '';
     // (and what was pending then: messages, short timers, frames; the oldest message's age)
     const now = performance.now();
     const oldest = Math.max(0, ...[...messages.values()].map((at) => now - at));
-    trace.push(`${Math.round(now - t0)} ${what} @${a?.tagName?.toLowerCase() ?? '-'} ${value} [m${messages.size}${messages.size ? `/${Math.round(oldest)}ms` : ''} t${timers.size} f${frames.size}]`);
+    trace.push(
+      `${Math.round(now - t0)} ${what} @${a?.tagName?.toLowerCase() ?? '-'} ${value} [m${messages.size}${messages.size ? `/${Math.round(oldest)}ms` : ''} t${timers.size} f${frames.size}]`,
+    );
     if (trace.length > 40) trace.shift();
   };
   document.addEventListener('keydown', (e) => note(`keydown ${e.key}`), true);
@@ -247,16 +258,32 @@ export function installIdle(version: string): void {
             appBusy = false;
           }
           const pendingMessages = messagePending(now);
-          const quiet = timers.size === 0 && (o.frames === false || frames.size === 0) && reading === 0 && pendingMessages === 0;
-          if (quiet && !appBusy && now - lastChange >= o.quiet) return resolve({ ms: Math.round(now - start), timedOut: false, busiest: last });
-          if (!quiet) last = `timers ${[...timers.values()].join(',') || '-'}, frames ${frames.size}${reading ? `, clipboard reads ${reading}` : ''}${pendingMessages ? `, messages ${pendingMessages}` : ''}`;
+          const quiet =
+            timers.size === 0 && (o.frames === false || frames.size === 0) && reading === 0 && pendingMessages === 0;
+          if (quiet && !appBusy && now - lastChange >= o.quiet)
+            return resolve({ ms: Math.round(now - start), timedOut: false, busiest: last });
+          if (!quiet)
+            last = `timers ${[...timers.values()].join(',') || '-'}, frames ${frames.size}${reading ? `, clipboard reads ${reading}` : ''}${pendingMessages ? `, messages ${pendingMessages}` : ''}`;
           else if (appBusy) last = 'app busy';
           else last = `changes, the last: ${lastKind}`;
           if (quiet && appBusy && now - Math.max(lastChange, start) >= (o.stuck ?? 1000)) {
-            return resolve({ ms: Math.round(now - start), timedOut: true, pending: `app busy, and nothing else for ${Math.round(now - Math.max(lastChange, start))}ms: stuck` });
+            return resolve({
+              ms: Math.round(now - start),
+              timedOut: true,
+              pending: `app busy, and nothing else for ${Math.round(now - Math.max(lastChange, start))}ms: stuck`,
+            });
           }
           if (now - start > o.timeout) {
-            const pending = [`timers ${[...timers.values()].join(',') || '-'}`, `frames ${frames.size}`, reading ? `clipboard reads ${reading}` : '', pendingMessages ? `messages ${pendingMessages}` : '', appBusy ? 'app busy' : '', `last change ${Math.round(now - lastChange)}ms ago`].filter(Boolean).join('; ');
+            const pending = [
+              `timers ${[...timers.values()].join(',') || '-'}`,
+              `frames ${frames.size}`,
+              reading ? `clipboard reads ${reading}` : '',
+              pendingMessages ? `messages ${pendingMessages}` : '',
+              appBusy ? 'app busy' : '',
+              `last change ${Math.round(now - lastChange)}ms ago`,
+            ]
+              .filter(Boolean)
+              .join('; ');
             return resolve({ ms: Math.round(now - start), timedOut: true, pending });
           }
           nativeSetTimeout(poll, 4);

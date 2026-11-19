@@ -20,7 +20,14 @@
 import { escapeHtml, isPunctuation, isUnicodeWhitespace } from './chars.ts';
 import { BLOCKQUOTE } from './blocks.ts';
 import { defineFlavor, type MdExtension, type MdFlavor } from './flavor.ts';
-import { autolinkExtension, footnotes, gfmCore, strikethroughExtension, tableExtension, tasklistExtension } from './gfm.ts';
+import {
+  autolinkExtension,
+  footnotes,
+  gfmCore,
+  strikethroughExtension,
+  tableExtension,
+  tasklistExtension,
+} from './gfm.ts';
 import { coreBlocks, type MdHtmlRenderer } from './html.ts';
 import { MdInlineTextBuilder } from './inline-text.ts';
 import { plainMarkup } from './markup.ts';
@@ -96,11 +103,15 @@ const reCallout = /^\[!([^\]\s]+)\]([+-]?)/;
  * it starts with: `[!type]` and a fold sign, from `from` to `to`; null where there is none. Obsidian's
  * syntax, which the outline reads in every flavor.
  */
-export function mdCalloutAt(line: string): { readonly kind: string; readonly fold: '+' | '-' | null; readonly from: number; readonly to: number } | null {
+export function mdCalloutAt(
+  line: string,
+): { readonly kind: string; readonly fold: '+' | '-' | null; readonly from: number; readonly to: number } | null {
   let from = 0;
   while (line[from] === ' ' || line[from] === '\t') from++;
   const match = reCallout.exec(line.slice(from));
-  return match ? { kind: match[1]!, fold: (match[2] || null) as '+' | '-' | null, from, to: from + match[0].length } : null;
+  return match
+    ? { kind: match[1]!, fold: (match[2] || null) as '+' | '-' | null, from, to: from + match[0].length }
+    : null;
 }
 
 const calloutStart = {
@@ -150,7 +161,9 @@ function renderBlockquote(r: MdHtmlRenderer, b: MdBlockAt, entering: boolean): v
   if (!callout) return coreBlocks.blockquote!(r, b, entering);
   if (entering) {
     r.cr();
-    r.lit(`<div class="callout" data-callout="${escapeHtml(callout.kind.toLowerCase())}"${callout.fold ? ` data-callout-fold="${callout.fold}"` : ''}>`);
+    r.lit(
+      `<div class="callout" data-callout="${escapeHtml(callout.kind.toLowerCase())}"${callout.fold ? ` data-callout-fold="${callout.fold}"` : ''}>`,
+    );
     r.cr();
     return;
   }
@@ -197,7 +210,11 @@ export const callouts: MdExtension = {
 const trimBlanksEnd = (s: string): string => s.replace(/[ \t]+$/, '');
 
 /** A block fenced by `fence` (`$$`, `%%`): from a line starting with it to a line ending with it (but blanks). */
-function fencedBlock(type: string, fence: string, name: string): { spec: MdBlockSpec; start: { name: string; before: string; start(m: MdMachine): 0 | 1 | 2 } } {
+function fencedBlock(
+  type: string,
+  fence: string,
+  name: string,
+): { spec: MdBlockSpec; start: { name: string; before: string; start(m: MdMachine): 0 | 1 | 2 } } {
   const next: MdLeafRole = Object.freeze({ type, first: false });
   const closing: MdLeafRole = Object.freeze({ type, first: false, closed: true });
   const spec: MdBlockSpec = {
@@ -315,7 +332,6 @@ export const commentBlocks: MdExtension = {
 
 // --------------------------------------------------------------------------------- wikilinks
 
-
 /** `[[target]]`, `[[target|alias]]`, `![[target]]` on one line; the target not empty. */
 function wikilinkAt(p: MdInlineParser, at: number, embed: boolean): boolean {
   const { text } = p;
@@ -340,8 +356,18 @@ function wikilinkAt(p: MdInlineParser, at: number, embed: boolean): boolean {
   return true;
 }
 
-const wikilinkRule: MdInlineRule = { name: 'wikilink', triggers: '[', before: 'openBracket', parse: (p) => wikilinkAt(p, p.pos, false) };
-const embedRule: MdInlineRule = { name: 'embed', triggers: '!', before: 'bang', parse: (p) => wikilinkAt(p, p.pos, true) };
+const wikilinkRule: MdInlineRule = {
+  name: 'wikilink',
+  triggers: '[',
+  before: 'openBracket',
+  parse: (p) => wikilinkAt(p, p.pos, false),
+};
+const embedRule: MdInlineRule = {
+  name: 'embed',
+  triggers: '!',
+  before: 'bang',
+  parse: (p) => wikilinkAt(p, p.pos, true),
+};
 
 export const wikilinks: MdExtension = {
   name: 'wikilinks',
@@ -360,7 +386,9 @@ export const wikilinks: MdExtension = {
       embed(r, node, entering) {
         if (!entering) return;
         const src = escapeHtml(node.target!);
-        r.markup(`<span class="internal-embed" src="${src}"${node.alias !== undefined ? ` alt="${escapeHtml(node.alias)}"` : ''}></span>`);
+        r.markup(
+          `<span class="internal-embed" src="${src}"${node.alias !== undefined ? ` alt="${escapeHtml(node.alias)}"` : ''}></span>`,
+        );
       },
     },
   },
@@ -478,7 +506,12 @@ function mathClosers(p: MdInlineParser): readonly number[] {
   for (let i = 1; i < text.length; i++) {
     const c = text.charCodeAt(i);
     if (c === 92) i++;
-    else if (c === 36 && !isSpace(text.charCodeAt(i - 1)) && !(text.charCodeAt(i + 1) >= 48 && text.charCodeAt(i + 1) <= 57)) closers.push(i);
+    else if (
+      c === 36 &&
+      !isSpace(text.charCodeAt(i - 1)) &&
+      !(text.charCodeAt(i + 1) >= 48 && text.charCodeAt(i + 1) <= 57)
+    )
+      closers.push(i);
   }
   p.memo.set('math closers', closers);
   return closers;
@@ -491,7 +524,9 @@ export const math: MdExtension = {
     inlines: {
       math(r, node, entering) {
         if (!entering) return;
-        r.markup(`<span class="math ${(node as MdInline & { display?: boolean }).display ? 'math-display' : 'math-inline'}">`);
+        r.markup(
+          `<span class="math ${(node as MdInline & { display?: boolean }).display ? 'math-display' : 'math-inline'}">`,
+        );
         r.out(node.value!);
         r.markup('</span>');
       },

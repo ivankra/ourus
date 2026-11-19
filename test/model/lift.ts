@@ -44,7 +44,8 @@ export function lift(doc: OurusDoc): Lifted {
         .map((l) => l.trim())
         .join('\n');
     } else if (n.kind !== 'root') {
-      if (n.kind === 'item') m.task = text instanceof OurusProse && text.task ? (text.task.status === ' ' ? ' ' : 'x') : null;
+      if (n.kind === 'item')
+        m.task = text instanceof OurusProse && text.task ? (text.task.status === ' ' ? ' ' : 'x') : null;
       const s = segments(doc, n);
       m.text = s.map((g) => source.slice(g.from, g.to)).join('\n');
       segs.set(m, s);
@@ -110,7 +111,10 @@ function segments(doc: OurusDoc, n: OurusNode): Seg[] {
     at = end + 1;
     // a setext underline's line, and a marker's line its text starts below, hold none of it
     if ((underline && start > underline.from) || (below && end < below.to)) continue;
-    const to = Math.max(Math.min(end, close && close.from >= start ? close.from : end), Math.min(end, text.textStart(k)));
+    const to = Math.max(
+      Math.min(end, close && close.from >= start ? close.from : end),
+      Math.min(end, text.textStart(k)),
+    );
     let [f, t] = [doc.posOf(n, Math.min(text.textStart(k), to)), doc.posOf(n, to, -1)];
     while (f < t && isSpace(source.charCodeAt(f))) f++;
     while (t > f && isSpace(source.charCodeAt(t - 1))) t--;

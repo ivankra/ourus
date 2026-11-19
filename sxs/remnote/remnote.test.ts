@@ -19,12 +19,12 @@ test("a paragraph's list and a heading's section come up beside it, and go back"
   assert.equal(draw(own(flat)), '¶ # A\n  ¶ ```\n    x\n    ```\n  - y\n¶ # B\n  - z\n');
 });
 
-test("a paragraph inside an item is refused: RemNote shows a bullet there", () => {
+test('a paragraph inside an item is refused: RemNote shows a bullet there', () => {
   assert.match(bulletless(outline('- a\n  ¶ b\n')) ?? '', /inside an item/);
   assert.equal(bulletless(outline('¶ a\n  - b\n')), undefined);
 });
 
-test("every spec buffer the setup holds goes there and back as it was", () => {
+test('every spec buffer the setup holds goes there and back as it was', () => {
   const spec = new URL('../../spec/', import.meta.url);
   let held = 0;
   for (const f of readdirSync(spec).filter((f) => f.endsWith('.md'))) {

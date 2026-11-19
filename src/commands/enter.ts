@@ -12,7 +12,15 @@ import { outdentCommand } from './outdent.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
 import { enterInQuote, quoteAtomAt } from './quote.ts';
 import { enterInPair } from './typing.ts';
-import { canOpenLineAbove, leaveList, openLineAbove, pastPrefix, splitSpaces, textActedOnAt, withoutSelection } from './util.ts';
+import {
+  canOpenLineAbove,
+  leaveList,
+  openLineAbove,
+  pastPrefix,
+  splitSpaces,
+  textActedOnAt,
+  withoutSelection,
+} from './util.ts';
 import { withFolds } from './view.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
@@ -54,64 +62,114 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   if (block) return block;
   // in the frontmatter, the host's newline (Gap19)
   if (ctx.from.zone === 'preamble') return new OurusDeferred('in-markup', 'the caret is in the preamble');
-  if (ctx.collapsed && ctx.from.zone === 'gap') return leaveQuote(ctx, ctx.from.owner) ?? leaveItem(ctx, ctx.from.owner);
+  if (ctx.collapsed && ctx.from.zone === 'gap')
+    return leaveQuote(ctx, ctx.from.owner) ?? leaveItem(ctx, ctx.from.owner);
   // in a callout's `[!type]`, markup: the host's where markup is text (Quote43), else refused, as over
   // a selection from it (Quote79)
   const from = ctx.from;
   // with `enterAtTextStart: stay`, at a heading's line start, before its `#`s: a blank line above it, the
   // heading whole, the caret to its title (Enter55c)
-  if (config.enterAtTextStart === 'stay' && ctx.collapsed && from.zone === 'frame' && from.part === 'heading' && from.offset === 0 && from.text instanceof OurusProse && canOpenLineAbove(ctx, from.node)) {
+  if (
+    config.enterAtTextStart === 'stay' &&
+    ctx.collapsed &&
+    from.zone === 'frame' &&
+    from.part === 'heading' &&
+    from.offset === 0 &&
+    from.text instanceof OurusProse &&
+    canOpenLineAbove(ctx, from.node)
+  ) {
     return openLineAbove(ctx, from.node, from.text.textStart(0), from.text, from.text.textStart(0));
   }
-  if (from.zone === 'frame' && from.part === 'callout' && from.offset > 0) return !decorates(config, 'callout') && ctx.collapsed ? new OurusDeferred('in-markup', 'the caret is in markup') : new OurusRejected('not-expressible', "a callout's type is one word");
+  if (from.zone === 'frame' && from.part === 'callout' && from.offset > 0)
+    return !decorates(config, 'callout') && ctx.collapsed
+      ? new OurusDeferred('in-markup', 'the caret is in markup')
+      : new OurusRejected('not-expressible', "a callout's type is one word");
   // in a setext underline, at the end of the title: the underline is markup (TO-E18)
-  const underline = ctx.collapsed && from.zone === 'frame' && from.part === 'underline' && from.text instanceof OurusProse ? { node: from.node, text: from.text, offset: from.text.frame.find((p) => p.part === 'underline')!.from } : null;
+  const underline =
+    ctx.collapsed && from.zone === 'frame' && from.part === 'underline' && from.text instanceof OurusProse
+      ? { node: from.node, text: from.text, offset: from.text.frame.find((p) => p.part === 'underline')!.from }
+      : null;
   // in a block id ending the text (`^┃x`), markup: the host's where it shows block ids as text; else at
   // the text's end, the block id staying
-  if (ctx.collapsed && from.zone === 'frame' && from.part === 'blockId' && !decorates(config, 'blockId')) return new OurusDeferred('in-markup', 'the caret is in markup');
-  const inBlockId = ctx.collapsed && from.zone === 'frame' && from.part === 'blockId' && from.text instanceof OurusProse ? { node: from.node, text: from.text, offset: closingFrameStart(from.text) } : null;
+  if (ctx.collapsed && from.zone === 'frame' && from.part === 'blockId' && !decorates(config, 'blockId'))
+    return new OurusDeferred('in-markup', 'the caret is in markup');
+  const inBlockId =
+    ctx.collapsed && from.zone === 'frame' && from.part === 'blockId' && from.text instanceof OurusProse
+      ? { node: from.node, text: from.text, offset: closingFrameStart(from.text) }
+      : null;
   const at = underline ?? inBlockId ?? textActedOnAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head));
   if (!at) return null;
   const { node, text, offset } = at;
   // over a selection in this text, it goes, and the split is where it was; across nodes, as Backspace
   // deletes it (Enter56)
-  const end = ctx.collapsed ? offset : ctx.to.zone === 'text' && ctx.to.node.persistentNode === node.persistentNode ? ctx.to.offset : -1;
+  const end = ctx.collapsed
+    ? offset
+    : ctx.to.zone === 'text' && ctx.to.node.persistentNode === node.persistentNode
+      ? ctx.to.offset
+      : -1;
   if (end < 0) return splitAcross(ctx);
   // a callout's title (Obsidian's) splits as a heading's does, from its text's start too; in its
   // `[!type]`, refused
   const title = node.kind === 'quote' && text.type === 'title';
-  if (title && text.frame.some((p) => p.part === 'callout' && offset > p.from && offset < p.to)) return new OurusRejected('not-expressible', "a callout's type is one word");
+  if (title && text.frame.some((p) => p.part === 'callout' && offset > p.from && offset < p.to))
+    return new OurusRejected('not-expressible', "a callout's type is one word");
   // a quote's text: an empty one leaves the quote, the `> ` going; with `enterInQuote: line` a line
   // of it, past the text's start (where a node goes above it, rule 6); with `split` it splits as a
   // paragraph does, the rest unquoted
   if (text.type === 'quote' && typed) {
-    if (text.empty && ctx.collapsed) return ctx.apply(ctx.draft().setText(node, text.slice(text.textStart(0)).withBlockIdLines(text.blockIdLines)).setCaret(node, 0, -1));
+    if (text.empty && ctx.collapsed)
+      return ctx.apply(
+        ctx
+          .draft()
+          .setText(node, text.slice(text.textStart(0)).withBlockIdLines(text.blockIdLines))
+          .setCaret(node, 0, -1),
+      );
     // on its empty last line (the one the Enter before made, held): it leaves the quote, the line
     // going, an empty paragraph after it (an item after an item)
     const last = text.text.lastIndexOf('\n');
     if (ctx.collapsed && offset === text.text.length && text.emptyLastLine) {
       const draft = ctx.draft();
-      const id = draft.create(node.kind === 'item' ? 'item' : 'paragraph', new OurusProse('paragraph', node.kind === 'item', ''));
+      const id = draft.create(
+        node.kind === 'item' ? 'item' : 'paragraph',
+        new OurusProse('paragraph', node.kind === 'item', ''),
+      );
       draft.setText(node, text.slice(0, last).withBlockIdLines(text.blockIdLines)).place('after', node, [id]);
       // (its blank lines the node's, ours where they were)
       if (node.kind !== 'item') draft.gap(id, node.gap).gapOrigin(id, node).gap(node, Math.max(1, node.gap));
       return ctx.apply(draft.setCaret(id, 0, -1));
     }
-    if (config.enterInQuote === 'line' && trimMd(text.text.slice(text.textStart(0), offset)) !== '') return shiftEnterCommand(ctx);
+    if (config.enterInQuote === 'line' && trimMd(text.text.slice(text.textStart(0), offset)) !== '')
+      return shiftEnterCommand(ctx);
   }
   // (an item's text a paragraph, or an ATX heading's, `- # a`: it splits as an item)
   const headingItem = node.kind === 'item' && text.type === 'heading' && text.heading?.form === 'atx';
   const prose = text.type === 'paragraph' || text.type === 'quote';
-  if (node.kind === 'item' ? !prose && !headingItem : node.kind !== 'heading' && node.kind !== 'paragraph' && !title) return null;
+  if (node.kind === 'item' ? !prose && !headingItem : node.kind !== 'heading' && node.kind !== 'paragraph' && !title)
+    return null;
   // (an empty heading splits as at a title's end: an empty paragraph after it, the heading kept; an
   // item's, an empty item after it, Enter71b)
   const emptyHeading = text.empty && (node.kind === 'heading' || headingItem);
-  if (text.empty && ctx.collapsed && !emptyHeading) return node.kind === 'item' ? enterInEmptyItem(ctx, node, text, offset) : emptyParagraph(ctx, node);
+  if (text.empty && ctx.collapsed && !emptyHeading)
+    return node.kind === 'item' ? enterInEmptyItem(ctx, node, text, offset) : emptyParagraph(ctx, node);
   // (an item's: the heading as it is, untouched, an empty item after it, its first child where it has
   // children, as at a title's end)
   // (over a selection of blanks on its line, `-  #« »`, the same: nothing of the title to take)
-  const blank = !ctx.collapsed && ctx.doc.lineAt(ctx.selection.anchor).index === ctx.doc.lineAt(ctx.selection.head).index && trimMd(ctx.doc.text.slice(Math.min(ctx.selection.anchor, ctx.selection.head), Math.max(ctx.selection.anchor, ctx.selection.head))) === '';
-  if (emptyHeading && headingItem && (ctx.collapsed || blank) && !view.zoomFolded.has(node.id) && view.zoom !== node.id) {
+  const blank =
+    !ctx.collapsed &&
+    ctx.doc.lineAt(ctx.selection.anchor).index === ctx.doc.lineAt(ctx.selection.head).index &&
+    trimMd(
+      ctx.doc.text.slice(
+        Math.min(ctx.selection.anchor, ctx.selection.head),
+        Math.max(ctx.selection.anchor, ctx.selection.head),
+      ),
+    ) === '';
+  if (
+    emptyHeading &&
+    headingItem &&
+    (ctx.collapsed || blank) &&
+    !view.zoomFolded.has(node.id) &&
+    view.zoom !== node.id
+  ) {
     const draft = ctx.draft();
     const id = draft.create('item', new OurusProse('paragraph', true, ''));
     if (node.children.length) draft.append(node, 'first', [id]);
@@ -124,7 +182,9 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   // at the text's start (below its marker too, `-⏎  ┃b`; past an escape of ours, `\┃-`): rule 6
   // (over a selection from there, it goes first: Enter59)
   const start = text.textStart(0);
-  const before = [...s.slice(start, offset)].filter((char, k) => char !== '\\' || !text.marks.hasAutoAt(start + k)).join('');
+  const before = [...s.slice(start, offset)]
+    .filter((char, k) => char !== '\\' || !text.marks.hasAutoAt(start + k))
+    .join('');
   if (trimMd(before) === '' && !title && !emptyHeading) {
     // (a paragraph right under an item's ATX title, a line of its text to an outliner: it splits off as
     // a later line of an item's text does, an item of its own, Enter52)
@@ -135,15 +195,24 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
     // an ATX heading splits there, as anywhere in its title (a setext one has no empty form). Over a
     // selection, it goes first (Enter59)
     if (stay && node.kind === 'item') return newEmptyNodeAbove(ctx, node, text, end, true);
-    if (stay && node.kind === 'paragraph' && canOpenLineAbove(ctx, node)) return openLineAbove(ctx, node, offset, text, end);
-    if (!stay || node.kind !== 'heading' || text.heading?.form !== 'atx') return newEmptyNodeAbove(ctx, node, text, end);
+    if (stay && node.kind === 'paragraph' && canOpenLineAbove(ctx, node))
+      return openLineAbove(ctx, node, offset, text, end);
+    if (!stay || node.kind !== 'heading' || text.heading?.form !== 'atx')
+      return newEmptyNodeAbove(ctx, node, text, end);
   }
   // (a closing frame stays with the first half: a block id, an ATX title's `#`s, a setext underline,
   // the run of them ending the text; null where there is none)
   const close = closingFrameStart(text) < s.length ? closingFrameStart(text) : null;
   // the spaces at the caret, as `enterSplitSpace` says (`- start` written as the second half's padding
   // by `done()`); not into the closing frame, whose blanks are its own: an ATX title's `#`s, a block id's
-  const split = splitSpaces(s, offset, end, lineStart, close !== null ? Math.max(end, close) : s.length, config.enterSplitSpace);
+  const split = splitSpaces(
+    s,
+    offset,
+    end,
+    lineStart,
+    close !== null ? Math.max(end, close) : s.length,
+    config.enterSplitSpace,
+  );
   let a = split.from;
   let b = split.to;
   const kept = split.kept;
@@ -168,19 +237,32 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   const after = folded && (atEnd || (node.kind === 'item' && config.enterMidItem === 'child'));
   const zoomRoot = view.zoom === node.id && node.kind === 'item';
   // (`enterMidItem` is of an item with children: one without has its rest as its sibling either way)
-  const child = zoomRoot || (node.kind === 'item' && node.children.length > 0 && !folded && (atEnd || config.enterMidItem === 'child'));
+  const child =
+    zoomRoot ||
+    (node.kind === 'item' && node.children.length > 0 && !folded && (atEnd || config.enterMidItem === 'child'));
   // with `quirkEnterMidHeading: workflowy`, the text before the caret a paragraph (an item) above the
   // heading, which keeps the rest (its `#`s or its underline, its block ids: those of its closing
   // frame and the lines it carries, moved) and its section (its children)
-  if (key && config.quirkEnterMidHeading === 'workflowy' && (node.kind === 'heading' || headingItem) && text.heading && !atEnd) {
+  if (
+    key &&
+    config.quirkEnterMidHeading === 'workflowy' &&
+    (node.kind === 'heading' || headingItem) &&
+    text.heading &&
+    !atEnd
+  ) {
     const open = text.frame.find((p) => p.part === 'heading');
     const from = open ? open.to : 0;
     // (a setext title starts at its text: spaces kept there would be none)
     let rest = b;
     if (!open) while (rest < s.length && isSpaceOrTab(s.charCodeAt(rest))) rest++;
     const [, made] = draft.split(node, a, { to: rest, children: 'follow', into: 'sibling' });
-    draft.convert(made, node.kind).setText(made, text.slice(0, from).concat(text.slice(rest)).withBlockIdLines(text.blockIdLines));
-    draft.movedBlockIds(blockIdsOf(text).map((b) => b.name), made);
+    draft
+      .convert(made, node.kind)
+      .setText(made, text.slice(0, from).concat(text.slice(rest)).withBlockIdLines(text.blockIdLines));
+    draft.movedBlockIds(
+      blockIdsOf(text).map((b) => b.name),
+      made,
+    );
     // (its block-id lines the heading's, `made`'s now)
     // (a paragraph's text, no heading's: a `#` it starts with literal, escaped as the writer escapes one)
     draft.setText(node, text.slice(from, a).withBlockIdLines([]).retyped('paragraph', headingItem));
@@ -199,7 +281,12 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
     draft.setText(node, escaped.withMarks({ auto: [...escaped.marks.auto, start] }));
     shift = 1;
   }
-  const [, made] = draft.split(node, a + shift, { to: b + shift, children: stay ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
+  const [, made] = draft.split(node, a + shift, {
+    to: b + shift,
+    children: stay ? 'stay' : 'follow',
+    into,
+    ...(title ? { kind: 'paragraph' as const } : {}),
+  });
   // (Enter under a heading sets its text off by a blank line, ours; Shift-Enter writes it compact)
   if (key && node.kind === 'heading') draft.setOff(node);
   // a task's new item is a task too
@@ -226,13 +313,25 @@ const LINE_BLOCKS = new Set(['table', 'thematic_break', 'footnote_definition']);
  */
 function blockAt(ctx: CommandContext): OurusResult | null | undefined {
   const at = ctx.from;
-  if (!ctx.collapsed || (at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusAtom) || !LINE_BLOCKS.has(at.text.type)) return undefined;
-  if (at.offset < at.text.text.length) return at.text.type === 'table' ? new OurusRejected('not-expressible', 'a row is a line') : null;
+  if (
+    !ctx.collapsed ||
+    (at.zone !== 'text' && at.zone !== 'frame') ||
+    !(at.text instanceof OurusAtom) ||
+    !LINE_BLOCKS.has(at.text.type)
+  )
+    return undefined;
+  if (at.offset < at.text.text.length)
+    return at.text.type === 'table' ? new OurusRejected('not-expressible', 'a row is a line') : null;
   if (at.node.kind === 'item') return nodeAfterBlock(ctx, at.node);
   const draft = ctx.draft();
   const made = draft.create('paragraph', new OurusProse('paragraph', false, ''));
   // (its blank lines the block's, ours where they were)
-  draft.place('after', at.node, [made]).gap(made, at.node.gap).gapOrigin(made, at.node).gap(at.node, 1).setCaret(made, 0, -1);
+  draft
+    .place('after', at.node, [made])
+    .gap(made, at.node.gap)
+    .gapOrigin(made, at.node)
+    .gap(at.node, 1)
+    .setCaret(made, 0, -1);
   return ctx.apply(draft);
 }
 
@@ -241,7 +340,8 @@ function blockAt(ctx: CommandContext): OurusResult | null | undefined {
  * (Quote35); anywhere else refused, there is no second one to make (Enter40).
  */
 function emptyParagraph(ctx: CommandContext, node: OurusNode): OurusResult | null {
-  if (node.kind === 'paragraph' && node.parent?.kind === 'quote' && !node.next && !node.children.length) return outdentCommand(ctx);
+  if (node.kind === 'paragraph' && node.parent?.kind === 'quote' && !node.next && !node.children.length)
+    return outdentCommand(ctx);
   return new OurusRejected('not-expressible', 'an empty paragraph makes no second one');
 }
 
@@ -259,7 +359,14 @@ function leaveQuote(ctx: CommandContext, owner: OurusNode): OurusResult | null |
   const item = owner.kind === 'item';
   const id = draft.create(item ? 'item' : 'paragraph', new OurusProse('paragraph', item, ''));
   // (the blank lines after the caret's, the last ours where it was)
-  return ctx.apply(draft.place('after', owner, [id]).gap(id, Math.max(0, owner.gap - 1), true).gapOrigin(id, owner).gap(owner, item ? 0 : 1).setCaret(id, 0, -1));
+  return ctx.apply(
+    draft
+      .place('after', owner, [id])
+      .gap(id, Math.max(0, owner.gap - 1), true)
+      .gapOrigin(id, owner)
+      .gap(owner, item ? 0 : 1)
+      .setCaret(id, 0, -1),
+  );
 }
 
 /**
@@ -272,12 +379,20 @@ function leaveItem(ctx: CommandContext, owner: OurusNode): OurusResult | null {
   if (owner.children.length || k < 0 || k >= owner.gap) return null;
   // the item whose last node the line is after
   let item: OurusNode | null = owner;
-  while (item && !(item.kind === 'item' && ctx.doc.atTextColumn(ctx.selection.head, item))) item = item.next ? null : item.parent;
+  while (item && !(item.kind === 'item' && ctx.doc.atTextColumn(ctx.selection.head, item)))
+    item = item.next ? null : item.parent;
   if (!item) return null;
   const draft = ctx.draft();
   const id = draft.create('item', newEmptyTextBeside(ctx, ctx.doc.textOf(item) as OurusProse, 'item'));
   // (the lines below, the last ours where it was)
-  return ctx.apply(draft.place('after', item, [id]).gap(owner, k, 'first').gap(id, owner.gap - k - 1, true).gapOrigin(id, owner).setCaret(id, 0, -1));
+  return ctx.apply(
+    draft
+      .place('after', item, [id])
+      .gap(owner, k, 'first')
+      .gap(id, owner.gap - k - 1, true)
+      .gapOrigin(id, owner)
+      .setCaret(id, 0, -1),
+  );
 }
 
 /**
@@ -287,9 +402,14 @@ function leaveItem(ctx: CommandContext, owner: OurusNode): OurusResult | null {
  */
 function splitAcross(ctx: CommandContext): OurusResult | null {
   const { from, to } = ctx;
-  if (from.zone !== 'text' || to.zone !== 'text' || (from.node.kind !== 'item' && from.node.kind !== 'paragraph')) return null;
+  if (from.zone !== 'text' || to.zone !== 'text' || (from.node.kind !== 'item' && from.node.kind !== 'paragraph'))
+    return null;
   const [before, after] = [from.text.text[from.offset - 1], to.text.text[to.offset]];
-  if ([before, after].some((c) => c === undefined || c === '\n' || isSpaceOrTab(c.charCodeAt(0))) || ctx.config.enterMidItem === 'child') return null;
+  if (
+    [before, after].some((c) => c === undefined || c === '\n' || isSpaceOrTab(c.charCodeAt(0))) ||
+    ctx.config.enterMidItem === 'child'
+  )
+    return null;
   return deleteSelectionAcross(ctx, (draft, node, offset) => {
     const [, made] = draft.split(node, offset, { children: 'follow' });
     return draft.setCaret(made, 0, -1);
@@ -307,7 +427,13 @@ function newEmptyTextBeside(ctx: CommandContext, text: OurusProse, kind: 'item' 
  * caret going into it: an empty item above an item, an empty paragraph above a paragraph or a heading.
  * `stays`: the caret staying in the node's text instead (`stay`, an item).
  */
-function newEmptyNodeAbove(ctx: CommandContext, node: OurusNode, text: OurusProse, to: number, stays = false): OurusResult | null {
+function newEmptyNodeAbove(
+  ctx: CommandContext,
+  node: OurusNode,
+  text: OurusProse,
+  to: number,
+  stays = false,
+): OurusResult | null {
   const kind = node.kind === 'item' ? 'item' : 'paragraph';
   const draft = ctx.draft();
   const rest = withoutSelection(text, to);
@@ -355,7 +481,10 @@ function enterInEmptyItem(ctx: CommandContext, node: OurusNode, text: OurusProse
   // as its list's last, or by `enterOnEmptyItem`: a nested item outdents as Shift-Tab does, a top-level
   // one leaves the list, an empty paragraph where it was (with `exit`, a nested one gets a sibling;
   // with `outdent`, a top-level one too where Shift-Tab has no level to leave, `outdentTopLevel: refuse`)
-  const sibling = config.enterOnEmptyItem === 'sibling' || (config.enterOnEmptyItem === 'exit' && nested) || (config.enterOnEmptyItem === 'outdent' && !nested && config.outdentTopLevel === 'refuse');
+  const sibling =
+    config.enterOnEmptyItem === 'sibling' ||
+    (config.enterOnEmptyItem === 'exit' && nested) ||
+    (config.enterOnEmptyItem === 'outdent' && !nested && config.outdentTopLevel === 'refuse');
   if (last || !sibling) {
     if (nested) return outdentCommand(ctx);
     return leaveList(ctx, node);
@@ -385,7 +514,14 @@ export function headingItemLine(ctx: CommandContext, node: OurusNode): OurusNode
  * of it (past `skip` blanks, its own, the caret). The title's item's other children go with it, its
  * children after its own; under `enterMidItem: child` they stay, and it is their first sibling.
  */
-function splitHeadingItemLine(ctx: CommandContext, node: OurusNode, item: OurusNode, a: number, b: number, skip = 0): OurusResult | null {
+function splitHeadingItemLine(
+  ctx: CommandContext,
+  node: OurusNode,
+  item: OurusNode,
+  a: number,
+  b: number,
+  skip = 0,
+): OurusResult | null {
   const draft = ctx.draft();
   const rest = item.children.slice(1);
   const text = ctx.doc.textOf(node) as OurusProse;

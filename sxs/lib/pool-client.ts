@@ -23,7 +23,15 @@ export const poolLog = join(poolDir, 'pool.log');
 const poolScript = fileURLToPath(new URL('../pool.ts', import.meta.url));
 
 /** The sources the pool runs: a pool started from other ones is replaced (drained first). */
-const SOURCES = ['../pool.ts', './pool-client.ts', './cdp.ts', './desktop.ts', './system.ts', '../siyuan/kernel.ts', '../obsidian/instance.ts'];
+const SOURCES = [
+  '../pool.ts',
+  './pool-client.ts',
+  './cdp.ts',
+  './desktop.ts',
+  './system.ts',
+  '../siyuan/kernel.ts',
+  '../obsidian/instance.ts',
+];
 let version: string | undefined;
 export function poolVersion(): string {
   if (version) return version;
@@ -61,14 +69,23 @@ export class PoolConn {
     const end = (): void => {
       if (this.closed) return;
       this.closed = true;
-      for (const p of this.pending.values()) p.reject(new Error(`the pool closed the connection (its log: ${poolLog})`));
+      for (const p of this.pending.values())
+        p.reject(new Error(`the pool closed the connection (its log: ${poolLog})`));
       this.pending.clear();
     };
     sock.on('close', end);
     sock.on('error', end);
   }
 
-  private message(m: { id?: number; ok?: boolean; error?: string; event?: string; line?: string; why?: string; [k: string]: unknown }): void {
+  private message(m: {
+    id?: number;
+    ok?: boolean;
+    error?: string;
+    event?: string;
+    line?: string;
+    why?: string;
+    [k: string]: unknown;
+  }): void {
     if (m.event === 'say') return this.say(m.line!);
     if (m.event === 'lost') {
       for (const fn of this.lostFns) fn(m.why!);
@@ -112,7 +129,10 @@ function tryDial(): Promise<Socket | null> {
 function startPool(): void {
   mkdirSync(poolDir, { recursive: true });
   const out = openSync(poolLog, 'a');
-  spawn(process.execPath, [...process.execArgv, poolScript, 'serve'], { detached: true, stdio: ['ignore', out, out] }).unref();
+  spawn(process.execPath, [...process.execArgv, poolScript, 'serve'], {
+    detached: true,
+    stdio: ['ignore', out, out],
+  }).unref();
 }
 
 /** Whether this process has checked the pool's code against its own (once, at its first connection). */
@@ -137,7 +157,13 @@ export async function connectPool(who: string, say: Say, { start = true } = {}):
     const conn = new PoolConn(sock, say);
     const hello = await Promise.race([
       conn.request<{ version: string; pid: number }>('hello', { version: poolVersion(), pid: process.pid, who }),
-      sleep(15000).then(() => Promise.reject(new Error(`the pool doesn't answer on ${poolSocket} (its log: ${poolLog}); \`node sxs/pool.ts stop\`, or kill it`))),
+      sleep(15000).then(() =>
+        Promise.reject(
+          new Error(
+            `the pool doesn't answer on ${poolSocket} (its log: ${poolLog}); \`node sxs/pool.ts stop\`, or kill it`,
+          ),
+        ),
+      ),
     ]).catch((e: Error) => {
       conn.close();
       throw e;
@@ -147,14 +173,19 @@ export async function connectPool(who: string, say: Say, { start = true } = {}):
       return conn;
     }
     // a pool of other code: drained, and one of this code started once it is gone
-    say(`the pool (pid ${hello.pid}) runs other code than this: waiting for its leases to end, then starting a new one`);
+    say(
+      `the pool (pid ${hello.pid}) runs other code than this: waiting for its leases to end, then starting a new one`,
+    );
     await conn.request('drain').catch(() => {});
     conn.close();
     for (let i = 0; ; i++) {
       const s = await tryDial();
       if (!s) break;
       s.destroy();
-      if (i % 60 === 59) say(`still waiting for the old pool (pid ${hello.pid}) to drain: \`node sxs/pool.ts status\` says what holds it`);
+      if (i % 60 === 59)
+        say(
+          `still waiting for the old pool (pid ${hello.pid}) to drain: \`node sxs/pool.ts status\` says what holds it`,
+        );
       await sleep(500);
     }
     checked = true;
@@ -246,7 +277,13 @@ export class Lease {
     this.conn = conn;
   }
 
-  private static async take<T>(op: string, args: object, who: string, say: Say, gone?: () => boolean): Promise<{ lease: Lease; grant: T } | null> {
+  private static async take<T>(
+    op: string,
+    args: object,
+    who: string,
+    say: Say,
+    gone?: () => boolean,
+  ): Promise<{ lease: Lease; grant: T } | null> {
     const conn = (await connectPool(who, say))!;
     const asked = conn.request<T>(op, args);
     // given up on while waiting for room (`gone`): its connection closed, which takes it off the pool's queue
@@ -277,12 +314,22 @@ export class Lease {
    * released cleanly if its `key` is this one's (and not `fresh`), else a new one in a new context.
    * Waits for room; null once `gone` says it's no longer wanted.
    */
-  static window(req: { app: string; key: string; fresh: boolean }, who: string, say: Say, gone?: () => boolean): Promise<{ lease: Lease; grant: WindowGrant } | null> {
+  static window(
+    req: { app: string; key: string; fresh: boolean },
+    who: string,
+    say: Say,
+    gone?: () => boolean,
+  ): Promise<{ lease: Lease; grant: WindowGrant } | null> {
     return Lease.take<WindowGrant>('window', req, who, say, gone);
   }
 
   /** A window of an Obsidian instance for `setup` (`window` above, for Obsidian's instances). */
-  static obsidian(req: { setup: string; key: string; fresh: boolean; appVersion?: string; installerVersion?: string }, who: string, say: Say, gone?: () => boolean): Promise<{ lease: Lease; grant: ObsidianGrant } | null> {
+  static obsidian(
+    req: { setup: string; key: string; fresh: boolean; appVersion?: string; installerVersion?: string },
+    who: string,
+    say: Say,
+    gone?: () => boolean,
+  ): Promise<{ lease: Lease; grant: ObsidianGrant } | null> {
     return Lease.take<ObsidianGrant>('obsidian', req, who, say, gone);
   }
 

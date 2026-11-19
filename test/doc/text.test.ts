@@ -44,14 +44,20 @@ function texts(doc: OurusDoc): string[] {
   return out;
 }
 
-test('1. prefix, frame, text: a task\'s rest is text', () => {
+test("1. prefix, frame, text: a task's rest is text", () => {
   assert.deepEqual(texts(parse('> - [ ] ## Title text')), ['quote null', 'item ⟦task:[ ] ⟧## Title text']);
-  assert.equal(parse('> - [ ] ## Title text').textOf(parse('> - [ ] ## Title text').rootNode.children[0]!.children[0]!)!.body, '## Title text');
+  assert.equal(
+    parse('> - [ ] ## Title text').textOf(parse('> - [ ] ## Title text').rootNode.children[0]!.children[0]!)!.body,
+    '## Title text',
+  );
   // CommonMark reads a paragraph `[ ] ## Title text`; the convention gives it the same frame
-  assert.deepEqual(texts(parse('> - [ ] ## Title text', 'commonmark')), ['quote null', 'item ⟦task:[ ] ⟧## Title text']);
+  assert.deepEqual(texts(parse('> - [ ] ## Title text', 'commonmark')), [
+    'quote null',
+    'item ⟦task:[ ] ⟧## Title text',
+  ]);
 });
 
-test('2. nodes with no text; code as an item\'s text', () => {
+test("2. nodes with no text; code as an item's text", () => {
   assert.deepEqual(texts(parse('- > * > - > line\n  >   >   > - ```', 'commonmark')), [
     'item null',
     'quote null',
@@ -69,7 +75,11 @@ test('3. several lines, a lazy one', () => {
 });
 
 test('4. a text ends where its children begin', () => {
-  assert.deepEqual(texts(parse('- [ ] foo\n  bar\n\n  # hello\n\n  - baz')), ['item ⟦task:[ ] ⟧foo⏎bar', 'heading ⟦heading:# ⟧hello', 'item baz']);
+  assert.deepEqual(texts(parse('- [ ] foo\n  bar\n\n  # hello\n\n  - baz')), [
+    'item ⟦task:[ ] ⟧foo⏎bar',
+    'heading ⟦heading:# ⟧hello',
+    'item baz',
+  ]);
 });
 
 test('5. a setext title; text below a marker', () => {
@@ -85,22 +95,39 @@ test('6. ATX closing; hard breaks', () => {
 });
 
 test('7. escapes by place, character and inline role', () => {
-  assert.deepEqual(texts(parse('\\- not a list\n2\\. x\n\\<div> y')), ['paragraph \\- not a list⏎2\\. x⏎\\<div> y'], 'every backslash the text\'s, markup or not');
+  assert.deepEqual(
+    texts(parse('\\- not a list\n2\\. x\n\\<div> y')),
+    ['paragraph \\- not a list⏎2\\. x⏎\\<div> y'],
+    "every backslash the text's, markup or not",
+  );
   assert.deepEqual(texts(parse('`a\n\\- b`')), ['paragraph `a⏎\\- b`'], 'a code span holds its backslash');
   assert.deepEqual(texts(parse('a \\- b')), ['paragraph a \\- b'], 'mid-line, text');
   assert.deepEqual(texts(parse('\\- x', 'gfm')).length, 1);
-  assert.deepEqual(texts(parse('- [ ] \\- x')), ['item ⟦task:[ ] ⟧\\- x'], 'after a checkbox the line\'s rest is text: the backslash isn\'t needed');
+  assert.deepEqual(
+    texts(parse('- [ ] \\- x')),
+    ['item ⟦task:[ ] ⟧\\- x'],
+    "after a checkbox the line's rest is text: the backslash isn't needed",
+  );
 });
 
 test('8. placeholders: an empty line, a held space', () => {
   assert.deepEqual(texts(parse('- a\n- ', 'gfm', [6])), ['item a', 'item ◌']);
-  assert.deepEqual(texts(parse('-  x', 'gfm', [2])), ['item ◌ x'], 'the held space a character of the text, the placeholder on it');
+  assert.deepEqual(
+    texts(parse('-  x', 'gfm', [2])),
+    ['item ◌ x'],
+    'the held space a character of the text, the placeholder on it',
+  );
 });
 
 test('9. callouts by flavor', () => {
-  assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'obsidian')), ['quote ⟦callout:[!tip]- ⟧Title', 'paragraph body']);
+  assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'obsidian')), [
+    'quote ⟦callout:[!tip]- ⟧Title',
+    'paragraph body',
+  ]);
   // (a flavor without callouts: the quote's text, as any)
-  assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'gfm')), ['paragraph ⟦quote:> ⟧[!tip]- Title⏎⟦quote:> ⟧body']);
+  assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'gfm')), [
+    'paragraph ⟦quote:> ⟧[!tip]- Title⏎⟦quote:> ⟧body',
+  ]);
 });
 
 test('10. code', () => {
@@ -115,10 +142,16 @@ test('10. code', () => {
 test('11. a gap in a quote', () => {
   const doc = parse('> a\n>\n> b');
   const quote = doc.rootNode.children[0]!;
-  assert.deepEqual(quote.children.map((n) => [doc.textOf(n)!.body, n.gap]), [['a', 1], ['b', 0]]);
+  assert.deepEqual(
+    quote.children.map((n) => [doc.textOf(n)!.body, n.gap]),
+    [
+      ['a', 1],
+      ['b', 0],
+    ],
+  );
 });
 
-test('positions: a text\'s offsets in the document, a held space and a markup escape characters of the text', () => {
+test("positions: a text's offsets in the document, a held space and a markup escape characters of the text", () => {
   const held = parse('-  x', 'gfm', [2]);
   const item = held.rootNode.children[0]!;
   assert.equal(held.posOf(item, 0, -1), 2, 'the held space');
@@ -150,7 +183,11 @@ function assertReadsAsParser(doc: OurusDoc): void {
     if (text && head) {
       const attrs = head.attrs;
       if ('heading' in text && head.type === 'heading') {
-        assert.deepEqual(text.heading, { level: attrs.level, form: attrs.setext ? 'setext' : 'atx' }, `${context}: heading`);
+        assert.deepEqual(
+          text.heading,
+          { level: attrs.level, form: attrs.setext ? 'setext' : 'atx' },
+          `${context}: heading`,
+        );
       }
       if ('task' in text && node.kind === 'item' && node.block.attrs.task) {
         const box = node.block.attrs.task!;
@@ -158,7 +195,11 @@ function assertReadsAsParser(doc: OurusDoc): void {
       }
       if ('callout' in text && node.kind === 'quote' && node.block.attrs.callout) {
         const callout = node.block.attrs.callout!;
-        assert.deepEqual(text.callout && { type: text.callout.type.toLowerCase(), fold: text.callout.fold }, { type: callout.kind.toLowerCase(), fold: callout.fold ?? null }, `${context}: callout`);
+        assert.deepEqual(
+          text.callout && { type: text.callout.type.toLowerCase(), fold: text.callout.fold },
+          { type: callout.kind.toLowerCase(), fold: callout.fold ?? null },
+          `${context}: callout`,
+        );
       }
       if ('info' in text && head.type === 'code_block' && attrs.fenced) {
         assert.equal(text.info, attrs.info ?? '', `${context}: info`);
@@ -182,7 +223,9 @@ function assertReadsAsParser(doc: OurusDoc): void {
 for (const flavor of ['commonmark', 'gfm', 'obsidian'] as const) {
   test(`${flavor}: a text's frame agrees with the parser, and its offsets map back to the document`, () => {
     fc.assert(
-      fc.property(fc.oneof(arbDoc(BLOCKS, { frontmatter: flavor === 'obsidian' }), arbDoc(INLINES)), (text) => assertReadsAsParser(parse(text, flavor))),
+      fc.property(fc.oneof(arbDoc(BLOCKS, { frontmatter: flavor === 'obsidian' }), arbDoc(INLINES)), (text) =>
+        assertReadsAsParser(parse(text, flavor)),
+      ),
       { numRuns: RUNS },
     );
   });
@@ -215,7 +258,7 @@ test('14. toggling a checkbox changes one character, the brackets and the space 
   assert.equal(notation(text.splice(1, 2, ' ')), '⟦task:[ ] ⟧done');
 });
 
-test('15. a heading\'s level is its `#`s; one that stops reading as a heading is a paragraph', () => {
+test("15. a heading's level is its `#`s; one that stops reading as a heading is a paragraph", () => {
   const text = new Text('heading', false, '## Title ##');
   assert.deepEqual(text.splice(0, 0, '#').heading, { level: 3, form: 'atx' });
   const unframed = text.splice(2, 3);
@@ -225,20 +268,24 @@ test('15. a heading\'s level is its `#`s; one that stops reading as a heading is
   assert.equal(new Text('paragraph', false, '# b').frame.length, 0);
 });
 
-test('a text read as an item\'s or not; a join slices past the lower text\'s frame', () => {
+test("a text read as an item's or not; a join slices past the lower text's frame", () => {
   const para = new Text('paragraph', false, '[ ] x');
-  assert.equal(para.task, null, 'a paragraph\'s `[ ]` is text');
+  assert.equal(para.task, null, "a paragraph's `[ ]` is text");
   assert.equal(para.asItem(true).task?.status, ' ');
   const upper = itemText('[x] a');
   const lower = itemText('[ ] b');
   const joined = upper.concat(lower.slice(lower.textStart(0)));
-  assert.equal(notation(joined), '⟦task:[x] ⟧ab', 'the upper\'s checkbox; the lower\'s gone with its frame');
+  assert.equal(notation(joined), '⟦task:[x] ⟧ab', "the upper's checkbox; the lower's gone with its frame");
 });
 
-test('placeholders ride along a splice: an empty line\'s mark, filled', () => {
+test("placeholders ride along a splice: an empty line's mark, filled", () => {
   const empty = new Text('paragraph', true, MarkSet.of('', { placeholders: [0] }));
   assert.equal(notation(empty), '◌');
-  assert.equal(notation(empty.splice(0, 0, 'x')), 'x◌', 'the mark moves past what is typed; the document drops it where its line has text');
+  assert.equal(
+    notation(empty.splice(0, 0, 'x')),
+    'x◌',
+    'the mark moves past what is typed; the document drops it where its line has text',
+  );
 });
 
 test('slices that tile a text concat back to it, its placeholders each once', () => {
@@ -248,10 +295,14 @@ test('slices that tile a text concat back to it, its placeholders each once', ()
     assert.equal(back.text, text.text);
     assert.deepEqual(back.marks.placeholders, text.marks.placeholders);
   }
-  assert.deepEqual(text.splice(0, 1, text.slice(2, 3)).marks.placeholders, [0, 2, 5], 'the insertion\'s mark at its place, the others where they were');
+  assert.deepEqual(
+    text.splice(0, 1, text.slice(2, 3)).marks.placeholders,
+    [0, 2, 5],
+    "the insertion's mark at its place, the others where they were",
+  );
 });
 
-test('math and comments: closed on a later line, past an item\'s marker line, their payload beside the delimiters, a no-break space no blank; alone on one line, inline', () => {
+test("math and comments: closed on a later line, past an item's marker line, their payload beside the delimiters, a no-break space no blank; alone on one line, inline", () => {
   const read = (s: string, line = 0): OurusAtom => {
     const doc = OurusDoc.parse(s, { config: { flavor: 'obsidian' } });
     return doc.textOf(doc.nodeAtLine(line)!) as OurusAtom;
@@ -280,23 +331,26 @@ test('a text owns its block-id lines: the caller changing its list or records af
   assert.deepEqual(atom.blockIdLines, [{ blankLines: 1, line: '^id' }]);
 });
 
-test('a frozen list of block-id lines is copied unless its records are frozen too: a caller\'s record changing changes no text', () => {
-    const line = { blankLines: 1, line: '^a' };
-    const text = new Text('paragraph', false, 'p', null, Object.freeze([line]));
-    line.line = '^b';
-    assert.equal(text.blockIdLines[0]!.line, '^a');
+test("a frozen list of block-id lines is copied unless its records are frozen too: a caller's record changing changes no text", () => {
+  const line = { blankLines: 1, line: '^a' };
+  const text = new Text('paragraph', false, 'p', null, Object.freeze([line]));
+  line.line = '^b';
+  assert.equal(text.blockIdLines[0]!.line, '^a');
 });
 
 test('held spaces come out of a text in one pass: linear in their number', async () => {
   const { scalingFactor } = await import('../lib/index.ts');
-  const settle = (n: number) => new Text('paragraph', false, 'a '.repeat(n)).withMarks({ placeholders: Array.from({ length: n }, (_, i) => 2 * i + 1) }).withoutHeldSpaces();
+  const settle = (n: number) =>
+    new Text('paragraph', false, 'a '.repeat(n))
+      .withMarks({ placeholders: Array.from({ length: n }, (_, i) => 2 * i + 1) })
+      .withoutHeldSpaces();
   assert.equal(settle(3).text, 'aaa');
   assert.deepEqual([...settle(3).marks.placeholders], []);
   // (eight times the spaces: linear about 8; one splice each was about 40)
   assert.ok(scalingFactor(settle, 1000, 8000) < 24);
 });
 
-test('a quote\'s text unquoted: every line\'s `>` and one blank after it off, a block id\'s own line\'s too, a lazy line as it is; a paragraph\'s', () => {
+test("a quote's text unquoted: every line's `>` and one blank after it off, a block id's own line's too, a lazy line as it is; a paragraph's", () => {
   const unquoted = (markdown: string): string => {
     const doc = OurusDoc.parse(markdown, { config: { flavor: 'obsidian', quotes: 'text' } });
     const text = doc.textOf(doc.rootNode.children[0]!) as OurusProse;

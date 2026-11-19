@@ -6,7 +6,19 @@
 // and Backspace as input, not keys, and lack the rest: buttons stand in for those. The Preview box
 // shows the document as ourus renders it, beside the text.
 
-import { OurusDoc, OurusView, executeCommand, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusResult, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../../src/index.ts';
+import {
+  OurusDoc,
+  OurusView,
+  executeCommand,
+  settlePlaceholders,
+  type ChangeSpec,
+  type OurusCommand,
+  type OurusResult,
+  OurusDeferred,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+} from '../../src/index.ts';
 
 const KEYS: Record<string, OurusCommand['type']> = {
   Tab: 'indent',
@@ -50,7 +62,10 @@ preview.addEventListener('click', (e) => {
 
 function selection() {
   const backward = area.selectionDirection === 'backward';
-  return { anchor: backward ? area.selectionEnd : area.selectionStart, head: backward ? area.selectionStart : area.selectionEnd };
+  return {
+    anchor: backward ? area.selectionEnd : area.selectionStart,
+    head: backward ? area.selectionStart : area.selectionEnd,
+  };
 }
 
 function select(anchor: number, head: number) {
@@ -202,7 +217,8 @@ for (const button of keys.querySelectorAll('button')) {
   });
   // pressed, as :active isn't on touch screens (iOS) or sticks (Chrome)
   button.addEventListener('pointerdown', () => button.classList.add('pressed'));
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) button.addEventListener(type, () => button.classList.remove('pressed'));
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
+    button.addEventListener(type, () => button.classList.remove('pressed'));
 }
 // iOS leaves the page under its keyboard (Android shrinks it): the bar stays at the bottom of what's visible
 const viewport = window.visualViewport;
@@ -218,7 +234,8 @@ for (const type of ['copy', 'cut'] as const) {
     const result = run({ type });
     if (result instanceof OurusDeferred) return;
     e.preventDefault();
-    if (result instanceof OurusSuccess) for (const [format, text] of Object.entries(result.clipboard ?? {})) e.clipboardData.setData(format, text);
+    if (result instanceof OurusSuccess)
+      for (const [format, text] of Object.entries(result.clipboard ?? {})) e.clipboardData.setData(format, text);
   });
 }
 
@@ -231,7 +248,11 @@ area.addEventListener('paste', (e) => {
   const data = e.clipboardData;
   const text = data?.getData('text/plain');
   if (!data || !text) return;
-  const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
+  const clipboard = Object.fromEntries(
+    ['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) =>
+      data.types.includes(t) ? [[t, data.getData(t)]] : [],
+    ),
+  );
   if (!(run(type === 'paste' ? { type, clipboard } : { type, text }) instanceof OurusDeferred)) e.preventDefault();
 });
 
@@ -243,9 +264,17 @@ function readBack() {
   let from = 0;
   while (from < old.length && from < text.length && old[from] === text[from]) from++;
   let end = 0;
-  while (end < old.length - from && end < text.length - from && old[old.length - 1 - end] === text[text.length - 1 - end]) end++;
+  while (
+    end < old.length - from &&
+    end < text.length - from &&
+    old[old.length - 1 - end] === text[text.length - 1 - end]
+  )
+    end++;
   const { head, anchor } = selection();
-  doc = doc.update({ changes: [{ from, to: old.length - end, insert: text.slice(from, text.length - end) }], ...(head === anchor ? { caret: head } : {}) });
+  doc = doc.update({
+    changes: [{ from, to: old.length - end, insert: text.slice(from, text.length - end) }],
+    ...(head === anchor ? { caret: head } : {}),
+  });
   render();
 }
 

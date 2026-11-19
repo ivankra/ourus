@@ -19,8 +19,18 @@ const SMALL: readonly (readonly [string, Record<string, string>])[] = [
 for (const [script, env] of SMALL) {
   test(`${script} on a few notes: nothing throws`, async () => {
     // (a different corpus than the baseline's: its counts aren't compared, only the throws, which fail the run)
-    const { stdout } = await run('node', [script], { cwd: here, env: { ...process.env, ...env }, maxBuffer: 1 << 26 }).catch((e: { stdout?: string }) => {
-      assert.fail(`${script} failed:\n${(e.stdout ?? '').split('\n').filter((l) => l.startsWith('FAIL')).slice(0, 5).join('\n')}`);
+    const { stdout } = await run('node', [script], {
+      cwd: here,
+      env: { ...process.env, ...env },
+      maxBuffer: 1 << 26,
+    }).catch((e: { stdout?: string }) => {
+      assert.fail(
+        `${script} failed:\n${(e.stdout ?? '')
+          .split('\n')
+          .filter((l) => l.startsWith('FAIL'))
+          .slice(0, 5)
+          .join('\n')}`,
+      );
     });
     assert.match(stdout, /^\d+ (runs|sessions)/m);
   });

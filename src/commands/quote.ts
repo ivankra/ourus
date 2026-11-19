@@ -6,7 +6,17 @@
 // is the document's reading of them (`ctx.doc.mdTree`), as for any other text: nothing here reads
 // Markdown.
 
-import { OurusAtom, OurusProse, VERBATIM, blockIdsOf, checkboxLength, closingFrameStart, withoutBlockIds, type OurusDoc, type OurusNode } from '../doc/index.ts';
+import {
+  OurusAtom,
+  OurusProse,
+  VERBATIM,
+  blockIdsOf,
+  checkboxLength,
+  closingFrameStart,
+  withoutBlockIds,
+  type OurusDoc,
+  type OurusNode,
+} from '../doc/index.ts';
 import { MAX_ITEM_NUMBER, type MdBlockAt, type MdLine, type MdPrefixPiece } from '../parser/index.ts';
 import { trimMd } from '../text/index.ts';
 import { listNumbering } from '../writer/index.ts';
@@ -28,7 +38,14 @@ export interface QuoteAt {
 export function quoteAtomAt(ctx: CommandContext): QuoteAt | null {
   const a = ctx.from;
   const b = ctx.to;
-  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusAtom) || a.text.type !== 'blockquote' || a.node.persistentNode !== b.node.persistentNode) return null;
+  if (
+    a.zone !== 'text' ||
+    b.zone !== 'text' ||
+    !(a.text instanceof OurusAtom) ||
+    a.text.type !== 'blockquote' ||
+    a.node.persistentNode !== b.node.persistentNode
+  )
+    return null;
   return { node: a.node, text: a.text, offset: a.offset, to: b.offset };
 }
 
@@ -79,7 +96,9 @@ export function quoteTextBefore(doc: OurusDoc, node: OurusNode, text: OurusAtom,
     const line = doc.mdTree.line(doc.lineAt(doc.posOf(node, start)).index);
     const k = line.prefix.findIndex((p) => p.container.block === block);
     const quotes = k < 0 ? [] : line.prefix.slice(k).filter((p) => p.kind === 'quote');
-    const from = quotes.length ? Math.max(start, doc.offsetOf(node, doc.mdTree.quoteMarker(quotes[quotes.length - 1]!).end)) : start;
+    const from = quotes.length
+      ? Math.max(start, doc.offsetOf(node, doc.mdTree.quoteMarker(quotes[quotes.length - 1]!).end))
+      : start;
     const end = text.text.indexOf('\n', start);
     lines.push(text.text.slice(Math.min(from, to), end < 0 || end > to ? to : end));
     if (end < 0 || end >= to) return lines.join('\n');
@@ -150,7 +169,9 @@ export function enterInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | nu
   // a selection from inside a line's `>`, part of the quote's markup: the host's where it shows `>` as
   // text the user edits, else refused, as over any selection taking part of markup
   if (!ctx.collapsed && at.offset < pastQuoteMarker(ctx, at, quoteLine(ctx, at, at.offset), false)) {
-    return !decorates(ctx.config, 'quote') ? new OurusDeferred('in-markup', 'the selection takes part of markup') : new OurusRejected('not-expressible', 'the selection takes part of markup');
+    return !decorates(ctx.config, 'quote')
+      ? new OurusDeferred('in-markup', 'the selection takes part of markup')
+      : new OurusRejected('not-expressible', 'the selection takes part of markup');
   }
   return ctx.config.enterInQuote === 'line' ? lineInQuote(ctx, at) : splitQuote(ctx, at);
 }
@@ -195,7 +216,11 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   // past its prefix; else past the quote's `>` and the blank after it)
   const own = item && item.line === line.index ? item : null;
   const box = own ? checkboxOf(ctx, own) : 0;
-  const textFrom = own ? ctx.doc.offsetOf(node, itemTextFrom(ctx, own) + box) : item ? ctx.doc.offsetOf(node, line.contentFrom) : pastQuoteMarker(ctx, at, here, true);
+  const textFrom = own
+    ? ctx.doc.offsetOf(node, itemTextFrom(ctx, own) + box)
+    : item
+      ? ctx.doc.offsetOf(node, line.contentFrom)
+      : pastQuoteMarker(ctx, at, here, true);
   // (a caret, or a selection's end, in the line's markup, its `>` or its item's marker, acts as at its
   // text's start)
   const [from, until] = [Math.max(offset, textFrom), Math.max(to, textFrom)];
@@ -209,7 +234,10 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const parent = own ? (items[items.length - 2] ?? null) : null;
   const list = own ? containers[containers.indexOf(own) - 1] : undefined;
   // (children: blocks after its text, which a list first is too)
-  const last = !!list && list.block.children[list.block.children.length - 1] === own!.block && !own!.block.children.some((c, k) => k > 0 || c.type === 'list');
+  const last =
+    !!list &&
+    list.block.children[list.block.children.length - 1] === own!.block &&
+    !own!.block.children.some((c, k) => k > 0 || c.type === 'list');
   const policy = last ? 'outdent' : ctx.config.enterOnEmptyItem;
   const anew = !!own && (policy === 'sibling' || (policy === 'exit' && !!parent));
   if (ctx.collapsed && !anew && trimMd(s.slice(emptyFrom, lineEnd)) === '') {
@@ -217,15 +245,26 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
       const after = itemAfter(ctx, at, parent, containers.slice(0, containers.indexOf(parent)));
       if (after instanceof OurusRejected) return after;
       // (the line replaced whole: the parent's renumbering, a wider marker moving its lines, leaves it)
-      const edited = editedQuote(text, [...after.edits.filter((e) => e.to < lineStart || e.from > lineEnd), { from: lineStart, to: lineEnd, insert: after.prefix }], lineEnd);
+      const edited = editedQuote(
+        text,
+        [
+          ...after.edits.filter((e) => e.to < lineStart || e.from > lineEnd),
+          { from: lineStart, to: lineEnd, insert: after.prefix },
+        ],
+        lineEnd,
+      );
       return ctx.apply(draft.setText(node, edited.text).setCaret(node, edited.pos, -1));
     }
     if (own) {
       const quotes = containers.slice(0, containers.indexOf(own));
       const quoted = tree.continuationPrefix(line.index, quotes);
-      const last = line.prefix.filter((p) => p.kind === 'quote' && quotes.some((c) => c.block === p.container.block)).pop();
+      const last = line.prefix
+        .filter((p) => p.kind === 'quote' && quotes.some((c) => c.block === p.container.block))
+        .pop();
       const bare = quoted + (last && tree.quoteMarker(last).end === tree.quoteMarker(last).to ? ' ' : '');
-      return ctx.apply(draft.setText(node, text.splice(lineStart, lineEnd, bare)).setCaret(node, lineStart + bare.length, -1));
+      return ctx.apply(
+        draft.setText(node, text.splice(lineStart, lineEnd, bare)).setCaret(node, lineStart + bare.length, -1),
+      );
     }
     if (!item) {
       // a quote of one empty line: the quote goes
@@ -253,7 +292,9 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
     edits = next.edits;
   } else if (!line.lazy && here.quote) prefix = tree.continuationPrefix(line.index, containers);
   // (the spaces at the caret as a text's Enter takes them, not code's)
-  const split = code ? { from, to: until, kept: 0 } : splitSpaces(s, from, until, textFrom, lineEnd, ctx.config.enterSplitSpace);
+  const split = code
+    ? { from, to: until, kept: 0 }
+    : splitSpaces(s, from, until, textFrom, lineEnd, ctx.config.enterSplitSpace);
   const edited = editedQuote(text, [...edits, { from: split.from, to: split.to, insert: `\n${prefix}` }], split.to);
   return ctx.apply(draft.setText(node, edited.text).setCaret(node, edited.pos, -1));
 }
@@ -262,10 +303,17 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
 type QuoteEdit = { readonly from: number; readonly to: number; readonly insert: string };
 
 /** `text` with `edits` (none overlapping) made, and where its offset `pos` is after them: past an edit ending there. */
-function editedQuote(text: OurusAtom, edits: readonly QuoteEdit[], pos: number): { readonly text: OurusAtom; readonly pos: number } {
+function editedQuote(
+  text: OurusAtom,
+  edits: readonly QuoteEdit[],
+  pos: number,
+): { readonly text: OurusAtom; readonly pos: number } {
   let shift = 0;
   for (const e of edits) if (e.to <= pos) shift += e.insert.length - (e.to - e.from);
-  return { text: [...edits].sort((x, y) => y.from - x.from).reduce((t, e) => t.splice(e.from, e.to, e.insert), text), pos: pos + shift };
+  return {
+    text: [...edits].sort((x, y) => y.from - x.from).reduce((t, e) => t.splice(e.from, e.to, e.insert), text),
+    pos: pos + shift,
+  };
 }
 
 /** Where item `item`'s text starts on its first line in the document: past its marker and the blanks after it. */
@@ -286,7 +334,12 @@ function checkboxOf(ctx: CommandContext, item: MdBlockAt): number {
  * `10.` moves its item's other lines as far: its content column with it). Refused where a number would
  * pass nine digits, or a narrower marker's item has a line that can't move left as far.
  */
-function itemAfter(ctx: CommandContext, at: QuoteAt, item: MdBlockAt, outer: readonly MdBlockAt[]): { readonly prefix: string; readonly edits: readonly QuoteEdit[] } | OurusRejected {
+function itemAfter(
+  ctx: CommandContext,
+  at: QuoteAt,
+  item: MdBlockAt,
+  outer: readonly MdBlockAt[],
+): { readonly prefix: string; readonly edits: readonly QuoteEdit[] } | OurusRejected {
   const doc = ctx.doc;
   const tree = doc.mdTree;
   const lead = tree.itemLead(item, outer);
@@ -295,8 +348,14 @@ function itemAfter(ctx: CommandContext, at: QuoteAt, item: MdBlockAt, outer: rea
   const siblings = outer[outer.length - 1]!.children();
   const k = siblings.findIndex((c) => c.block === item.block);
   const was = siblings.map((c) => c.block.attrs.list!.start!);
-  const numbers = listNumbering([...was.slice(0, k + 1), null, ...was.slice(k + 1)], was, was[0]!, ctx.config.orderedLists);
-  if (numbers.some((n) => n > MAX_ITEM_NUMBER)) return new OurusRejected('not-expressible', `an item numbered past ${MAX_ITEM_NUMBER} is no list item`);
+  const numbers = listNumbering(
+    [...was.slice(0, k + 1), null, ...was.slice(k + 1)],
+    was,
+    was[0]!,
+    ctx.config.orderedLists,
+  );
+  if (numbers.some((n) => n > MAX_ITEM_NUMBER))
+    return new OurusRejected('not-expressible', `an item numbered past ${MAX_ITEM_NUMBER} is no list item`);
   // (each other item renumbered: its number as written, the delimiter after it staying, and its later
   // lines' indentation for it, as far as its marker is wider or narrower)
   const edits: QuoteEdit[] = [];
@@ -313,10 +372,17 @@ function itemAfter(ctx: CommandContext, at: QuoteAt, item: MdBlockAt, outer: rea
     const wider = number.length - (to - from);
     // (a line lazy for it, or empty, as it is)
     for (let l = sibling.line + 1; wider !== 0 && l <= sibling.lastLine; l++) {
-      const piece = tree.line(l).empty ? undefined : tree.line(l).prefix.find((p) => p.container.block === sibling.block);
+      const piece = tree.line(l).empty
+        ? undefined
+        : tree.line(l).prefix.find((p) => p.container.block === sibling.block);
       if (!piece) continue;
       if (wider > 0) edit(piece.to, piece.to, ' '.repeat(wider));
-      else if (piece.to + wider < piece.from || piece.partialTab || [...doc.text.slice(piece.to + wider, piece.to)].some((c) => c !== ' ')) return new OurusRejected('not-expressible', 'a renumbered item\'s lines can\'t move left with its marker');
+      else if (
+        piece.to + wider < piece.from ||
+        piece.partialTab ||
+        [...doc.text.slice(piece.to + wider, piece.to)].some((c) => c !== ' ')
+      )
+        return new OurusRejected('not-expressible', "a renumbered item's lines can't move left with its marker");
       else edit(piece.to + wider, piece.to, '');
     }
   }
@@ -361,7 +427,10 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   if (owner) {
     const ownerText = ctx.doc.textOf(owner);
     const task = ownerText instanceof OurusProse && !!ownerText.task && ctx.config.enterTask === 'continue';
-    const id = draft.create('item', new OurusProse('paragraph', true, (task ? '[ ] ' : '') + s.slice(split.to, lineEnd)));
+    const id = draft.create(
+      'item',
+      new OurusProse('paragraph', true, (task ? '[ ] ' : '') + s.slice(split.to, lineEnd)),
+    );
     const later = owner.children.slice(node.index + 1);
     if (ctx.config.enterMidItem === 'child' && later.length) draft.place('after', node, [id]);
     else {
@@ -370,7 +439,12 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
     }
     if (lineEnd < s.length) {
       const lines = s.slice(lineEnd + 1);
-      draft.append(id, 'first', [draft.create('atom', new OurusAtom('blockquote', false, quoteLine(ctx, at, lineEnd + 1).quote ? lines : `> ${lines}`))]);
+      draft.append(id, 'first', [
+        draft.create(
+          'atom',
+          new OurusAtom('blockquote', false, quoteLine(ctx, at, lineEnd + 1).quote ? lines : `> ${lines}`),
+        ),
+      ]);
     }
     return ctx.apply(draft.setCaret(id, task ? 4 : 0, -1));
   }
@@ -396,7 +470,10 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   if (lineEnd < s.length) {
     // (a lazy line first: its `> `, which a quote's first line needs)
     const lines = s.slice(lineEnd + 1);
-    const rest = draft.create('atom', new OurusAtom('blockquote', false, quoteLine(ctx, at, lineEnd + 1).quote ? lines : `> ${lines}`));
+    const rest = draft.create(
+      'atom',
+      new OurusAtom('blockquote', false, quoteLine(ctx, at, lineEnd + 1).quote ? lines : `> ${lines}`),
+    );
     if (item) draft.append(id, 'first', [rest]);
     else draft.place('after', id, [rest]);
   }
@@ -415,7 +492,12 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
   const s = text.text;
   if (forward) {
     if (s[offset] !== '\n') return null;
-    return ctx.apply(ctx.draft().setText(node, text.splice(offset, offset + 1)).setCaret(node, offset, -1));
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, text.splice(offset, offset + 1))
+        .setCaret(node, offset, -1),
+    );
   }
   const here = quoteLine(ctx, at, offset);
   const { start, end } = here;
@@ -429,12 +511,26 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
     const joined = text.splice(start - 1, mark);
     let lead = start - 1;
     while (joined.text[lead] === ' ' || joined.text[lead] === '\t') lead++;
-    const held = joined.marks.placeholders.filter((p) => p >= start - 1 && (p < lead || (p === lead && joined.marks.hasEmptyNodeAt(p))));
-    const settled = held.length ? joined.withMarks({ placeholders: joined.marks.placeholders.filter((p) => !held.includes(p)) }) : joined;
-    return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, start - 1, -1));
+    const held = joined.marks.placeholders.filter(
+      (p) => p >= start - 1 && (p < lead || (p === lead && joined.marks.hasEmptyNodeAt(p))),
+    );
+    const settled = held.length
+      ? joined.withMarks({ placeholders: joined.marks.placeholders.filter((p) => !held.includes(p)) })
+      : joined;
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, settled)
+        .setCaret(node, start - 1, -1),
+    );
   }
   if (offset !== mark || !here.quote || trimMd(s.slice(offset, end)) !== '') return null;
-  return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, offset)).setCaret(node, start - 1, -1));
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(node, text.splice(start - 1, offset))
+      .setCaret(node, start - 1, -1),
+  );
 }
 
 /**
@@ -460,20 +556,39 @@ export function breakInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | nu
  * blank after it before an item's marker or text (`>- a`), whose columns a new line wouldn't keep:
  * its `>` would take a blank the line before has none of; or where the line so doesn't write.
  */
-export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly string[], lazy = false): OurusResult | null {
+export function linesInQuote(
+  ctx: CommandContext,
+  at: QuoteAt,
+  lines: readonly string[],
+  lazy = false,
+): OurusResult | null {
   const { node, text, offset, to } = at;
   const put = (prefix: string): OurusResult | null => {
     const inserted = lines.map((l, k) => (k === 0 || lazy ? l : `${prefix}${l}`)).join('\n');
-    return ctx.apply(ctx.draft().setText(node, text.splice(offset, to, inserted)).setCaret(node, offset + inserted.length, -1));
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(node, text.splice(offset, to, inserted))
+        .setCaret(node, offset + inserted.length, -1),
+    );
   };
   if (lazy) return put('');
   const tree = ctx.doc.mdTree;
   const here = quoteLine(ctx, at, offset);
   const caret = ctx.doc.posOf(node, offset);
-  const pieces = here.line.prefix.filter((p) => p.to <= caret && here.containers.some((c) => c.block === p.container.block));
+  const pieces = here.line.prefix.filter(
+    (p) => p.to <= caret && here.containers.some((c) => c.block === p.container.block),
+  );
   const last = pieces[pieces.length - 1];
-  const bare = (p: MdPrefixPiece | undefined): boolean => p?.kind === 'quote' && tree.quoteMarker(p).end === tree.quoteMarker(p).to;
-  if (here.line.lazy || !here.quote || pieces.length < 2 || pieces.some((p, k) => bare(p) && k < pieces.length - 1 && pieces[k + 1]!.kind !== 'quote')) return put('> ');
+  const bare = (p: MdPrefixPiece | undefined): boolean =>
+    p?.kind === 'quote' && tree.quoteMarker(p).end === tree.quoteMarker(p).to;
+  if (
+    here.line.lazy ||
+    !here.quote ||
+    pieces.length < 2 ||
+    pieces.some((p, k) => bare(p) && k < pieces.length - 1 && pieces[k + 1]!.kind !== 'quote')
+  )
+    return put('> ');
   const nested = tree.continuationPrefix(here.line.index, here.containers, caret);
   const deep = put(bare(last) ? `${nested} ` : nested);
   return deep instanceof OurusRejected ? put('> ') : deep;
@@ -482,7 +597,10 @@ export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly s
 /** `text` without the markup before and after its words that is its node's: a task's checkbox, a heading's `#`s, closing `#`s or underline. */
 function withoutOwnMarkup(text: OurusProse): OurusProse {
   let out = text;
-  for (const p of [...text.frame].filter((p) => p.part === 'task' || p.part === 'heading' || p.part === 'close' || p.part === 'underline').sort((a, b) => b.from - a.from)) out = out.splice(p.from, p.to);
+  for (const p of [...text.frame]
+    .filter((p) => p.part === 'task' || p.part === 'heading' || p.part === 'close' || p.part === 'underline')
+    .sort((a, b) => b.from - a.from))
+    out = out.splice(p.from, p.to);
   return out;
 }
 
@@ -498,7 +616,8 @@ export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAto
   const upper = ctx.doc.textOf(above);
   if (!(upper instanceof OurusProse)) return null;
   // (an ATX title holds one line, as a prose join refuses it: Backspace's)
-  if (upper.heading?.form === 'atx' && text.text.includes('\n')) return new OurusRejected('not-expressible', 'an ATX title is a single line');
+  if (upper.heading?.form === 'atx' && text.text.includes('\n'))
+    return new OurusRejected('not-expressible', 'an ATX title is a single line');
   // (its children after the item's above, or lifted where it is their parent: as `joinWithChildren` has it)
   const refused = childrenRefused(ctx, above, node, above.kind === 'item' && above !== node.parent);
   if (refused) return refused;
@@ -508,7 +627,12 @@ export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAto
   const moved = draft.joinBlockIds(above, upper, node, text);
   const quote = quoteAsProse(moved ? text : (withoutBlockIds(text) as OurusAtom)).asItem(upper.item);
   const end = closingFrameStart(upper);
-  draft.setText(above, upper.splice(end, end, quote).withBlockIdLines(moved && quote.blockIdLines.length ? quote.blockIdLines : upper.blockIdLines));
+  draft.setText(
+    above,
+    upper
+      .splice(end, end, quote)
+      .withBlockIdLines(moved && quote.blockIdLines.length ? quote.blockIdLines : upper.blockIdLines),
+  );
   const children = [...node.children];
   if (children.length) {
     draft.remove(children);
@@ -525,28 +649,48 @@ export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAto
  * are written, the caret at the seam; its children go to the quote's node where it is an item, else
  * where it was. Null for a node with no text, or code.
  */
-export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: OurusAtom, node: OurusNode): OurusResult | null {
+export function joinIntoQuote(
+  ctx: CommandContext,
+  above: OurusNode,
+  quote: OurusAtom,
+  node: OurusNode,
+): OurusResult | null {
   const read = ctx.doc.textOf(node);
   if (!(read instanceof OurusProse)) return null;
   // (before the block id that ends the quote, which ends it still)
   // (a quote's `^x` a block id only in a flavor that has them: elsewhere text)
-  const end = ctx.doc.mdTree.flavor.has('blockIds') ? blockIdsOf(quote).find((b) => !b.carried && b.partTo === quote.text.length) : undefined;
+  const end = ctx.doc.mdTree.flavor.has('blockIds')
+    ? blockIdsOf(quote).find((b) => !b.carried && b.partTo === quote.text.length)
+    : undefined;
   const at = end && !end.carried ? end.partFrom : quote.text.length;
   const draft = ctx.draft();
   // (its own markup goes with it, a task's checkbox, a heading's marks: its text joins, as a prose
   // join takes it; an empty one, a task's checkbox alone too, just goes: tasks.md rule 4)
   const lower = withoutOwnMarkup(read);
-  if (trimMd(lower.body) === '' && !node.children.length && !blockIdsOf(read).length) return ctx.apply(draft.remove([node]).setCaret(above, at, -1));
+  if (trimMd(lower.body) === '' && !node.children.length && !blockIdsOf(read).length)
+    return ctx.apply(draft.remove([node]).setCaret(above, at, -1));
   // (its children after the quote item's, else into its place: an empty item's as
   // `emptyItemWithChildren` has it, another's as `joinWithChildren` does)
   const adopt = above.kind === 'item' && above !== node.parent;
-  if (node.kind === 'item' && read.empty && node.children.length && !adopt && ctx.config.emptyItemWithChildren === 'refuse') return new OurusRejected('has-children');
+  if (
+    node.kind === 'item' &&
+    read.empty &&
+    node.children.length &&
+    !adopt &&
+    ctx.config.emptyItemWithChildren === 'refuse'
+  )
+    return new OurusRejected('has-children');
   const refused = read.empty ? null : childrenRefused(ctx, above, node, adopt);
   if (refused) return refused;
   // (its block ids as a join takes them: moved to the quote, or merged into its)
   const moved = draft.joinBlockIds(above, quote, node, lower);
   const rest = moved ? lower : (withoutBlockIds(lower) as OurusProse);
-  draft.setText(above, quote.splice(at, at, rest.marks).withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines));
+  draft.setText(
+    above,
+    quote
+      .splice(at, at, rest.marks)
+      .withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines),
+  );
   const children = [...node.children];
   if (children.length) {
     draft.remove(children);

@@ -24,16 +24,28 @@ export function renderedHtml(markdown: string, from: OurusDoc, text: boolean | '
     // after it the blocks they are)
     const all = markdown.split(/\r\n|\n|\r/);
     const lines = text === 'firstLine' ? all.slice(0, 1) : all;
-    const spelled = escapeParagraph(from.mdTree.flavor, 'paragraph', false, lines, lines.map(() => false), undefined, false);
+    const spelled = escapeParagraph(
+      from.mdTree.flavor,
+      'paragraph',
+      false,
+      lines,
+      lines.map(() => false),
+      undefined,
+      false,
+    );
     const escaped = [...(spelled?.lines ?? lines)];
     // (a backslash at each markup escape it asks for, from a line's last)
-    for (const e of [...(spelled?.markup ?? [])].reverse()) escaped[e.line] = escaped[e.line]!.slice(0, e.at) + '\\' + escaped[e.line]!.slice(e.at);
+    for (const e of [...(spelled?.markup ?? [])].reverse())
+      escaped[e.line] = escaped[e.line]!.slice(0, e.at) + '\\' + escaped[e.line]!.slice(e.at);
     source = [...escaped, ...all.slice(lines.length)].join('\n');
   }
   // (a footnote definition at the copy's top level that nothing in it refers to: its content, from the last)
   const copy = OurusDoc.parse(source, { config });
   const tree = copy.mdTree;
-  for (const def of tree.unreferencedFootnotes().filter((b) => tree.line(b.line).containers[0]?.block === b.block).reverse()) {
+  for (const def of tree
+    .unreferencedFootnotes()
+    .filter((b) => tree.line(b.line).containers[0]?.block === b.block)
+    .reverse()) {
     const label = tree.line(def.line).prefix.find((p) => p.container.block === def.block)!;
     const [start, end] = [tree.line(def.line).from, tree.line(def.lastLine).to];
     source = source.slice(0, start) + copy.markdownOf(label.to, end) + source.slice(end);
@@ -44,13 +56,16 @@ export function renderedHtml(markdown: string, from: OurusDoc, text: boolean | '
   for (const b of from.mdTree.rootAt.preorder()) {
     if (b.block.type !== 'refdef' && b.block.type !== 'footnote_definition') continue;
     const first = from.mdTree.line(b.line);
-    const start = b.block.type === 'refdef' ? first.contentFrom : first.prefix.find((p) => p.container.block === b.block)!.from;
+    const start =
+      b.block.type === 'refdef' ? first.contentFrom : first.prefix.find((p) => p.container.block === b.block)!.from;
     const end = from.mdTree.line(b.lastLine).to;
     if (start < reached) continue;
     defs.push(from.markdownOf(start, end));
     reached = end;
   }
-  const html = OurusDoc.parse(`\n${source}${defs.length ? `\n\n${defs.join('\n\n')}\n` : ''}`, { config }).mdTree.renderHtml();
+  const html = OurusDoc.parse(`\n${source}${defs.length ? `\n\n${defs.join('\n\n')}\n` : ''}`, {
+    config,
+  }).mdTree.renderHtml();
   return text === true ? keptSpaces(markdown, html) : html;
 }
 
@@ -83,13 +98,19 @@ export function clipboardSource(lines: readonly string[], config: Partial<OurusC
   // (by a reduction, not a spread: a clipboard of a hundred thousand lines is past the arguments a call takes)
   // (none from ourus's own copy, written out of its containers: what indentation it has is its own,
   // indented code's)
-  const common = ours ? 0 : lines.filter((text) => trimMd(text) !== '').reduce((m, text) => Math.min(m, indentOf(text)), Infinity);
+  const common = ours
+    ? 0
+    : lines.filter((text) => trimMd(text) !== '').reduce((m, text) => Math.min(m, indentOf(text)), Infinity);
   let source = lines.map((text) => (trimMd(text) === '' ? '' : dropColumns(text, common)));
   // (but a line of blanks in code, math, a comment, HTML is the block's: kept, its share of the common
   // indentation taken off as the others', where the clipboard read so has the line in such a block)
   if (lines.some((text) => text !== '' && trimMd(text) === '')) {
     const tree = read(source);
-    source = source.map((text, i) => (text === '' && lines[i] !== '' && trimMd(lines[i]!) === '' && VERBATIM.has(tree.line(i).leaf?.block.type ?? '') ? dropColumns(lines[i]!, common) : text));
+    source = source.map((text, i) =>
+      text === '' && lines[i] !== '' && trimMd(lines[i]!) === '' && VERBATIM.has(tree.line(i).leaf?.block.type ?? '')
+        ? dropColumns(lines[i]!, common)
+        : text,
+    );
   }
   // (ourus's own is written out of its containers: a line in it that looks like a closing fence is code)
   if (ours) return source;
@@ -101,7 +122,13 @@ export function clipboardSource(lines: readonly string[], config: Partial<OurusC
   // a delimited block (a fence, `$$`, `%%`) opened at the first line's start, outside any container
   const opened = (tree: MdTree): MdBlockAt | null => {
     const leaf = tree.line(0).leaf;
-    return leaf && leaf.line === 0 && !tree.line(0).containers.length && tree.flavor.delimited(leaf.block) && tree.markup(0).marks.find((m) => m.kind === 'open')?.from === 0 ? leaf : null;
+    return leaf &&
+      leaf.line === 0 &&
+      !tree.line(0).containers.length &&
+      tree.flavor.delimited(leaf.block) &&
+      tree.markup(0).marks.find((m) => m.kind === 'open')?.from === 0
+      ? leaf
+      : null;
   };
   const as = opened(read(source));
   if (!as || as.block.attrs.closed) return source;
@@ -117,7 +144,11 @@ export function clipboardSource(lines: readonly string[], config: Partial<OurusC
  * without a line break (inline text): frontmatter read after a blank line, a block it leaves open
  * (a fence it doesn't close) closed where it ends. Null where it holds nothing.
  */
-export function clipboardFragment(markdown: string, config: Partial<OurusConfig>, ours = false): { readonly doc: OurusDoc; readonly inline: boolean } | null {
+export function clipboardFragment(
+  markdown: string,
+  config: Partial<OurusConfig>,
+  ours = false,
+): { readonly doc: OurusDoc; readonly inline: boolean } | null {
   const all = markdown.split(/\r\n|\n|\r/);
   // (the blank lines at the start dropped at once: one at a time, each shift moves the rest)
   let first = 0;

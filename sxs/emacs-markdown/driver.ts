@@ -20,7 +20,11 @@ import type { TextDoc } from '../lib/text.ts';
 import { BUFFER, FRESH, lisp, SELECT, startEmacs, toCodePoints, toUtf16, type Emacs } from './emacs.ts';
 
 /** markdown-mode's release: its tag, and its one file's SHA-256 (the tag's `markdown-mode.el`). */
-const MARKDOWN_MODE = { tag: 'v2.8', version: '2.8', sha256: '73a686707d3e4044b475b5047af9e62c1d3810d4ee5e1002b52782d8bccb6d36' };
+const MARKDOWN_MODE = {
+  tag: 'v2.8',
+  version: '2.8',
+  sha256: '73a686707d3e4044b475b5047af9e62c1d3810d4ee5e1002b52782d8bccb6d36',
+};
 
 /** markdown-mode's directory, fetched into `.sxs/emacs-markdown/files/` if it isn't there yet. */
 async function markdownMode(say: (line: string) => void): Promise<string> {
@@ -29,10 +33,13 @@ async function markdownMode(say: (line: string) => void): Promise<string> {
   const sha = (b: Buffer): string => createHash('sha256').update(b).digest('hex');
   if (existsSync(file) && sha(readFileSync(file)) === MARKDOWN_MODE.sha256) return dir;
   say(`fetching markdown-mode ${MARKDOWN_MODE.tag} ...`);
-  const r = await fetch(`https://raw.githubusercontent.com/jrblevin/markdown-mode/${MARKDOWN_MODE.tag}/markdown-mode.el`);
+  const r = await fetch(
+    `https://raw.githubusercontent.com/jrblevin/markdown-mode/${MARKDOWN_MODE.tag}/markdown-mode.el`,
+  );
   if (!r.ok) throw new Error(`markdown-mode.el: ${r.status}`);
   const body = Buffer.from(await r.arrayBuffer());
-  if (sha(body) !== MARKDOWN_MODE.sha256) throw new Error(`markdown-mode.el: SHA-256 ${sha(body)}, not ${MARKDOWN_MODE.sha256}`);
+  if (sha(body) !== MARKDOWN_MODE.sha256)
+    throw new Error(`markdown-mode.el: SHA-256 ${sha(body)}, not ${MARKDOWN_MODE.sha256}`);
   mkdirSync(dir, { recursive: true });
   writeFileSync(file, body);
   return dir;
@@ -101,7 +108,12 @@ export const driver: Driver = {
     undo: 'C-/',
     // `undo-redo`
     redo: 'C-M-_',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, shifted(k)]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, shifted(k)],
+      ]),
+    ),
   },
 
   holds(doc) {
@@ -111,7 +123,8 @@ export const driver: Driver = {
     // typed through the terminal, a no-break space or a character outside the Basic Multilingual Plane
     // (an emoji) arrives as its code (`302240`), not the character
     if (text.includes('\u00a0')) return 'no-break space, which the terminal types as its code';
-    if (/[\u{10000}-\u{10ffff}]/u.test(text)) return 'character outside the Basic Multilingual Plane, which the terminal types as its code';
+    if (/[\u{10000}-\u{10ffff}]/u.test(text))
+      return 'character outside the Basic Multilingual Plane, which the terminal types as its code';
     return undefined;
   },
 
@@ -131,15 +144,22 @@ export const driver: Driver = {
     await this.load(null as unknown as Page, { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } });
     await emacs.session.press(this.keys.indent as string);
     const after = (await this.read(null as unknown as Page)) as TextDoc;
-    if (after.text !== '- a\n  - b\n') throw new Error(`markdown-mode's keys didn't come up: C-c <right> gives ${JSON.stringify(after.text)}`);
+    if (after.text !== '- a\n  - b\n')
+      throw new Error(`markdown-mode's keys didn't come up: C-c <right> gives ${JSON.stringify(after.text)}`);
     return `${await emacs.eval('emacs-version')}, markdown-mode ${MARKDOWN_MODE.version}`;
   },
 
   async load(_page, doc) {
     const { text, sel } = doc as TextDoc;
     const at = (u: number): number => toCodePoints(text, u) + 1;
-    const caret = !sel ? '(goto-char (point-min))' : sel.anchor === sel.head ? `(goto-char ${at(sel.head)})` : SELECT(at(sel.anchor), at(sel.head));
-    await emacs.eval(`(progn ${FRESH('markdown-mode')} (insert ${lisp(text)}) ${caret} (setq buffer-undo-list nil) (set-buffer-modified-p nil) t)`);
+    const caret = !sel
+      ? '(goto-char (point-min))'
+      : sel.anchor === sel.head
+        ? `(goto-char ${at(sel.head)})`
+        : SELECT(at(sel.anchor), at(sel.head));
+    await emacs.eval(
+      `(progn ${FRESH('markdown-mode')} (insert ${lisp(text)}) ${caret} (setq buffer-undo-list nil) (set-buffer-modified-p nil) t)`,
+    );
   },
 
   async read() {

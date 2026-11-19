@@ -32,7 +32,12 @@ export const has = (command: string): boolean => succeeds('sh', ['-c', 'command 
 
 const installed = (pkg: string): boolean => {
   try {
-    return execFileSync('dpkg-query', ['-W', '-f=${db:Status-Status}', pkg], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }) === 'installed';
+    return (
+      execFileSync('dpkg-query', ['-W', '-f=${db:Status-Status}', pkg], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) === 'installed'
+    );
   } catch {
     return false;
   }
@@ -54,7 +59,8 @@ export function ensureAptInstalled(who: string, needs: readonly Need[], say: (li
   const what = `${who} needs ${wanted.join(' ')}`;
   const manual = `install ${wanted.length > 1 ? 'them' : 'it'} (on Debian: apt install ${missing.map((need) => names(need)[0]).join(' ')})`;
   const release = existsSync('/etc/os-release') ? readFileSync('/etc/os-release', 'utf8') : '';
-  if (!/^(?:ID|ID_LIKE)=.*\b(?:debian|ubuntu)\b/m.test(release) || !has('apt-get')) throw new Error(`${what}: ${manual}`);
+  if (!/^(?:ID|ID_LIKE)=.*\b(?:debian|ubuntu)\b/m.test(release) || !has('apt-get'))
+    throw new Error(`${what}: ${manual}`);
   const root = asRoot();
   if (!root) throw new Error(`${what}, and installing needs root or passwordless sudo: ${manual}`);
   const apt = (...args: string[]): void => {
@@ -63,16 +69,25 @@ export function ensureAptInstalled(who: string, needs: readonly Need[], say: (li
       execFileSync(command!, rest, { stdio: ['ignore', 'ignore', 'pipe'], maxBuffer: 1 << 26 });
     } catch (e) {
       const err = e as { stderr?: Buffer; message: string };
-      throw new Error(`${what}; apt-get ${args[0]} failed: ${(err.stderr?.toString() || err.message).trim().split('\n').pop()}`);
+      throw new Error(
+        `${what}; apt-get ${args[0]} failed: ${(err.stderr?.toString() || err.message).trim().split('\n').pop()}`,
+      );
     }
   };
   say(`installing ${wanted.join(' ')} for ${who} (apt-get${root.length ? ', by sudo' : ''})`);
   apt('update', '-q');
   // of each need's names, the first this release has
-  const packages = [...new Set(missing.map((need) => names(need).find((name) => succeeds('apt-cache', ['show', name])) ?? names(need)[0]!))];
+  const packages = [
+    ...new Set(
+      missing.map((need) => names(need).find((name) => succeeds('apt-cache', ['show', name])) ?? names(need)[0]!),
+    ),
+  ];
   apt('install', '-y', '-q', '--no-install-recommends', ...packages);
   const still = missing.filter((need) => !present(need));
-  if (still.length) throw new Error(`${what}; apt-get installed ${packages.join(' ')}, but ${still.map((need) => need.command ?? names(need)[0]).join(' and ')} isn't there`);
+  if (still.length)
+    throw new Error(
+      `${what}; apt-get installed ${packages.join(' ')}, but ${still.map((need) => need.command ?? names(need)[0]).join(' and ')} isn't there`,
+    );
 }
 
 // ------------------------------------------------------------------ the container's cap on tasks
@@ -86,7 +101,11 @@ export function tasks(): { current: number; max: number; hits: number } | null {
   try {
     const max = Number(read('pids.max'));
     if (!Number.isFinite(max)) return null;
-    return { current: Number(read('pids.current')), max, hits: Number(/^max (\d+)/m.exec(read('pids.events'))?.[1] ?? 0) };
+    return {
+      current: Number(read('pids.current')),
+      max,
+      hits: Number(/^max (\d+)/m.exec(read('pids.events'))?.[1] ?? 0),
+    };
   } catch {
     return null;
   }
@@ -110,7 +129,9 @@ export function watchTasks(say: (line: string) => void): () => void {
     if (!now) return;
     peak = Math.max(peak, now.current);
     if (now.hits > told && Date.now() - toldAt >= 10_000) {
-      say(`warning: the container's cap on tasks (${now.max}) refused ${now.hits - told} just now, ${now.current} running: browsers and windows may crash or hang, and the runs in them fail`);
+      say(
+        `warning: the container's cap on tasks (${now.max}) refused ${now.hits - told} just now, ${now.current} running: browsers and windows may crash or hang, and the runs in them fail`,
+      );
       [told, toldAt] = [now.hits, Date.now()];
     }
   };
@@ -121,7 +142,10 @@ export function watchTasks(say: (line: string) => void): () => void {
     check();
     const last = tasks() ?? first;
     const refused = last.hits - first.hits;
-    if (refused) say(`warning: the container's cap on tasks (${last.max}) refused ${refused} during the run, ${peak} running at most: a crash or a hang may be that, not the app`);
+    if (refused)
+      say(
+        `warning: the container's cap on tasks (${last.max}) refused ${refused} during the run, ${peak} running at most: a crash or a hang may be that, not the app`,
+      );
     else if (peak >= 0.9 * last.max) say(`tasks: ${peak} running at most, near the container's cap (${last.max})`);
   };
 }

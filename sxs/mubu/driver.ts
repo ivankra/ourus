@@ -52,13 +52,22 @@ function toItem(depth: number, text: string): Item & { prefix: number; escaped?:
   const after = task ? first!.slice(task[0].length) : first!;
   const heading = /^(#{1,3}) /.exec(after);
   const prefix = (task?.[0].length ?? 0) + (heading?.[0].length ?? 0);
-  return { depth, text: first!.slice(prefix), note, task: task ? (task[1] === ' ' ? 1 : 2) : 0, heading: heading?.[1]!.length ?? 0, prefix };
+  return {
+    depth,
+    text: first!.slice(prefix),
+    note,
+    task: task ? (task[1] === ' ' ? 1 : 2) : 0,
+    heading: heading?.[1]!.length ?? 0,
+    prefix,
+  };
 }
 
 /** A node's canonical text, and the length of the prefix its attributes stand for. */
 function fromItem(it: Item): { text: string; prefix: number } {
   // (a text starting `# `, the heading being an attribute, escaped: `\# x`)
-  const prefix = (it.task ? (it.task === 2 ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : !it.task && /^#{1,6}(?=[ \t]|$)/.test(it.text) ? '\\' : '');
+  const prefix =
+    (it.task ? (it.task === 2 ? '[x] ' : '[ ] ') : '') +
+    (it.heading ? '#'.repeat(it.heading) + ' ' : !it.task && /^#{1,6}(?=[ \t]|$)/.test(it.text) ? '\\' : '');
   return { text: prefix + it.text + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length };
 }
 
@@ -106,14 +115,29 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // Ctrl+Home and Ctrl+End go to the node's text's start and end, not the outline's
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // a node's text is one line of rich text, with nothing of Markdown's blocks: no code block, no quote
   // (`> q` would be its text). A task and a heading level are a node's attributes: a caret in them has
   // no place (`holds`), and a join or split at them is Mubu's to show
-  refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'quote'],
+  refuses: [
+    'code block',
+    'html',
+    'table',
+    'math',
+    'thematic break',
+    'link reference definition',
+    'comment',
+    'footnote',
+    'quote',
+  ],
   // measured with `--ignore-options` (2026-10-26): each value agrees where ourus's default doesn't
   behaves: {
     // a character typed over a selection (probed 2026-11-18): none, the character replaces it
@@ -151,34 +175,54 @@ export const driver: Driver = {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\[[ xX]\] /, '')))) return 'heading deeper than H3';
     // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
-    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Mubu holds as the text #';
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text)))
+      return 'heading with no text (# alone), which Mubu holds as the text #';
     // a block's later lines are its node's note, which an empty last line isn't
-    if (o.blocks.some((b) => b.text.endsWith('\n'))) return "block's text ending in a line break: an empty note is none";
+    if (o.blocks.some((b) => b.text.endsWith('\n')))
+      return "block's text ending in a line break: an empty note is none";
     if (o.sel) {
       const it = toItem(0, o.blocks[o.sel.block]!.text);
       // a task's checkbox and a heading's level are the node's attributes, not text: no caret goes there
-      if (Math.min(o.sel.anchor, o.sel.head) < it.prefix && !it.escaped) return "caret in a task's checkbox or a heading's #s";
+      if (Math.min(o.sel.anchor, o.sel.head) < it.prefix && !it.escaped)
+        return "caret in a task's checkbox or a heading's #s";
       // a node's text is drawn without its trailing spaces (`a ` as `<span>a</span>`), which its
       // model keeps: no caret goes past them (Enter58)
-      if (Math.max(o.sel.anchor, o.sel.head) > it.prefix + it.text.trimEnd().length && Math.max(o.sel.anchor, o.sel.head) <= it.prefix + it.text.length) return "caret past a node's trailing spaces, which Mubu doesn't draw";
+      if (
+        Math.max(o.sel.anchor, o.sel.head) > it.prefix + it.text.trimEnd().length &&
+        Math.max(o.sel.anchor, o.sel.head) <= it.prefix + it.text.length
+      )
+        return "caret past a node's trailing spaces, which Mubu doesn't draw";
       // the text and the note are editors of their own: no selection spans both
       const textEnd = it.prefix + it.text.length;
-      if (it.note !== null && Math.min(o.sel.anchor, o.sel.head) <= textEnd && Math.max(o.sel.anchor, o.sel.head) > textEnd) return "selection across a node's text and its note";
+      if (
+        it.note !== null &&
+        Math.min(o.sel.anchor, o.sel.head) <= textEnd &&
+        Math.max(o.sel.anchor, o.sel.head) > textEnd
+      )
+        return "selection across a node's text and its note";
     }
     return undefined;
   },
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction((find) => (0, eval)(find)?.getState().doc.outliner?.model && document.querySelector('.outliner-page .content.mm-editor'), FIND_STORE, { timeout: 120000 });
-    const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+    await page.waitForFunction(
+      (find) =>
+        (0, eval)(find)?.getState().doc.outliner?.model && document.querySelector('.outliner-page .content.mm-editor'),
+      FIND_STORE,
+      { timeout: 120000 },
+    );
+    const settled = await page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+    );
     if (settled.timedOut) throw new Error(`Mubu didn't settle after loading: ${settled.pending}`);
     await page.evaluate((find) => {
       const store = (0, eval)(find);
       // the sign-in dialog a visitor is shown (`state.modal.loginModal`), closed as its own close button
       // does, whenever it opens: it takes the focus
       const close = () => {
-        if (store.getState().modal?.loginModal?.visible) store.dispatch({ type: '@modal/set_login_modal_visible', payload: { visible: false } });
+        if (store.getState().modal?.loginModal?.visible)
+          store.dispatch({ type: '@modal/set_login_modal_visible', payload: { visible: false } });
       };
       if (!(window as any).__sxsLoginClosed) {
         (window as any).__sxsLoginClosed = true;
@@ -187,10 +231,17 @@ export const driver: Driver = {
       close();
     }, FIND_STORE);
     // ready once a key does what it should: Tab indents
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await idle();
       await page.keyboard.press('Tab');
       await idle();
@@ -229,7 +280,13 @@ export const driver: Driver = {
         const roots: any[] = [];
         const parents: any[] = [];
         for (const it of items) {
-          const node = { text: runs(it.text), note: it.note === null ? '' : runs(it.note), ...(it.heading && { heading: it.heading }), ...(it.task && { taskStatus: it.task }), children: [] as any[] };
+          const node = {
+            text: runs(it.text),
+            note: it.note === null ? '' : runs(it.note),
+            ...(it.heading && { heading: it.heading }),
+            ...(it.task && { taskStatus: it.task }),
+            children: [] as any[],
+          };
           (it.depth ? parents[it.depth - 1].children : roots).push(node);
           parents[it.depth] = node;
           parents.length = it.depth + 1;
@@ -241,17 +298,26 @@ export const driver: Driver = {
         const walk = (ns: any[]) => ns.forEach((n) => (ids.push(n.id), walk(n.children ?? [])));
         walk(model.toJSON().nodes);
         if (ids.length !== items.length) throw new Error(`made ${ids.length} nodes of the test's ${items.length}`);
-        const editor = (id: string, note = false) => document.querySelector(`.outliner-page .${note ? 'note' : 'content'}.mm-editor[data-id="${id}"]`) as HTMLElement | null;
+        const editor = (id: string, note = false) =>
+          document.querySelector(
+            `.outliner-page .${note ? 'note' : 'content'}.mm-editor[data-id="${id}"]`,
+          ) as HTMLElement | null;
         for (let i = 0; i < 300 && !ids.every((id) => editor(id)); i++) await new Promise((r) => setTimeout(r, 10));
         if (!ids.every((id) => editor(id))) throw new Error("the test's nodes didn't render");
         await idle();
         if (!sel) return;
         // the caret, as Mubu's own commands put it (moving a node, say), then its direction
         const id = ids[sel.block]!;
-        outliner.command.execute('focus', id, sel.inNote, { start: Math.min(sel.anchor, sel.head), end: Math.max(sel.anchor, sel.head) });
+        outliner.command.execute('focus', id, sel.inNote, {
+          start: Math.min(sel.anchor, sel.head),
+          end: Math.max(sel.anchor, sel.head),
+        });
         const el = editor(id, sel.inNote)!;
         for (let i = 0; i < 100 && document.activeElement !== el; i++) await new Promise((r) => setTimeout(r, 10));
-        if (document.activeElement !== el) throw new Error(`the node didn't take the caret (focus: ${(document.activeElement as HTMLElement | null)?.className})`);
+        if (document.activeElement !== el)
+          throw new Error(
+            `the node didn't take the caret (focus: ${(document.activeElement as HTMLElement | null)?.className})`,
+          );
         if (sel.head < sel.anchor) {
           const at = (offset: number): [Node, number] => {
             const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -282,19 +348,36 @@ export const driver: Driver = {
       // a node's runs, each with its formatting (Mubu's underline has no Markdown: plain)
       const runsOf = (t: any): Run[] =>
         Array.isArray(t)
-          ? t.map((s) => ({ text: s.text ?? '', ...(s.style?.bold && { bold: true }), ...(s.style?.italic && { italic: true }), ...(s.style?.strikethrough && { strike: true }), ...(s.style?.code && { code: true }), ...(s.link && { href: s.link }) }))
+          ? t.map((s) => ({
+              text: s.text ?? '',
+              ...(s.style?.bold && { bold: true }),
+              ...(s.style?.italic && { italic: true }),
+              ...(s.style?.strikethrough && { strike: true }),
+              ...(s.style?.code && { code: true }),
+              ...(s.link && { href: s.link }),
+            }))
           : [{ text: String(t ?? '') }];
       const flat: { depth: number; runs: Run[]; note: string | null; task: number; heading: number; id: string }[] = [];
       const walk = (ns: any[], depth: number) =>
         ns.forEach((n) => {
           const note = plain(n.note);
-          flat.push({ depth, runs: runsOf(n.text), note: note ? note : null, task: n.taskStatus === 1 || n.taskStatus === 2 ? n.taskStatus : 0, heading: n.heading || 0, id: n.id });
+          flat.push({
+            depth,
+            runs: runsOf(n.text),
+            note: note ? note : null,
+            task: n.taskStatus === 1 || n.taskStatus === 2 ? n.taskStatus : 0,
+            heading: n.heading || 0,
+            id: n.id,
+          });
           walk(n.children ?? [], depth + 1);
         });
       walk(outliner.model.toJSON().nodes, 0);
       // nodes selected as nodes (Shift+Up or Down past a node's edge): the caret's editor keeps the focus
       const s = outliner.getService('Selection').getSelection();
-      const selected: number[] = s?.type === 'node' ? s.nodes.map((id: string) => flat.findIndex((f) => f.id === id)).filter((i: number) => i >= 0) : [];
+      const selected: number[] =
+        s?.type === 'node'
+          ? s.nodes.map((id: string) => flat.findIndex((f) => f.id === id)).filter((i: number) => i >= 0)
+          : [];
       let sel: { block: number; anchor: number; head: number; inNote: boolean; text: string } | null = null;
       const el = document.activeElement as HTMLElement | null;
       if (!selected.length && el?.classList.contains('mm-editor') && el.closest('.outliner-page') && el.dataset.id) {
@@ -308,14 +391,23 @@ export const driver: Driver = {
           return r.toString().length;
         };
         const block = flat.findIndex((f) => f.id === el.dataset.id);
-        if (block >= 0) sel = { block, anchor: offset(ds.anchorNode, ds.anchorOffset), head: offset(ds.focusNode, ds.focusOffset), inNote: el.classList.contains('note'), text: el.textContent ?? '' };
+        if (block >= 0)
+          sel = {
+            block,
+            anchor: offset(ds.anchorNode, ds.anchorOffset),
+            head: offset(ds.focusNode, ds.focusOffset),
+            inNote: el.classList.contains('note'),
+            text: el.textContent ?? '',
+          };
       }
       return { flat, sel, selected };
     }, FIND_STORE);
     // a node's text as Markdown, its formatting in markup, and where an offset in the text is in it
     const mds = raw.flat.map((f) => runsAsMarkdown(f.runs));
     // a note being edited, empty, is none in the model yet: the caret's editor says it's there
-    const notes = raw.flat.map((f, i) => (raw.sel?.block === i && raw.sel.inNote && f.note === null ? raw.sel.text : f.note));
+    const notes = raw.flat.map((f, i) =>
+      raw.sel?.block === i && raw.sel.inNote && f.note === null ? raw.sel.text : f.note,
+    );
     const texts = raw.flat.map((f, i) => fromItem({ ...f, text: mds[i]!.text, note: notes[i]! }));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
     let sel: Outline['sel'] = null;

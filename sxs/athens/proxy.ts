@@ -23,7 +23,9 @@ export function expose(js: string): string | null {
   const span = js.indexOf('"ds/transact!-wrap-span"');
   if (span < 0) return null;
   const deref = [...js.slice(Math.max(0, span - 2000), span).matchAll(/var f=([\w$]+)\(a\)/g)].pop()?.[1];
-  const after = /a=([\w$]+)\.j\(a,[\w$]+\);[^}]*return a\}(\s*)function [\w$]+\(\)\{var a=([\w$]+);/.exec(js.slice(span, span + 600));
+  const after = /a=([\w$]+)\.j\(a,[\w$]+\);[^}]*return a\}(\s*)function [\w$]+\(\)\{var a=([\w$]+);/.exec(
+    js.slice(span, span + 600),
+  );
   const transit = /=([\w$]+)\(([\w$]+)\(([\w$]+),null\),localStorage\.getItem\(/.exec(js);
   const volatile = /function ([\w$]+)\(a\)\{this\.state=a;this\.[\w$]+=32768;this\.[\w$]+=0\}/.exec(js)?.[1];
   if (!deref || !after || !transit || !volatile) return null;

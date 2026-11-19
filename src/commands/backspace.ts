@@ -11,7 +11,26 @@ import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, editInCode, joinInCode, onDelimiterLine } from './code.ts';
 import { deleteEmptyPair, pairPlace } from './typing.ts';
-import { blockElement, joinIntoFootnote, childrenRefused, deleteHeldSpace, drawnAt, fenceDrawn, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, pastPrefixAt, textActedOnAt, wholeBlocksSelection, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
+import {
+  blockElement,
+  joinIntoFootnote,
+  childrenRefused,
+  deleteHeldSpace,
+  drawnAt,
+  fenceDrawn,
+  hiddenSpacesAt,
+  inMarkup,
+  leaveList,
+  pastPrefix,
+  pastPrefixAt,
+  textActedOnAt,
+  wholeBlocksSelection,
+  textEnd,
+  textStart,
+  unnumberItem,
+  visiblePreceding,
+  withTextlessParents,
+} from './util.ts';
 import { decorates } from '../config.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
@@ -35,18 +54,22 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
     // (at the text's start, its first line's: `lastIndexOf` would read a line break there before it)
     const line = code.offset && code.text.text.lastIndexOf('\n', code.offset - 1) + 1;
     // (indented code's text past its four columns)
-    const start = code.text.frame.find((p) => p.part === 'indent' && p.from === line && p.to <= code.offset)?.to ?? line;
+    const start =
+      code.text.frame.find((p) => p.part === 'indent' && p.from === line && p.to <= code.offset)?.to ?? line;
     if (code.offset === start) return deleteContentBackwardCommand(ctx);
     return editInCode(ctx, code, start, code.offset, '', { host: false });
   }
   const at = ctx.from;
-  if (at.zone === 'frame' && at.part === 'underline') return new OurusRejected('not-expressible', 'a setext underline has no text');
+  if (at.zone === 'frame' && at.part === 'underline')
+    return new OurusRejected('not-expressible', 'a setext underline has no text');
   if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return deleteContentBackwardCommand(ctx);
   const { node, text, offset } = at;
   // (at the underline's end)
-  if (text.frame.some((p) => p.part === 'underline' && offset > p.from)) return new OurusRejected('not-expressible', 'a setext underline has no text');
+  if (text.frame.some((p) => p.part === 'underline' && offset > p.from))
+    return new OurusRejected('not-expressible', 'a setext underline has no text');
   const task = text.frame.find((p) => p.part === 'task');
-  if (task && offset === task.to && ctx.config.taskEditing === 'text') return ctx.apply(ctx.draft().setText(node, text.splice(task.from, task.to)).setCaret(node, task.from, -1));
+  if (task && offset === task.to && ctx.config.taskEditing === 'text')
+    return ctx.apply(ctx.draft().setText(node, text.splice(task.from, task.to)).setCaret(node, task.from, -1));
   const s = text.text;
   const line = lineOf(s, offset);
   const start = text.textStart(line);
@@ -64,7 +87,11 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
   if (to === end && underline && end + 1 >= underline.from) {
     if (line > 0) return ctx.apply(draft.setText(node, text.splice(start - 1, end)).setCaret(node, start - 1, -1));
     const lead = `${'#'.repeat(text.heading?.level ?? 1)} `;
-    return ctx.apply(draft.setText(node, text.slice(0, 0).withBlockIdLines(text.blockIdLines).splice(0, 0, lead)).setCaret(node, lead.length, -1));
+    return ctx.apply(
+      draft
+        .setText(node, text.slice(0, 0).withBlockIdLines(text.blockIdLines).splice(0, 0, lead))
+        .setCaret(node, lead.length, -1),
+    );
   }
   if (to === end && end < s.length) {
     let rest = end + 1;
@@ -77,7 +104,12 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
     }
     if (line > 0 && node.kind !== 'heading') {
       const into = node.kind === 'item' ? 'child' : 'sibling';
-      draft.split(node, start - 1, { to: rest, children: into === 'child' ? 'stay' : 'follow', into, kind: 'paragraph' });
+      draft.split(node, start - 1, {
+        to: rest,
+        children: into === 'child' ? 'stay' : 'follow',
+        into,
+        kind: 'paragraph',
+      });
       return ctx.apply(draft.gap(node, 1).select({ blank: node, line: 0 }, { blank: node, line: 0 }));
     }
   }
@@ -90,7 +122,10 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
  */
 function unwrapTask(draft: OurusDraft, node: OurusNode, text: OurusProse): OurusDraft {
   // (a paragraph's text, whatever its lines read as alone: a `- ` line below it no underline, escaped)
-  return draft.convert(node, 'paragraph').setText(node, text.type === 'heading' && text.heading?.form === 'setext' ? text.retyped('paragraph') : text).setCaret(node, 0, -1);
+  return draft
+    .convert(node, 'paragraph')
+    .setText(node, text.type === 'heading' && text.heading?.form === 'setext' ? text.retyped('paragraph') : text)
+    .setCaret(node, 0, -1);
 }
 
 /**
@@ -133,24 +168,52 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   const breakBelow = hidden?.text.frame.find((p) => p.part === 'below');
   if (hidden && breakBelow && hidden.node.kind === 'item') {
     const spaces = ' '.repeat(hidden.to - hidden.from);
-    return ctx.apply(ctx.draft().setText(hidden.node, hidden.text.splice(breakBelow.from, breakBelow.to, spaces)).setCaret(hidden.node, breakBelow.from, -1));
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(hidden.node, hidden.text.splice(breakBelow.from, breakBelow.to, spaces))
+        .setCaret(hidden.node, breakBelow.from, -1),
+    );
   }
   if (hidden) {
     // (an item's marker first, with `body` and `unwrap`)
-    const unwrapped = hidden.node.kind !== 'item' || config.backspaceAtItemStart === 'join' ? null : config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, hidden.node, hidden.text) : unwrapItem(ctx, hidden.node, hidden.text, hidden.to - hidden.from);
+    const unwrapped =
+      hidden.node.kind !== 'item' || config.backspaceAtItemStart === 'join'
+        ? null
+        : config.backspaceAtItemStart === 'logseq'
+          ? unnumberItem(ctx, hidden.node, hidden.text)
+          : unwrapItem(ctx, hidden.node, hidden.text, hidden.to - hidden.from);
     return unwrapped ?? joinUp(ctx, hidden.node, hidden.text);
   }
   let at = ctx.from;
   // at the start of a quote read as an atom, before its `>`: it joins the text above as it is written
   // (a numbered item's number first, with `backspaceAtItemStart: logseq`, as a paragraph item's)
-  if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'blockquote' && at.offset === 0) {
-    return (at.node.kind === 'item' && config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, at.node, at.text, 0) : null) ?? joinQuoteUp(ctx, at.node, at.text);
+  if (
+    ctx.collapsed &&
+    at.zone === 'text' &&
+    at.text instanceof OurusAtom &&
+    at.text.type === 'blockquote' &&
+    at.offset === 0
+  ) {
+    return (
+      (at.node.kind === 'item' && config.backspaceAtItemStart === 'logseq'
+        ? unnumberItem(ctx, at.node, at.text, 0)
+        : null) ?? joinQuoteUp(ctx, at.node, at.text)
+    );
   }
   // at the start of a rule or a table after a block in its container: refused, as Delete refuses to take
   // one in (no text joins one; the host's join would make a rule a paragraph's setext underline)
-  if (ctx.collapsed && (at.zone === 'text' || at.zone === 'frame') && at.node.kind === 'atom' && at.text instanceof OurusAtom && (at.text.type === 'thematic_break' || at.text.type === 'table') && head === ctx.doc.posOf(at.node, 0, 1)) {
+  if (
+    ctx.collapsed &&
+    (at.zone === 'text' || at.zone === 'frame') &&
+    at.node.kind === 'atom' &&
+    at.text instanceof OurusAtom &&
+    (at.text.type === 'thematic_break' || at.text.type === 'table') &&
+    head === ctx.doc.posOf(at.node, 0, 1)
+  ) {
     const above = visiblePreceding(ctx.view, at.node);
-    if (above && above.kind !== 'root' && !(above === at.node.parent && !ctx.doc.textOf(above))) return new OurusRejected('not-expressible', `can't join the ${nameOf(at.node)} into the text above`);
+    if (above && above.kind !== 'root' && !(above === at.node.parent && !ctx.doc.textOf(above)))
+      return new OurusRejected('not-expressible', `can't join the ${nameOf(at.node)} into the text above`);
   }
   // (right after a later line's `> `: it joins the line above)
   const inQuote = quoteAtomAt(ctx);
@@ -160,11 +223,25 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   // the brackets staying, as the host's Backspace does where it shows them as text (tasks.md rule 5)
   // at a footnote's text start, right after its label: the host's where it shows the label as text,
   // refused where it draws it (the text would join the label, or the text above)
-  if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'footnote_definition' && at.offset === at.text.frame.find((p) => p.part === 'label')?.to) {
-    return decorates(config, 'footnote') ? new OurusRejected('not-expressible', "a footnote's label is no text") : new OurusDeferred('in-markup', "the footnote's label is markup the host edits as text");
+  if (
+    ctx.collapsed &&
+    at.zone === 'text' &&
+    at.text instanceof OurusAtom &&
+    at.text.type === 'footnote_definition' &&
+    at.offset === at.text.frame.find((p) => p.part === 'label')?.to
+  ) {
+    return decorates(config, 'footnote')
+      ? new OurusRejected('not-expressible', "a footnote's label is no text")
+      : new OurusDeferred('in-markup', "the footnote's label is markup the host edits as text");
   }
   const status = statusIn(at, -1);
-  if (status && decorates(config, 'checkbox')) return ctx.apply(ctx.draft().setText(status.node, status.text.splice(status.at, status.at + 1)).setCaret(status.node, status.at, -1));
+  if (status && decorates(config, 'checkbox'))
+    return ctx.apply(
+      ctx
+        .draft()
+        .setText(status.node, status.text.splice(status.at, status.at + 1))
+        .setCaret(status.node, status.at, -1),
+    );
   // before a checkbox, in the marker: at the item's start, where the item joins (TO1), not past its checkbox
   const beforeBox = at.zone === 'marker' || (at.zone === 'frame' && at.part === 'task' && at.offset === 0);
   const markup = inMarkup(ctx.doc, at, head);
@@ -186,11 +263,17 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   while (first < s.length && isSpaceOrTab(s.charCodeAt(first))) first++;
   // past the line's leading spaces, in the text: the host's (its edit keeps a placeholder where it
   // would empty a node or widen an item's padding), but in an empty pair of backticks
-  if (offset > first) return beforeGluedBlockId(ctx, node, text, offset) ?? deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ?? new OurusDeferred('host-default');
+  if (offset > first)
+    return (
+      beforeGluedBlockId(ctx, node, text, offset) ??
+      deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ??
+      new OurusDeferred('host-default')
+    );
   const draft = ctx.draft();
   // among a later line's leading spaces, past the first: the space before the caret goes, a space typed
   // there taken back; at the line's start, the line joins (ShiftEnter21)
-  if (offset > lineStart && lineStart !== text.textStart(0)) return ctx.apply(draft.setText(node, text.splice(offset - 1, offset)).setCaret(node, offset - 1, -1));
+  if (offset > lineStart && lineStart !== text.textStart(0))
+    return ctx.apply(draft.setText(node, text.splice(offset - 1, offset)).setCaret(node, offset - 1, -1));
   if (lineStart !== text.textStart(0)) {
     // at a later line's start: it joins the line above, its spaces with it, the caret staying before
     // or past them, where it was (a Shift-Enter's break taken back: ShiftEnter21); a quote's line its
@@ -214,12 +297,15 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   // (`taskEditing: unwrap`: a paragraph where it is, its checkbox going with its marker, TaskBackspace3b;
   // an empty one, an empty paragraph set off as an item leaving its list is, TaskBackspace3c)
   if (task && !beforeBox && config.taskEditing === 'unwrap' && node.kind === 'item') {
-    return text.empty ? leaveList(ctx, node) : ctx.apply(unwrapTask(draft, node, text.asItem(false).splice(task.from, task.to)));
+    return text.empty
+      ? leaveList(ctx, node)
+      : ctx.apply(unwrapTask(draft, node, text.asItem(false).splice(task.from, task.to)));
   }
   // (`taskEditing: block`: the task joins as any item, its checkbox going with its marker)
   if (task && !beforeBox && config.taskEditing !== 'block') {
     // (`text`: one character of it, the text starting with the rest: TaskBackspace5)
-    if (config.taskEditing === 'text') return ctx.apply(draft.setText(node, text.splice(offset - 1, offset)).setCaret(node, offset - 1, -1));
+    if (config.taskEditing === 'text')
+      return ctx.apply(draft.setText(node, text.splice(offset - 1, offset)).setCaret(node, offset - 1, -1));
     draft.setText(node, text.splice(task.from, task.to)).setCaret(node, task.from, -1);
     return ctx.apply(draft);
   }
@@ -229,7 +315,9 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     // (an ATX title's closing `#`s too)
     const close = text.frame.find((p) => p.part === 'close');
     const open = text.frame.find((p) => p.part === 'heading') ?? text.frame.find((p) => p.part === 'underline')!;
-    draft.setText(node, (close ? text.splice(close.from, close.to) : text).splice(open.from, open.to)).setCaret(node, open.part === 'heading' ? open.from : 0, -1);
+    draft
+      .setText(node, (close ? text.splice(close.from, close.to) : text).splice(open.from, open.to))
+      .setCaret(node, open.part === 'heading' ? open.from : 0, -1);
     return ctx.apply(draft);
   }
   // a quote's `>`s go, every line's (`quotes: text`): its text a paragraph where it is; first under an
@@ -237,9 +325,20 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   if (text.type === 'quote') {
     const parent = node.index === 0 && node.parent?.kind === 'item' ? node.parent : null;
     const parentText = parent ? ctx.doc.textOf(parent) : null;
-    if (parent && node.kind === 'paragraph' && !node.children.length && parentText instanceof OurusProse && parentText.empty) {
+    if (
+      parent &&
+      node.kind === 'paragraph' &&
+      !node.children.length &&
+      parentText instanceof OurusProse &&
+      parentText.empty
+    ) {
       // (its checkbox kept: the text the task's)
-      return ctx.apply(draft.setText(parent, parentText.concat(text.unquoted())).remove([node]).setCaret(parent, parentText.text.length, -1));
+      return ctx.apply(
+        draft
+          .setText(parent, parentText.concat(text.unquoted()))
+          .remove([node])
+          .setCaret(parent, parentText.text.length, -1),
+      );
     }
     return ctx.apply(draft.setText(node, text.unquoted()).setCaret(node, 0, -1));
   }
@@ -251,7 +350,9 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     if (title.empty) return null;
     const id = draft.create('paragraph', title);
     // (the blank lines after the title, the paragraph's now)
-    return ctx.apply(draft.setText(node, null).append(node, 'first', [id]).inheritGap(id, node).gap(node, 0).setCaret(id, 0, -1));
+    return ctx.apply(
+      draft.setText(node, null).append(node, 'first', [id]).inheritGap(id, node).gap(node, 0).setCaret(id, 0, -1),
+    );
   }
   // with `enterAtTextStart: stay`, the blank lines Enter opens above a paragraph go one a press while
   // more than one is there (a join across them would merge the two: Backspace12e), and at the
@@ -260,7 +361,8 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     const above = node.preceding;
     const leading = !above || above.kind === 'root' ? ctx.doc.leadingBlankLines : null;
     if (leading) return ctx.apply(draft.leadingBlankLines(leading - 1).setCaret(node, offset, -1));
-    if (above && above.kind !== 'root' && above.gap > 1) return ctx.apply(draft.gap(above, above.gap - 1).setCaret(node, offset, -1));
+    if (above && above.kind !== 'root' && above.gap > 1)
+      return ctx.apply(draft.gap(above, above.gap - 1).setCaret(node, offset, -1));
   }
   // an item's marker first, with `body` and `unwrap`, where it would join the node above
   // (with `logseq` a numbered item's number, an empty one's too)
@@ -268,7 +370,13 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     const unnumbered = unnumberItem(ctx, node, text);
     if (unnumbered) return unnumbered;
   }
-  if (config.backspaceAtItemStart !== 'join' && config.backspaceAtItemStart !== 'logseq' && node.kind === 'item' && text.type === 'paragraph' && !text.empty) {
+  if (
+    config.backspaceAtItemStart !== 'join' &&
+    config.backspaceAtItemStart !== 'logseq' &&
+    node.kind === 'item' &&
+    text.type === 'paragraph' &&
+    !text.empty
+  ) {
     const unwrapped = unwrapItem(ctx, node, text);
     if (unwrapped) return unwrapped;
   }
@@ -287,7 +395,8 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
 function rejoins(ctx: CommandContext, above: OurusNode, below: OurusNode | null | undefined): boolean {
   if (above.kind !== 'item' || below?.kind !== 'item') return false;
   const [a, b] = [ctx.doc.listOf(above)?.block, ctx.doc.listOf(below)?.block];
-  const kind = (l: typeof a): string => JSON.stringify([l?.attrs.list?.type, l?.attrs.list?.bulletChar, l?.attrs.list?.delimiter]);
+  const kind = (l: typeof a): string =>
+    JSON.stringify([l?.attrs.list?.type, l?.attrs.list?.bulletChar, l?.attrs.list?.delimiter]);
   return !!a && !!b && a !== b && a.attrs.tight === true && kind(a) === kind(b);
 }
 
@@ -345,21 +454,41 @@ function blankLineBack(ctx: CommandContext, owner: OurusNode): OurusResult | nul
   const text = ctx.doc.textOf(owner);
   const k = ctx.doc.lineAt(head).index - owner.ownLastLine - 1;
   // (at a line's start, the host's deletes the line break just as well)
-  if (!text || owner.children.length || k < 0 || k >= owner.gap || head === ctx.doc.lineAt(head).from || !ctx.doc.atTextColumn(head, owner)) return new OurusDeferred('host-default');
+  if (
+    !text ||
+    owner.children.length ||
+    k < 0 ||
+    k >= owner.gap ||
+    head === ctx.doc.lineAt(head).from ||
+    !ctx.doc.atTextColumn(head, owner)
+  )
+    return new OurusDeferred('host-default');
   // the one quoted blank line between two paragraphs of a quote, `quotes: text` (Shift-Enter's at a
   // line's end in a quote's text): they join, the next its text's next line, as the host's Backspace
   // joins them out of a quote; one paragraph left, the quote is its text again
   const next = owner.next;
-  if (ctx.config.quotes === 'text' && owner.parent?.kind === 'quote' && owner.gap === 1 && owner.kind === 'paragraph' && next?.kind === 'paragraph' && text instanceof OurusProse) {
+  if (
+    ctx.config.quotes === 'text' &&
+    owner.parent?.kind === 'quote' &&
+    owner.gap === 1 &&
+    owner.kind === 'paragraph' &&
+    next?.kind === 'paragraph' &&
+    text instanceof OurusProse
+  ) {
     const draft = ctx.draft();
     draft.join(owner, next, { separator: '\n' });
     return ctx.apply(draft.setCaret(owner, textEnd(text), -1));
   }
   // (its text set again: where what follows would then continue it, `done()` keeps the line)
   // (a line before the gap's last: the last, ourus's or not, stays as it was)
-  const draft = ctx.draft().gap(owner, owner.gap - 1, k < owner.gap - 1).setText(owner, text);
+  const draft = ctx
+    .draft()
+    .gap(owner, owner.gap - 1, k < owner.gap - 1)
+    .setText(owner, text);
   if (k > 0) return ctx.apply(draft.select({ blank: owner, line: k - 1 }, { blank: owner, line: k - 1 }));
-  return ctx.apply(draft.setCaret(owner, text instanceof OurusAtom && !fenceDrawn(ctx, text) ? text.text.length : textEnd(text), -1));
+  return ctx.apply(
+    draft.setCaret(owner, text instanceof OurusAtom && !fenceDrawn(ctx, text) ? text.text.length : textEnd(text), -1),
+  );
 }
 
 /**
@@ -374,14 +503,22 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   // right after a folded node, what is above is its text, not its hidden descendants' (Fold15)
   const above = visiblePreceding(ctx.view, node);
   // first in its container: the next layer of markup goes (rule 6)
-  if (!above || above.kind === 'root' || (above === node.parent && !doc.textOf(above))) return caretAtSeam ? firstInContainer(ctx, node, text) : null;
+  if (!above || above.kind === 'root' || (above === node.parent && !doc.textOf(above)))
+    return caretAtSeam ? firstInContainer(ctx, node, text) : null;
   const upper = doc.textOf(above);
   if (!upper) return null;
   // into a quote read as an atom above: as it is written, on its last line (`quotes: atom`)
-  if (upper instanceof OurusAtom && upper.type === 'blockquote' && above !== node.parent) return joinIntoQuote(ctx, above, upper, node);
+  if (upper instanceof OurusAtom && upper.type === 'blockquote' && above !== node.parent)
+    return joinIntoQuote(ctx, above, upper, node);
   // into a callout's title, which in Obsidian is a line of its own (Quote60, 62)
   // (a block id on a line of its own ending it, or carried, a line of it too)
-  if (upper instanceof OurusProse && upper.type === 'title' && doc.config.flavor === 'obsidian' && (text.text.slice(text.textStart(0)).includes('\n') || text.blockIdLines.length > 0)) return new OurusRejected('not-expressible', "a callout's title is a single line");
+  if (
+    upper instanceof OurusProse &&
+    upper.type === 'title' &&
+    doc.config.flavor === 'obsidian' &&
+    (text.text.slice(text.textStart(0)).includes('\n') || text.blockIdLines.length > 0)
+  )
+    return new OurusRejected('not-expressible', "a callout's title is a single line");
   const draft = ctx.draft();
   // an empty item with children goes, they going to the node above: its last ones where it is an
   // item that isn't the parent, else into its place, which `emptyItemWithChildren: refuse` refuses
@@ -399,7 +536,13 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   // into an empty item above: the text moves up into it, its own checkbox and all, the empty item's
   // going; its children after the item's (into its place, where the item is its parent: TaskBackspace1);
   // the caret after its checkbox
-  if (above.kind === 'item' && upper instanceof OurusProse && upper.empty && !text.empty && (node.kind === 'item' || node.kind === 'paragraph')) {
+  if (
+    above.kind === 'item' &&
+    upper instanceof OurusProse &&
+    upper.empty &&
+    !text.empty &&
+    (node.kind === 'item' || node.kind === 'paragraph')
+  ) {
     // (its children lifted into its place, where the item is its parent: as `joinWithChildren` has it)
     const refused = childrenRefused(ctx, above, node, above !== node.parent);
     if (refused) return refused;
@@ -411,13 +554,24 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
     }
     draft.remove([node]);
     // (its block ids with it, on the item now)
-    draft.setText(above, moved).movedBlockIds(blockIdsOf(text).map((b) => b.name), above).setCaret(above, moved.textStart(0), -1);
+    draft
+      .setText(above, moved)
+      .movedBlockIds(
+        blockIdsOf(text).map((b) => b.name),
+        above,
+      )
+      .setCaret(above, moved.textStart(0), -1);
     return ctx.apply(draft);
   }
   if (above.kind === 'item' && upper instanceof OurusProse && upper.empty) return null;
   // right after an item's text, a paragraph's lines continue it, an empty one an empty line of it
   // (as Backspace takes back a Shift-Enter: ShiftEnter11)
-  const lineOfAbove = node.kind === 'paragraph' && above === node.parent && above.kind === 'item' && node.index === 0 && upper instanceof OurusProse;
+  const lineOfAbove =
+    node.kind === 'paragraph' &&
+    above === node.parent &&
+    above.kind === 'item' &&
+    node.index === 0 &&
+    upper instanceof OurusProse;
   // an empty node goes, the node above taking its gap as a join does, the caret to the end of the
   // text above (after an atom's, at its end: Fence60); an empty paragraph's list stays, in its place
   // (Backspace20)
@@ -427,41 +581,65 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
     const atEnd = upper instanceof OurusProse || node.kind === 'item' || fenceDrawn(ctx, upper);
     // (its blank lines after what is above it in the text: a folded node's last descendant, not its own text's)
     const before = node.preceding && node.preceding.kind !== 'root' ? node.preceding : above;
-    draft.dissolve(node).inheritGap(before, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
+    draft
+      .dissolve(node)
+      .inheritGap(before, node)
+      .setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
     // (an empty paragraph between two lists of one kind, which rejoin: the list above's spacing, its
     // blank lines the paragraph's, as an empty item leaving its list set it off: Backspace50c)
-    if (node.kind === 'paragraph' && node.prev && rejoins(ctx, node.prev, node.children[0] ?? node.next)) draft.gap(before, 0);
+    if (node.kind === 'paragraph' && node.prev && rejoins(ctx, node.prev, node.children[0] ?? node.next))
+      draft.gap(before, 0);
     return ctx.apply(draft);
   }
   // after a footnote's text, this paragraph joins it, its text being prose
-  if (upper instanceof OurusAtom && upper.type === 'footnote_definition' && !ctx.view.zoom) return joinIntoFootnote(ctx, above, upper, node) ?? new OurusRejected('not-expressible', `can't join into ${nameOf(above)}`);
+  if (upper instanceof OurusAtom && upper.type === 'footnote_definition' && !ctx.view.zoom)
+    return (
+      joinIntoFootnote(ctx, above, upper, node) ??
+      new OurusRejected('not-expressible', `can't join into ${nameOf(above)}`)
+    );
   // after code, a table or a rule: the host's where it shows the block as text, its Backspace a blank
   // line a press, then the line joined to the block's as text; refused where it draws it
   const element = upper instanceof OurusAtom ? blockElement(upper) : null;
-  if (element && !decorates(ctx.config, element) && !ctx.view.zoom) return new OurusDeferred('in-markup', `the ${nameOf(above)} above is markup the host edits as text`);
-  if (!(upper instanceof OurusProse)) return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? nameOf(above) : 'that'}`);
+  if (element && !decorates(ctx.config, element) && !ctx.view.zoom)
+    return new OurusDeferred('in-markup', `the ${nameOf(above)} above is markup the host edits as text`);
+  if (!(upper instanceof OurusProse))
+    return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? nameOf(above) : 'that'}`);
   if (node.kind !== 'item' && node.kind !== 'paragraph' && node.kind !== 'heading') return null;
   const lines = text.body.split('\n').length;
   if (lines > 1 && upper.heading?.form === 'atx') {
     // an item's title: the first line joins it, the rest a paragraph right under it, as an outliner's
     // block keeps its later lines (Enter51); where it would land after the item's children, refused
-    const under = lineOfAbove || (above.kind === 'item' && node.kind === 'item' && above !== node.parent && !above.children.length);
+    const under =
+      lineOfAbove || (above.kind === 'item' && node.kind === 'item' && above !== node.parent && !above.children.length);
     if (above.kind !== 'item' || !under) return new OurusRejected('not-expressible', 'an ATX title is a single line');
     const first = text.text.indexOf('\n', text.textStart(0));
     let next = first + 1;
     while (next < text.text.length && isSpaceOrTab(text.text.charCodeAt(next))) next++;
-    draft.split(node, first, { to: next, children: 'stay', into: lineOfAbove ? 'sibling' : 'child', kind: 'paragraph' });
+    draft.split(node, first, {
+      to: next,
+      children: 'stay',
+      into: lineOfAbove ? 'sibling' : 'child',
+      kind: 'paragraph',
+    });
   }
   // (a heading's title alone: its section stays where it is)
   const adopt = above.kind === 'item' && above !== node.parent && node.kind !== 'heading';
-  if (!adopt && node.kind !== 'heading' && node.children.length && config.joinWithChildren !== 'join') return new OurusRejected('has-children');
+  if (!adopt && node.kind !== 'heading' && node.children.length && config.joinWithChildren !== 'join')
+    return new OurusRejected('has-children');
   // (`never`: into a sibling too)
   if (adopt && node.children.length && config.joinWithChildren === 'never') return new OurusRejected('has-children');
   // (and where they'd go into an item that isn't childless at their parent's depth: down a level, into
   // the last descendant above, or among the children it has, a folded one's: Backspace45c, Fold15b)
-  if (adopt && node.children.length && config.joinWithChildren === 'refuse' && (above.children.length || above.depth !== node.depth)) return new OurusRejected('has-children');
+  if (
+    adopt &&
+    node.children.length &&
+    config.joinWithChildren === 'refuse' &&
+    (above.children.length || above.depth !== node.depth)
+  )
+    return new OurusRejected('has-children');
   // (a heading's closing marks go too: an ATX title's `#`s, a setext underline)
-  const close = node.kind === 'heading' ? text.frame.find((p) => p.part === 'close' || p.part === 'underline') : undefined;
+  const close =
+    node.kind === 'heading' ? text.frame.find((p) => p.part === 'close' || p.part === 'underline') : undefined;
   if (close) draft.setText(node, text.splice(close.from, close.to));
   // (the spaces Markdown hid before the text, the user's, joined as spaces)
   const hidden = doc.hiddenSpaces(node);
@@ -507,7 +685,8 @@ function firstInContainer(ctx: CommandContext, node: OurusNode, text: OurusProse
     // the document's only node goes, with the quotes it is all of (Backspace17e, Quote59)
     if (!next && !node.children.length) {
       const gone = withTextlessParents(doc, [node])[0]!;
-      if (gone.parent?.kind === 'root' && gone.parent.children.length === 1) return ctx.apply(draft.remove([gone]).setCaretAt(ctx.doc.mdTree.documentStart));
+      if (gone.parent?.kind === 'root' && gone.parent.children.length === 1)
+        return ctx.apply(draft.remove([gone]).setCaretAt(ctx.doc.mdTree.documentStart));
     }
     if (!next || !nextText) return null;
     // (with the quotes it is all of, which would hold nothing: `> - ┃⏎# h`)
@@ -539,7 +718,10 @@ function firstInContainer(ctx: CommandContext, node: OurusNode, text: OurusProse
     // (one line of it: its lazy lines would read otherwise where the item's text is)
     if (item && (own === null || (own instanceof OurusProse && own.empty)) && !text.body.includes('\n')) {
       const merged = own ? own.concat(text) : text.asItem(true);
-      draft.remove([node]).setText(item, merged).setCaret(item, own ? own.text.length : 0, -1);
+      draft
+        .remove([node])
+        .setText(item, merged)
+        .setCaret(item, own ? own.text.length : 0, -1);
       if (parent.children.length === 1) draft.remove([parent]);
       return ctx.apply(draft);
     }
@@ -560,7 +742,10 @@ function firstInContainer(ctx: CommandContext, node: OurusNode, text: OurusProse
  * host's, and within a block of code, but where it would make a fence (`editInCode`). Null where an end isn't in a node's text, or the second end is under a node between, which
  * it is unsupported. `then` goes on from there (Enter splits at the caret), null where it can't.
  */
-export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusDraft, node: OurusNode, offset: number) => OurusDraft | null): OurusResult | null {
+export function deleteSelectionAcross(
+  ctx: CommandContext,
+  then?: (draft: OurusDraft, node: OurusNode, offset: number) => OurusDraft | null,
+): OurusResult | null {
   // within a block of code, the host's, but where what it leaves would make a fence of code
   const code = then ? null : codeAt(ctx);
   if (code) return editInCode(ctx, code, code.offset, code.to, '');
@@ -571,7 +756,13 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   // (an end in a marker or a prefix: from that line's text)
   const from = pastPrefixAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head));
   const to = pastPrefixAt(ctx, Math.max(ctx.selection.anchor, ctx.selection.head));
-  if (from.zone !== 'text' || to.zone !== 'text' || !(from.text instanceof OurusProse) || !(to.text instanceof OurusProse)) return null;
+  if (
+    from.zone !== 'text' ||
+    to.zone !== 'text' ||
+    !(from.text instanceof OurusProse) ||
+    !(to.text instanceof OurusProse)
+  )
+    return null;
   // within one text, the host's (a cut deletes it so too: `deleteSelected`)
   if (from.node === to.node) return new OurusDeferred('host-default');
   const upper = from.node;
@@ -584,7 +775,11 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   // (`- o«ne⏎- two⏎  »- kid⏎  - more`: `- o┃kid⏎  - more`)
   const between: OurusNode[] = [];
   const holding: OurusNode[] = [];
-  for (let n: OurusNode | null = upper.children[0] ?? upper.afterSubtree; n && n !== lower; n = n.children[0] ?? n.afterSubtree) {
+  for (
+    let n: OurusNode | null = upper.children[0] ?? upper.afterSubtree;
+    n && n !== lower;
+    n = n.children[0] ?? n.afterSubtree
+  ) {
     if (isAbove(n, lower)) {
       if (n.kind !== 'item' && n.kind !== 'paragraph') return null;
       holding.push(n);
@@ -613,18 +808,23 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
     if (rest.text.startsWith('\n')) return null;
   }
   // (a callout's title holds one line, as a join into it refuses)
-  if (from.text.type === 'title' && ctx.config.flavor === 'obsidian' && rest.text.includes('\n')) return new OurusRejected('not-expressible', "a callout's title is a single line");
+  if (from.text.type === 'title' && ctx.config.flavor === 'obsidian' && rest.text.includes('\n'))
+    return new OurusRejected('not-expressible', "a callout's title is a single line");
   // each node's block ids stay its own, the selection covering them or not: the first node stays, and
   // covering the end of its text is no choice of its block id; the last's go to the join, which takes
   // them or refuses
   const kept = (text: OurusProse, cut: number): OurusProse => {
     const id = text.frame.find((p) => p.part === 'blockId');
-    return id && id.to > cut ? text.slice(0, Math.min(cut, id.from)).concat(text.slice(id.from, id.to)) : text.slice(0, cut);
+    return id && id.to > cut
+      ? text.slice(0, Math.min(cut, id.from)).concat(text.slice(id.from, id.to))
+      : text.slice(0, cut);
   };
   const id = to.text.frame.find((p) => p.part === 'blockId');
   if (id && to.offset > id.from) rest = to.text.slice(id.from, id.to);
   const at = Math.min(from.offset, from.text.frame.find((p) => p.part === 'blockId')?.from ?? from.offset);
-  draft.setText(upper, kept(from.text, from.offset).withBlockIdLines(from.text.blockIdLines)).setText(lower, rest.withBlockIdLines(to.text.blockIdLines));
+  draft
+    .setText(upper, kept(from.text, from.offset).withBlockIdLines(from.text.blockIdLines))
+    .setText(lower, rest.withBlockIdLines(to.text.blockIdLines));
   const adopt = upper.kind === 'item' && upper !== lower.parent;
   draft.join(upper, lower, { children: adopt ? 'adopt' : 'place' });
   if (holding.length) {
@@ -653,7 +853,12 @@ function isAbove(a: OurusNode, b: OurusNode): boolean {
  * the blank after it goes with it, as typing there put it in (`- item x┃ ^id1` → `- item ┃^id1`),
  * not two blanks left before the id. The last character before the id is the host's.
  */
-function beforeGluedBlockId(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number): OurusResult | null {
+function beforeGluedBlockId(
+  ctx: CommandContext,
+  node: OurusNode,
+  text: OurusProse,
+  offset: number,
+): OurusResult | null {
   const s = text.text;
   const cp = s.codePointAt(offset - 1);
   const len = offset >= 2 && cp !== undefined && cp >= 0xdc00 && cp <= 0xdfff ? 2 : 1;
@@ -661,8 +866,13 @@ function beforeGluedBlockId(ctx: CommandContext, node: OurusNode, text: OurusPro
   if (isSpaceOrTab(s.charCodeAt(start)) || s[offset] !== ' ') return null;
   // (after a blank with text before it: the last character before the id the host's, which empties the text)
   const lineStart = text.textStart(lineOf(s, start));
-  if (start - 1 <= lineStart || !isSpaceOrTab(s.charCodeAt(start - 1)) || isSpaceOrTab(s.charCodeAt(start - 2))) return null;
+  if (start - 1 <= lineStart || !isSpaceOrTab(s.charCodeAt(start - 1)) || isSpaceOrTab(s.charCodeAt(start - 2)))
+    return null;
   if (!blockIdsOf(text).some((b) => !b.carried && b.from === offset + 1)) return null;
-  return ctx.apply(ctx.draft().setText(node, text.splice(start, offset + 1)).setCaret(node, start, -1));
+  return ctx.apply(
+    ctx
+      .draft()
+      .setText(node, text.splice(start, offset + 1))
+      .setCaret(node, start, -1),
+  );
 }
-

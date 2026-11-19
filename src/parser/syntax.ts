@@ -9,7 +9,20 @@
 // since the only effects reaching back to earlier lines depend on it. The block tree is built again
 // from the records, taking whole every old block outside the lines read again (`tree.ts`).
 
-import { advanceColumns, applyChanges, type ChangeSpec, columnIndex, docPos, type DocPos, type LineBounds, lineEnding, lineIndex, lineIndexAt, normalizeChanges, splitLines } from '../text/index.ts';
+import {
+  advanceColumns,
+  applyChanges,
+  type ChangeSpec,
+  columnIndex,
+  docPos,
+  type DocPos,
+  type LineBounds,
+  lineEnding,
+  lineIndex,
+  lineIndexAt,
+  normalizeChanges,
+  splitLines,
+} from '../text/index.ts';
 import { isBlankText, isSpaceOrTab, normalizeLabel } from './chars.ts';
 import { PARAGRAPH, PARAGRAPH_FIRST, PARAGRAPH_NEXT, type ParagraphFrame } from './blocks.ts';
 import { commonmark, type MdFlavor } from './flavor.ts';
@@ -162,10 +175,31 @@ export class MdTree {
     const n = s.length;
     const records: MdLineRecord[] = new Array(n);
     const states: MdState[] = new Array(n);
-    const machine = new MdMachine(flavor, { text, starts: s, ends: e, sentinels }, records, states, flavor.initialState);
+    const machine = new MdMachine(
+      flavor,
+      { text, starts: s, ends: e, sentinels },
+      records,
+      states,
+      flavor.initialState,
+    );
     for (let i = 0; i < n; i++) machine.read(i);
     machine.finish(n);
-    return new MdTree(text, flavor, s, e, records, states, sentinels, extraLine, { from: 0, to: n - 1, full: true }, null, null, null, undefined, document);
+    return new MdTree(
+      text,
+      flavor,
+      s,
+      e,
+      records,
+      states,
+      sentinels,
+      extraLine,
+      { from: 0, to: n - 1, full: true },
+      null,
+      null,
+      null,
+      undefined,
+      document,
+    );
   }
 
   /** The tree of the text after `changes` (in this text's coordinates), read again only where they can make a difference. */
@@ -186,13 +220,17 @@ export class MdTree {
     if (list.length) {
       firstOld = lineIndexAt(this.starts, list[0]!.from);
       // a change at a line's start can join the line ending before it, a lone CR, with a LF
-      if (firstOld > 0 && list[0]!.from === this.starts[firstOld] && this.text.charCodeAt(list[0]!.from - 1) === 13) firstOld--;
+      if (firstOld > 0 && list[0]!.from === this.starts[firstOld] && this.text.charCodeAt(list[0]!.from - 1) === 13)
+        firstOld--;
       lastOld = lineIndexAt(this.starts, list[list.length - 1]!.to);
       for (const c of list) delta += c.insert.length - (c.to - c.from);
       // (from the text's start where line 0 changes: the change may be to a byte-order mark before it)
       const regionFrom = firstOld === 0 ? 0 : (this.starts[firstOld] ?? this.text.length);
       const oldRegionEnd = lastOld + 1 < oldN ? this.starts[lastOld + 1]! : this.text.length;
-      const middle = regionFrom === 0 ? linesOf(text.slice(0, oldRegionEnd + delta), this.document) : splitLines(text.slice(regionFrom, oldRegionEnd + delta));
+      const middle =
+        regionFrom === 0
+          ? linesOf(text.slice(0, oldRegionEnd + delta), this.document)
+          : splitLines(text.slice(regionFrom, oldRegionEnd + delta));
       starts = this.starts.slice(0, firstOld);
       ends = this.ends.slice(0, firstOld);
       for (let i = 0; i < middle.starts.length; i++) {
@@ -248,7 +286,8 @@ export class MdTree {
     const open = before[before.length - 1]!;
     if (open.spec === PARAGRAPH) {
       const count = (open as ParagraphFrame).lines;
-      for (let l = restart - count; l < restart; l++) records[l] = { ...records[l]!, leaf: l === restart - count ? PARAGRAPH_FIRST : PARAGRAPH_NEXT };
+      for (let l = restart - count; l < restart; l++)
+        records[l] = { ...records[l]!, leaf: l === restart - count ? PARAGRAPH_FIRST : PARAGRAPH_NEXT };
     }
     const source: LineSource = { text, starts, ends, sentinels };
     const machine = new MdMachine(flavor, source, records, states, before);
@@ -274,7 +313,11 @@ export class MdTree {
         states[j] = this.states[j - lineDelta]!;
       }
     } else machine.finish(n);
-    const reread: MdReread = { from: restart, to: converged >= 0 ? converged : n - 1, full: restart === 0 && converged < 0 };
+    const reread: MdReread = {
+      from: restart,
+      to: converged >= 0 ? converged : n - 1,
+      full: restart === 0 && converged < 0,
+    };
     // the first line whose record may differ: the open paragraph's lines before the restart are read again
     const from = open.spec === PARAGRAPH ? restart - (open as ParagraphFrame).lines : restart;
     // the same lines, read the same: the old tree holds (it keeps no absolute offsets)
@@ -294,7 +337,22 @@ export class MdTree {
     }
     for (let l = restart; l <= reread.to; l++) if (records[l]!.ahead > 0) lookaheads.push(l);
     if (converged >= 0) for (const l of this.lookaheads) if (l + lineDelta > reread.to) lookaheads.push(l + lineDelta);
-    return new MdTree(text, flavor, starts, ends, records, states, sentinels, false, reread, this.inlineCache, blocks, reuse, lookaheads, this.document);
+    return new MdTree(
+      text,
+      flavor,
+      starts,
+      ends,
+      records,
+      states,
+      sentinels,
+      false,
+      reread,
+      this.inlineCache,
+      blocks,
+      reuse,
+      lookaheads,
+      this.document,
+    );
   }
 
   // ----------------------------------------------------------------------------- the blocks
@@ -342,7 +400,9 @@ export class MdTree {
       const task = item?.block.type === 'item' && item.line === i ? item.block.attrs.task : undefined;
       if (task) {
         const box = { kind: 'task', from: line.from + task.start, to: line.from + task.end };
-        markup = line.leaf ? { ...markup, marks: [box, ...markup.marks] } : { marks: [box], textFrom: box.to, textTo: box.to };
+        markup = line.leaf
+          ? { ...markup, marks: [box, ...markup.marks] }
+          : { marks: [box], textFrom: box.to, textTo: box.to };
       }
       this.lineMarkupsCache[i] = markup;
     }
@@ -419,14 +479,24 @@ export class MdTree {
     return this.#spelled(item.line, containers, Infinity, item);
   }
 
-  #spelled(i: number, containers: readonly MdBlockAt[], upTo: number, item: MdBlockAt | null, tabAsSpaces = true): string {
+  #spelled(
+    i: number,
+    containers: readonly MdBlockAt[],
+    upTo: number,
+    item: MdBlockAt | null,
+    tabAsSpaces = true,
+  ): string {
     let out = '';
     let last: MdPrefixPiece | null = null;
     // (the columns of the tab the last piece took part of, as spaces: what it ends with where nothing copies the tab)
-    const rest = (): string => (tabAsSpaces && last?.partialTab ? ' '.repeat(last.toColumn - advanceColumns(this.text, last.from, last.to, last.fromColumn)) : '');
+    const rest = (): string =>
+      tabAsSpaces && last?.partialTab
+        ? ' '.repeat(last.toColumn - advanceColumns(this.text, last.from, last.to, last.fromColumn))
+        : '';
     for (const piece of this.line(i).prefix) {
       if (piece.to > upTo) break;
-      if (item && piece.container.block === item.block) return out + (this.text.slice(piece.from, this.markerFrom(item)) || rest());
+      if (item && piece.container.block === item.block)
+        return out + (this.text.slice(piece.from, this.markerFrom(item)) || rest());
       if (!containers.some((c) => c.block === piece.container.block)) continue;
       const written = this.text.slice(piece.from, piece.to);
       out += piece.kind === 'quote' ? written : written.replace(/[^\t]/g, ' ');
@@ -458,15 +528,23 @@ export class MdTree {
   /** The footnote definitions no reference in the document points to, which GFM renders none of. */
   unreferencedFootnotes(): MdBlockAt[] {
     const used = new Set<string>();
-    for (const b of this.rootAt.preorder()) if (this.inlineText(b)) for (const n of inlinePreorder(this.inlines(b))) if (n.type === 'footnote_ref') used.add(n.label!);
-    return [...this.rootAt.preorder()].filter((b) => b.block.type === 'footnote_definition' && !used.has(normalizeLabel('[' + b.block.attrs.label!.slice(2, -1) + ']')));
+    for (const b of this.rootAt.preorder())
+      if (this.inlineText(b))
+        for (const n of inlinePreorder(this.inlines(b))) if (n.type === 'footnote_ref') used.add(n.label!);
+    return [...this.rootAt.preorder()].filter(
+      (b) =>
+        b.block.type === 'footnote_definition' &&
+        !used.has(normalizeLabel('[' + b.block.attrs.label!.slice(2, -1) + ']')),
+    );
   }
 
   /** Normalized labels of footnote definitions (GFM). */
   get footnotes(): ReadonlySet<string> {
     if (this.footnoteLabels) return this.footnoteLabels;
     const labels = new Set<string>();
-    if (this.flavor.has('footnotes')) for (const b of this.rootAt.preorder()) if (b.block.type === 'footnote_definition') labels.add(normalizeLabel('[' + b.block.attrs.label!.slice(2)));
+    if (this.flavor.has('footnotes'))
+      for (const b of this.rootAt.preorder())
+        if (b.block.type === 'footnote_definition') labels.add(normalizeLabel('[' + b.block.attrs.label!.slice(2)));
     return (this.footnoteLabels = labels);
   }
 
@@ -491,7 +569,11 @@ export class MdTree {
     if (!at || this.inlineText(at)) return at;
     const col = pos - line.from;
     for (let parts = at.children(); parts.length; ) {
-      const part = parts.find((p) => p.line === line.index && (p.block.attrs.start === undefined || (p.block.attrs.start <= col && col <= p.block.attrs.end!)));
+      const part = parts.find(
+        (p) =>
+          p.line === line.index &&
+          (p.block.attrs.start === undefined || (p.block.attrs.start <= col && col <= p.block.attrs.end!)),
+      );
       if (!part) return at;
       at = part;
       if (this.inlineText(at)) return at;
@@ -511,7 +593,9 @@ export class MdTree {
     if (!text) return false;
     const at = text.textAt(pos);
     if (at < 0) return false;
-    const escape = inlinesCovering(this.inlines(leaf), (node) => node.from <= at && at < node.to).find((node) => node.type === 'escape');
+    const escape = inlinesCovering(this.inlines(leaf), (node) => node.from <= at && at < node.to).find(
+      (node) => node.type === 'escape',
+    );
     return !!escape && escape.from === at;
   }
 
@@ -523,7 +607,9 @@ export class MdTree {
     if (!text) return null;
     const at = text.textAt(pos);
     if (at < 0) return null;
-    const span = inlinesCovering(this.inlines(leaf), (node) => node.from < at && at < node.to).find((node) => node.type === 'code');
+    const span = inlinesCovering(this.inlines(leaf), (node) => node.from < at && at < node.to).find(
+      (node) => node.type === 'code',
+    );
     if (!span) return null;
     let closer = span.to;
     while (closer > span.from && text.text[closer - 1] === '`') closer--;
@@ -542,7 +628,9 @@ export class MdTree {
     if (!text) return false;
     const at = text.textAt(pos);
     if (at < 0) return false;
-    return inlinesCovering(this.inlines(leaf), (node) => node.from < at && at < node.to).some((node) => node.type === 'code' || node.type === 'math' || node.type === 'comment');
+    return inlinesCovering(this.inlines(leaf), (node) => node.from < at && at < node.to).some(
+      (node) => node.type === 'code' || node.type === 'math' || node.type === 'comment',
+    );
   }
 
   /** A leaf's inlines, parsed when first asked for; none for blocks without inline text. */
@@ -554,7 +642,11 @@ export class MdTree {
     const cache = this.cache();
     result = cache.map.get(t.text);
     if (!result) {
-      result = new MdInlineParser(this.flavor.inline, { references: this.references, footnotes: this.footnotes }, t.text).parse();
+      result = new MdInlineParser(
+        this.flavor.inline,
+        { references: this.references, footnotes: this.footnotes },
+        t.text,
+      ).parse();
       cache.map.set(t.text, result);
     }
     this.leafInlines.set(leaf.block, result);
@@ -565,7 +657,10 @@ export class MdTree {
     if (this.cacheChecked) return this.inlineCache!;
     this.cacheChecked = true;
     // (what the inlines depend on, encoded so that no label, which may hold any character, reads as two)
-    const key = JSON.stringify([[...this.references].map(([label, ref]) => [label, ref.destination, ref.title]), [...this.footnotes]]);
+    const key = JSON.stringify([
+      [...this.references].map(([label, ref]) => [label, ref.destination, ref.title]),
+      [...this.footnotes],
+    ]);
     if (!this.inlineCache || this.inlineCache.key !== key || this.inlineCache.map.size > 4 * this.lineCount + 1024) {
       this.inlineCache = { key, map: new Map() };
     }
@@ -704,7 +799,13 @@ function placeSentinels(
 const NO_PIECES: readonly MdPrefixPiece[] = Object.freeze([]);
 
 /** Line `i`'s info, from the tree and the snapshot's text. */
-function lineInfo(tree: MdTree, root: MdBlock, i: number, containers: readonly MdBlockAt[], leaf: MdBlockAt | null): MdLine {
+function lineInfo(
+  tree: MdTree,
+  root: MdBlock,
+  i: number,
+  containers: readonly MdBlockAt[],
+  leaf: MdBlockAt | null,
+): MdLine {
   const { text } = tree;
   const rec = tree.records[i]!;
   const from = docPos(tree.starts[i]!);
@@ -714,7 +815,15 @@ function lineInfo(tree: MdTree, root: MdBlock, i: number, containers: readonly M
     const pieces: MdPrefixPiece[] = new Array(rec.pieces.length);
     for (let k = 0; k < rec.pieces.length; k++) {
       const p = rec.pieces[k]!;
-      pieces[k] = { container: containers[p.depth]!, kind: p.kind, from: docPos(from + p.from), to: docPos(from + p.to), fromColumn: columnIndex(p.fromColumn), toColumn: columnIndex(p.toColumn), partialTab: p.partialTab };
+      pieces[k] = {
+        container: containers[p.depth]!,
+        kind: p.kind,
+        from: docPos(from + p.from),
+        to: docPos(from + p.to),
+        fromColumn: columnIndex(p.fromColumn),
+        toColumn: columnIndex(p.toColumn),
+        partialTab: p.partialTab,
+      };
     }
     prefix = pieces;
   }
@@ -741,7 +850,8 @@ function lineInfo(tree: MdTree, root: MdBlock, i: number, containers: readonly M
 /** Whether two records are equal as data (what the tree is made from). */
 function sameRecord(a: MdLineRecord, b: MdLineRecord): boolean {
   if (a === b) return true;
-  if (a.depth !== b.depth || a.lazy !== b.lazy || a.text !== b.text || a.pad !== b.pad || a.ahead !== b.ahead) return false;
+  if (a.depth !== b.depth || a.lazy !== b.lazy || a.text !== b.text || a.pad !== b.pad || a.ahead !== b.ahead)
+    return false;
   if (a.leaf !== b.leaf && !sameData(a.leaf, b.leaf)) return false;
   if (a.pieces.length !== b.pieces.length || a.opened.length !== b.opened.length) return false;
   for (let k = 0; k < a.pieces.length; k++) if (!sameData(a.pieces[k], b.pieces[k])) return false;

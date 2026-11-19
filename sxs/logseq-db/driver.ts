@@ -7,7 +7,13 @@
 // a property), edited in CodeMirror. README.md has the rest.
 
 import type { Outline } from '../lib/block.ts';
-import { LITERAL_NUMBER, logseqDriver, type LogseqFlavor, type BlockAsRead, type BlockToLoad } from '../logseq/driver.ts';
+import {
+  LITERAL_NUMBER,
+  logseqDriver,
+  type LogseqFlavor,
+  type BlockAsRead,
+  type BlockToLoad,
+} from '../logseq/driver.ts';
 
 // A block whose whole text is one fenced code block or one `$$` math block becomes a code or math
 // block, its text the code or the math (Logseq's `src/main/frontend/format/block.cljs`,
@@ -23,7 +29,13 @@ const FENCED = /^```([^\n`]*)\n([\s\S]*?)\n?```$/;
 const MATH = /^\$\$\n([\s\S]*?)\n?\$\$$/;
 
 /** The canonical prefixes a block's properties stand for, in their order: its number, its checkbox, its heading's `#`s. */
-function split(text: string): { rest: string; number: boolean; task?: 'Todo' | 'Done'; heading?: number; from: number } {
+function split(text: string): {
+  rest: string;
+  number: boolean;
+  task?: 'Todo' | 'Done';
+  heading?: number;
+  from: number;
+} {
   let rest = text;
   const n = /^\d{1,9}\. /.exec(rest);
   if (n) rest = rest.slice(n[0].length);
@@ -31,7 +43,13 @@ function split(text: string): { rest: string; number: boolean; task?: 'Todo' | '
   if (t) rest = rest.slice(t[0].length);
   const h = /^(#{1,6}) /.exec(rest);
   if (h) rest = rest.slice(h[0].length);
-  return { rest, number: !!n, ...(t && { task: t[1] === ' ' ? 'Todo' : 'Done' }), ...(h && { heading: h[1]!.length }), from: text.length - rest.length };
+  return {
+    rest,
+    number: !!n,
+    ...(t && { task: t[1] === ' ' ? 'Todo' : 'Done' }),
+    ...(h && { heading: h[1]!.length }),
+    from: text.length - rest.length,
+  };
 }
 
 export const DB: LogseqFlavor = {
@@ -53,7 +71,8 @@ export const DB: LogseqFlavor = {
     if (s.task) props['logseq.property/status'] = s.task;
     if (s.heading) props['logseq.property/heading'] = s.heading;
     // a `#` that is text, escaped in the canonical text, its content plain (a heading being a property)
-    if (!s.task && !s.heading && /^\\#/.test(s.rest)) return { content: s.rest.slice(1), props, edit: s.rest.slice(1), from: s.from + 1, to: 0, numbered: s.number };
+    if (!s.task && !s.heading && /^\\#/.test(s.rest))
+      return { content: s.rest.slice(1), props, edit: s.rest.slice(1), from: s.from + 1, to: 0, numbered: s.number };
     return { content: s.rest, props, edit: s.rest, from: s.from, to: 0, numbered: s.number };
   },
   fromLogseq(raw: BlockAsRead, number) {
@@ -73,7 +92,11 @@ export const DB: LogseqFlavor = {
     const literal = !raw.status && !raw.heading ? LITERAL_NUMBER.exec(raw.content) : null;
     // and a `#` that is text, content without the heading's property (`\# x`)
     const hash = !literal && !raw.status && !raw.heading && /^#{1,6}(?=[ \t]|$)/.test(raw.content);
-    const text = literal ? raw.content.slice(0, literal[0].length) + '\\' + raw.content.slice(literal[0].length) : hash ? '\\' + raw.content : raw.content;
+    const text = literal
+      ? raw.content.slice(0, literal[0].length) + '\\' + raw.content.slice(literal[0].length)
+      : hash
+        ? '\\' + raw.content
+        : raw.content;
     const cut = literal ? pre.length + literal[0].length : hash ? pre.length : undefined;
     return { text: pre + text, from: 0, to: pre.length, ...(cut !== undefined && { cut }) };
   },
@@ -123,7 +146,11 @@ export const DB: LogseqFlavor = {
     for (const [i, b] of doc.blocks.entries()) {
       const code = FENCED.exec(b.text);
       // a code or math block's own lines: a caret on a fence or a `$$`, or whitespace at their edges, which Logseq trims
-      const own = code ? { at: 4 + code[1]!.length, text: code[2]!, what: 'code' } : MATH.test(b.text) ? { at: 3, text: MATH.exec(b.text)![1]!, what: 'math' } : null;
+      const own = code
+        ? { at: 4 + code[1]!.length, text: code[2]!, what: 'code' }
+        : MATH.test(b.text)
+          ? { at: 3, text: MATH.exec(b.text)![1]!, what: 'math' }
+          : null;
       if (own) {
         const sel = doc.sel?.block === i ? doc.sel : undefined;
         const inside = (p: number) => p >= own.at && p <= own.at + own.text.length;
@@ -133,16 +160,19 @@ export const DB: LogseqFlavor = {
       }
       if (/^[ \t]*(?:`{3,}|~{3,})/m.test(b.text)) return 'code fence other than a block of ``` alone';
       // `$$…$$` on one line: Logseq DB makes it a math block of its own lines (Auto35: `$$┃$$`)
-      if (/^\$\$.*\$\$$/.test(split(b.text).rest)) return 'display math on one line, which Logseq DB makes a math block';
+      if (/^\$\$.*\$\$$/.test(split(b.text).rest))
+        return 'display math on one line, which Logseq DB makes a math block';
       // a heading with no text, `#` alone: held as `# #` (Regression168)
       if (/^#{1,6}$/.test(b.text)) return 'heading with no text, which Logseq DB holds as # #';
       // a number, a checkbox and a heading's `#`s are the block's properties, no text: no caret goes
       // before or inside them (Outdent17: `┃# H` loads as `# ┃H`)
-      if (doc.sel?.block === i && Math.min(doc.sel.anchor, doc.sel.head) < split(b.text).from) return "caret in a number, a checkbox or a heading's #s (the block's properties)";
+      if (doc.sel?.block === i && Math.min(doc.sel.anchor, doc.sel.head) < split(b.text).from)
+        return "caret in a number, a checkbox or a heading's #s (the block's properties)";
       // an empty task's space after its checkbox goes as the block loads (PasteList7: `[ ]┃`)
-      if (/^\[[ xX]\] $/.test(b.text)) return "empty task with a space after its checkbox, which Logseq DB drops";
+      if (/^\[[ xX]\] $/.test(b.text)) return 'empty task with a space after its checkbox, which Logseq DB drops';
       // Logseq drops a line break at a stored text's edge; the block being edited (its editor) keeps it
-      if (doc.sel?.block !== i && /^\n|\n$/.test(split(b.text).rest)) return 'line break at the edge of a block not being edited';
+      if (doc.sel?.block !== i && /^\n|\n$/.test(split(b.text).rest))
+        return 'line break at the edge of a block not being edited';
     }
     return undefined;
   },

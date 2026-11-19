@@ -28,7 +28,14 @@ export function visibleSelection(view: OurusView, selection: OurusSelection): Ou
     let start = pos;
     for (const id of view.zoomFolded) {
       const range = doc.foldRange(doc.node(id)!);
-      if (range && pos > range.from && pos <= range.to && range.from < start && (empty || pos !== range.to || pos !== end)) start = range.from;
+      if (
+        range &&
+        pos > range.from &&
+        pos <= range.to &&
+        range.from < start &&
+        (empty || pos !== range.to || pos !== end)
+      )
+        start = range.from;
     }
     return start;
   };
@@ -56,13 +63,24 @@ export function editableStart(doc: OurusDoc, node: OurusNode): number {
   const text = doc.textOf(n);
   if (!text) return doc.textStart(n.startLine);
   const start = textStart(text);
-  if (!(text instanceof OurusAtom) || !decorates(doc.config, text.type === 'math_block' ? 'math' : text.type === 'comment_block' ? 'comment' : 'fence')) return doc.posOf(n, start, 1);
-  for (let up: OurusNode | null = n; up; up = up.parent) if (up.kind === 'item' || up.kind === 'quote') return doc.posOf(n, start, 1);
+  if (
+    !(text instanceof OurusAtom) ||
+    !decorates(doc.config, text.type === 'math_block' ? 'math' : text.type === 'comment_block' ? 'comment' : 'fence')
+  )
+    return doc.posOf(n, start, 1);
+  for (let up: OurusNode | null = n; up; up = up.parent)
+    if (up.kind === 'item' || up.kind === 'quote') return doc.posOf(n, start, 1);
   const open = text.frame.find((p) => p.part === 'open');
   const close = text.frame.find((p) => p.part === 'close');
   const lineEnd = text.text.indexOf('\n', open?.to ?? 0);
   // (a line between the opening's and the closing's, or past an unclosed opening's)
-  return doc.posOf(n, open && start <= lineEnd && lineEnd >= 0 && lineEnd + 1 < (close ? close.from : text.text.length + 1) ? lineEnd + 1 : start, 1);
+  return doc.posOf(
+    n,
+    open && start <= lineEnd && lineEnd >= 0 && lineEnd + 1 < (close ? close.from : text.text.length + 1)
+      ? lineEnd + 1
+      : start,
+    1,
+  );
 }
 
 /**
@@ -126,7 +144,14 @@ export function selectedNodes(view: OurusView, selection: OurusSelection): Ourus
   if (roots.length === 1 && to !== Math.min(subtreeEnd(doc, last.endLine), viewEnd(view))) {
     const text = doc.textOf(first);
     const end = text ? doc.posOf(first, textEnd(text), -1) : -1;
-    if (text && from === doc.posOf(first, textStart(text), 1) && to >= end && to <= doc.posOf(first, text.text.length, -1) && !doc.text.slice(end, to).includes('\n')) return null;
+    if (
+      text &&
+      from === doc.posOf(first, textStart(text), 1) &&
+      to >= end &&
+      to <= doc.posOf(first, text.text.length, -1) &&
+      !doc.text.slice(end, to).includes('\n')
+    )
+      return null;
   }
   return roots;
 }
@@ -138,20 +163,26 @@ export function selectedNodes(view: OurusView, selection: OurusSelection): Ourus
  * owns the list the last is in, `listParent`, with its whole list); zoomed, at the zoom's end where
  * they end it. The anchor at the top unless `direction` is `up`. Throws for no nodes, the root, a node outside the zoom or one a fold hides.
  */
-export function subtreesSelection(view: OurusView, nodes: readonly OurusNode[], direction: 'down' | 'up' = 'down'): OurusSelection {
+export function subtreesSelection(
+  view: OurusView,
+  nodes: readonly OurusNode[],
+  direction: 'down' | 'up' = 'down',
+): OurusSelection {
   const doc = view.doc;
   if (!nodes.length) throw new Error('no nodes to select');
   let start = Infinity;
   let end = -1;
   for (const node of nodes) {
     if (node.kind === 'root') throw new Error('the root is no node to select');
-    if (view.isHidden(node)) throw new Error(`node ${node.id} is hidden by ${outsideZoom(view, node) ? 'the zoom' : 'a fold'}`);
+    if (view.isHidden(node))
+      throw new Error(`node ${node.id} is hidden by ${outsideZoom(view, node) ? 'the zoom' : 'a fold'}`);
     start = Math.min(start, node.startLine);
     end = Math.max(end, node.endLine);
   }
   const from = doc.mdTree.starts[start]!;
   // (the nodes touched between, each whole, and the nodes whose lines theirs are)
-  for (const n of outermost(view, touchedNodes(view, { anchor: from, head: subtreeEnd(doc, end) }))) end = Math.max(end, n.endLine);
+  for (const n of outermost(view, touchedNodes(view, { anchor: from, head: subtreeEnd(doc, end) })))
+    end = Math.max(end, n.endLine);
   // (zoomed, not past the zoom: the line break after it is out of the view)
   const to = Math.min(subtreeEnd(doc, end), viewEnd(view));
   return direction === 'up' ? { anchor: to, head: from } : { anchor: from, head: to };
@@ -181,7 +212,11 @@ function outermost(view: OurusView, roots: readonly OurusNode[]): OurusNode[] {
       // (the parent's last lines the blank lines after them: a quote's `>` after its last item)
       const last = run[run.length - 1]!;
       const ends = parent.endLine >= last.endLine && parent.endLine <= last.endLine + last.lastDescendant.gap;
-      const whole = parent.kind !== 'root' && run.length === parent.children.length && parent.startLine === run[0]!.startLine && ends;
+      const whole =
+        parent.kind !== 'root' &&
+        run.length === parent.children.length &&
+        parent.startLine === run[0]!.startLine &&
+        ends;
       if (whole && !outsideZoom(view, parent)) {
         next.push(parent);
         lifted = true;

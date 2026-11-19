@@ -43,7 +43,9 @@ export function textPosition(doc: OurusDoc, head: number): number {
       // after a code fence's run, typing writes its info string; after `$$` or `%%`, the block's payload
       if (head >= at(delimiters.open.to)) return head;
       const payloadLines = payload();
-      return payloadLines.length ? at(starts[payloadLines[0]!]!) : at(code ? starts[opening]! + lines[opening]!.length : delimiters.open.to);
+      return payloadLines.length
+        ? at(starts[payloadLines[0]!]!)
+        : at(code ? starts[opening]! + lines[opening]!.length : delimiters.open.to);
     }
     if (k === closing) {
       // before a math or comment delimiter, typing is more payload
@@ -56,6 +58,8 @@ export function textPosition(doc: OurusDoc, head: number): number {
   // a space a placeholder holds as text (`- ◌ x`) starts the text
   const start = doc.textStart(line.index);
   const s = doc.text;
-  const held = doc.marks.placeholders.find((pos) => pos >= line.from && pos < start && isSpaceOrTab(s.charCodeAt(pos)) && trimMd(s.slice(pos, start)) === '');
+  const held = doc.marks.placeholders.find(
+    (pos) => pos >= line.from && pos < start && isSpaceOrTab(s.charCodeAt(pos)) && trimMd(s.slice(pos, start)) === '',
+  );
   return head < (held ?? start) ? (held ?? start) : head;
 }

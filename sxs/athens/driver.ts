@@ -74,8 +74,11 @@ export const driver: Driver = {
   // zoomed, the root is the page's title, no block on screen to put a caret in
   holds(doc) {
     const o = doc as Outline;
-    if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return "the caret in the zoom root, the page's title";
-    return o.view && o.view.zoom !== null && o.selected?.includes(o.view.zoom) ? "the zoom root selected as a block, the page's title" : undefined;
+    if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom)
+      return "the caret in the zoom root, the page's title";
+    return o.view && o.view.zoom !== null && o.selected?.includes(o.view.zoom)
+      ? "the zoom root selected as a block, the page's title"
+      : undefined;
   },
   keys: {
     // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
@@ -100,7 +103,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
   // a heading's `#`s, a task's marker and a code block's fences are text in the block, edited a
@@ -158,7 +166,9 @@ export const driver: Driver = {
     const exposed = async (): Promise<boolean> => {
       await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
       return page
-        .waitForFunction(() => (window as any).__ourusAthens && document.querySelector('.block-container'), null, { timeout: 60000 })
+        .waitForFunction(() => (window as any).__ourusAthens && document.querySelector('.block-container'), null, {
+          timeout: 60000,
+        })
         .then(() => true)
         .catch(() => false);
     };
@@ -167,14 +177,24 @@ export const driver: Driver = {
       const cdp = await page.context().newCDPSession(page);
       await cdp.send('Network.clearBrowserCache');
       await cdp.detach();
-      if (!(await exposed())) throw new Error("Athens's bundle came without the names athens/proxy.ts adds to it (not found in it?)");
+      if (!(await exposed()))
+        throw new Error("Athens's bundle came without the names athens/proxy.ts adds to it (not found in it?)");
     }
-    const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+    const settled = await page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+    );
     if (settled.timedOut) throw new Error(`Athens didn't settle after loading: ${settled.pending}`);
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await idle();
       await page.keyboard.press('Tab');
       await idle();
@@ -195,7 +215,13 @@ export const driver: Driver = {
     const blocks = o.blocks.map((b) => ({ depth: b.depth, ...toAthens(b.text) }));
     // (blocks selected whole: the first opened at its start, to select from with the keys below)
     const selected = o.selected?.length ? o.selected : null;
-    const sel = o.sel ? { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to), head: shiftOffset(o.sel.head, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+    const sel = o.sel
+      ? {
+          block: o.sel.block,
+          anchor: shiftOffset(o.sel.anchor, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to),
+          head: shiftOffset(o.sel.head, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to),
+        }
+      : selected && { block: selected[0]!, anchor: 0, head: 0 };
     const target = await page.evaluate(
       async ({ blocks, sel, view }) => {
         const w = window as any;
@@ -205,7 +231,8 @@ export const driver: Driver = {
         const eid: number = (w.__ourusSxsNext = (w.__ourusSxsNext ?? 1_000_000_000) + 1);
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const kw = (s: string) => A.read(JSON.stringify(`~:${s}`));
-        const entity = (db: unknown, id: number) => new w.datascript.impl.entity.Entity(db, id, A.volatile(false), A.volatile(A.read('["^ "]')));
+        const entity = (db: unknown, id: number) =>
+          new w.datascript.impl.entity.Entity(db, id, A.volatile(false), A.volatile(A.read('["^ "]')));
         (document.activeElement as HTMLElement | null)?.blur();
         const now = Date.now();
         const uids = blocks.map((_, i) => `sxs${eid}-${i}`);
@@ -213,18 +240,50 @@ export const driver: Driver = {
         const node = (i: number): unknown[] => {
           const b = blocks[i]!;
           const kids: number[] = [];
-          for (let k = i + 1; k < blocks.length && blocks[k]!.depth > b.depth; k++) if (blocks[k]!.depth === b.depth + 1) kids.push(k);
+          for (let k = i + 1; k < blocks.length && blocks[k]!.depth > b.depth; k++)
+            if (blocks[k]!.depth === b.depth + 1) kids.push(k);
           // (a string transit would read as its own: `^x` a cache reference, `~x` a tag; escaped with a `~`,
           // as transit writes them: BlockIds15, a block's text a block id)
-          return ['^ ', '~:block/uid', uids[i], '~:block/string', /^[~^`]/.test(b.string) ? `~${b.string}` : b.string, '~:block/open', true, '~:create/time', now, '~:edit/time', now, '~:block/order', siblingOrder(i), ...(kids.length ? ['~:block/children', kids.map(node)] : [])];
+          return [
+            '^ ',
+            '~:block/uid',
+            uids[i],
+            '~:block/string',
+            /^[~^`]/.test(b.string) ? `~${b.string}` : b.string,
+            '~:block/open',
+            true,
+            '~:create/time',
+            now,
+            '~:edit/time',
+            now,
+            '~:block/order',
+            siblingOrder(i),
+            ...(kids.length ? ['~:block/children', kids.map(node)] : []),
+          ];
         };
         const siblingOrder = (i: number): number => {
           let n = 0;
-          for (let k = i - 1; k >= 0 && blocks[k]!.depth >= blocks[i]!.depth; k--) if (blocks[k]!.depth === blocks[i]!.depth) n++;
+          for (let k = i - 1; k >= 0 && blocks[k]!.depth >= blocks[i]!.depth; k--)
+            if (blocks[k]!.depth === blocks[i]!.depth) n++;
           return n;
         };
         const top = blocks.flatMap((b, i) => (b.depth === 0 ? [i] : []));
-        const tx: unknown[] = [['^ ', '~:db/id', eid, '~:node/title', `ourus sxs ${eid}`, '~:block/uid', `sxs${eid}`, '~:create/time', now, '~:edit/time', now, ...(top.length ? ['~:block/children', top.map(node)] : [])]];
+        const tx: unknown[] = [
+          [
+            '^ ',
+            '~:db/id',
+            eid,
+            '~:node/title',
+            `ourus sxs ${eid}`,
+            '~:block/uid',
+            `sxs${eid}`,
+            '~:create/time',
+            now,
+            '~:edit/time',
+            now,
+            ...(top.length ? ['~:block/children', top.map(node)] : []),
+          ],
+        ];
         // the last test's page goes, with its blocks
         if (w.__ourusSxsPage) {
           const db = A.deref(A.conn());
@@ -245,11 +304,20 @@ export const driver: Driver = {
         await w.__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
         // its view, every block on screen: the folded ones closed, then the zoom root's route
         if (view) {
-          if (view.folded.length) A.transact(A.conn(), A.read(JSON.stringify(view.folded.map((i: number) => ['~:db/add', ['~:block/uid', uids[i]], '~:block/open', false]))));
+          if (view.folded.length)
+            A.transact(
+              A.conn(),
+              A.read(
+                JSON.stringify(
+                  view.folded.map((i: number) => ['~:db/add', ['~:block/uid', uids[i]], '~:block/open', false]),
+                ),
+              ),
+            );
           if (view.zoom !== null) {
             const root = uids[view.zoom]!;
             location.hash = `#/page/${root}`;
-            const shown = () => !!document.querySelector(`.block-container[data-uid="${root}"]`) && location.hash === `#/page/${root}`;
+            const shown = () =>
+              !!document.querySelector(`.block-container[data-uid="${root}"]`) && location.hash === `#/page/${root}`;
             for (let i = 0; i < 300 && !shown(); i++) await wait(10);
             if (!shown()) throw new Error(`the zoom root's route didn't render (at ${location.hash})`);
           }
@@ -260,7 +328,9 @@ export const driver: Driver = {
         // where a click opens the block for editing, as a user's does: at its right end, past its text
         // (at its left a task's checkbox, which a click toggles: SubtreeEdit9); the caret set after
         const uid = uids[sel.block]!;
-        const r = document.querySelector(`.block-container[data-uid="${uid}"] > .block-body .block-content`)?.getBoundingClientRect();
+        const r = document
+          .querySelector(`.block-container[data-uid="${uid}"] > .block-body .block-content`)
+          ?.getBoundingClientRect();
         return r ? { uid, x: r.right - 4, y: r.top + Math.min(r.height / 2, 10) } : null;
       },
       { blocks: blocks.map(({ depth, string }) => ({ depth, string })), sel, view: o.view ?? null },
@@ -268,15 +338,23 @@ export const driver: Driver = {
     viewed(page).on = !!o.view;
     if (!sel) return;
     if (!target) throw new Error("the block to edit isn't on screen");
-    const editing = (): Promise<boolean> => page.evaluate((uid) => document.activeElement?.id === `editable-uid-${uid}`, target.uid);
+    const editing = (): Promise<boolean> =>
+      page.evaluate((uid) => document.activeElement?.id === `editable-uid-${uid}`, target.uid);
     for (let attempt = 0; attempt < 3 && !(await editing()); attempt++) {
       await page.mouse.click(target.x, target.y);
       for (let i = 0; i < 50 && !(await editing()); i++) await page.waitForTimeout(10);
     }
-    if (!(await editing())) throw new Error(`the block didn't open for editing (focus: ${await page.evaluate(() => (document.activeElement as HTMLElement | null)?.id || document.activeElement?.tagName)})`);
+    if (!(await editing()))
+      throw new Error(
+        `the block didn't open for editing (focus: ${await page.evaluate(() => (document.activeElement as HTMLElement | null)?.id || document.activeElement?.tagName)})`,
+      );
     await page.evaluate((sel) => {
       const ta = document.activeElement as HTMLTextAreaElement;
-      ta.setSelectionRange(Math.min(sel.anchor, sel.head), Math.max(sel.anchor, sel.head), sel.head < sel.anchor ? 'backward' : 'forward');
+      ta.setSelectionRange(
+        Math.min(sel.anchor, sel.head),
+        Math.max(sel.anchor, sel.head),
+        sel.head < sel.anchor ? 'backward' : 'forward',
+      );
     }, sel);
     // blocks selected whole, as a user selects them: Shift+Up on the first block's first line selects
     // it, each Shift+Down the next on screen, till the last is (`read` reports the topmost)
@@ -287,7 +365,8 @@ export const driver: Driver = {
         return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
       };
       for (let i = 0; i < 3 && (await reached()) < 0; i++) await page.keyboard.press('Shift+ArrowUp');
-      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++)
+        await page.keyboard.press('Shift+ArrowDown');
     }
   },
 
@@ -297,12 +376,20 @@ export const driver: Driver = {
       const A = w.__ourusAthens;
       const kw = (s: string) => A.read(JSON.stringify(`~:${s}`));
       const db = A.deref(A.conn());
-      const pageEntity = new w.datascript.impl.entity.Entity(db, w.__ourusSxsPage, A.volatile(false), A.volatile(A.read('["^ "]')));
+      const pageEntity = new w.datascript.impl.entity.Entity(
+        db,
+        w.__ourusSxsPage,
+        A.volatile(false),
+        A.volatile(A.read('["^ "]')),
+      );
       const ta = document.activeElement as HTMLTextAreaElement | null;
-      const editingUid = ta?.tagName === 'TEXTAREA' && ta.id.startsWith('editable-uid-') ? ta.id.slice('editable-uid-'.length) : null;
+      const editingUid =
+        ta?.tagName === 'TEXTAREA' && ta.id.startsWith('editable-uid-') ? ta.id.slice('editable-uid-'.length) : null;
       const flat: { depth: number; string: string; uid: string; closed: boolean }[] = [];
       const walk = (e: any, depth: number): void => {
-        const kids = [...(e.get(kw('block/children')) ?? [])].sort((a: any, b: any) => a.get(kw('block/order')) - b.get(kw('block/order')));
+        const kids = [...(e.get(kw('block/children')) ?? [])].sort(
+          (a: any, b: any) => a.get(kw('block/order')) - b.get(kw('block/order')),
+        );
         for (const k of kids) {
           const uid = k.get(kw('block/uid'));
           // the block being edited: its textarea, ahead of what Athens stored
@@ -315,17 +402,36 @@ export const driver: Driver = {
       const i = editingUid ? flat.findIndex((b) => b.uid === editingUid) : -1;
       const back = ta?.selectionDirection === 'backward';
       // blocks selected whole (Shift+Up at a block's edge), the topmost: a block's children go with it
-      const lit = new Set([...document.querySelectorAll('.block-container.is-selected')].map((el) => flat.findIndex((b) => b.uid === el.getAttribute('data-uid'))).filter((k) => k >= 0));
+      const lit = new Set(
+        [...document.querySelectorAll('.block-container.is-selected')]
+          .map((el) => flat.findIndex((b) => b.uid === el.getAttribute('data-uid')))
+          .filter((k) => k >= 0),
+      );
       const under = (k: number): boolean => {
-        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
+        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--)
+          if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
         return false;
       };
       const selected = [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
       // the view: the closed blocks, and the block whose route is shown, if one of the test's
       const route = /^#\/page\/(.+)$/.exec(location.hash)?.[1];
       const zoom = flat.findIndex((b) => b.uid === route);
-      const view = viewed ? { folded: flat.flatMap((b, k) => (b.closed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
-      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected, view };
+      const view = viewed
+        ? { folded: flat.flatMap((b, k) => (b.closed ? [k] : [])), zoom: zoom >= 0 ? zoom : null }
+        : undefined;
+      return {
+        flat,
+        sel:
+          i >= 0
+            ? {
+                block: i,
+                anchor: back ? ta!.selectionEnd : ta!.selectionStart,
+                head: back ? ta!.selectionStart : ta!.selectionEnd,
+              }
+            : null,
+        selected,
+        view,
+      };
     }, viewed(page).on);
     const texts = raw.flat.map((b) => fromAthens(b.string));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
@@ -359,7 +465,9 @@ export const driver: Driver = {
     const there = (o: Outline): boolean => {
       if (!o.sel) return false;
       const text = o.blocks[o.sel.block]!.text;
-      return up ? o.sel.block === 0 && !text.slice(0, o.sel.head).includes('\n') : o.sel.block === o.blocks.length - 1 && !text.slice(o.sel.head).includes('\n');
+      return up
+        ? o.sel.block === 0 && !text.slice(0, o.sel.head).includes('\n')
+        : o.sel.block === o.blocks.length - 1 && !text.slice(o.sel.head).includes('\n');
     };
     let last = '';
     for (let i = 0; i < 200; i++) {
@@ -391,36 +499,43 @@ async function athensDrop(page: Page, drop: Drop, settle: () => Promise<void>): 
   // (a drop of the selection: a press on its first block's bullet)
   const press = drop.press ?? drop.rows[0];
   if (press === undefined) throw new Unsupported('a drop of nothing pressed or selected');
-  const at = await page.evaluate(({ press, to }) => {
-    const w = window as any;
-    // (a drop is a case's first action: block i is the one `load` made i-th)
-    const el = (i: number) => document.querySelector(`.block-container[data-uid="sxs${w.__ourusSxsPage}-${i}"]`) as HTMLElement | null;
-    const index = (e: Element | null | undefined): number | 'root' => (e ? Number(e.getAttribute('data-uid')!.split('-').pop()) : 'root');
-    const container = (e: Element) => e.parentElement?.closest(`.block-container[data-uid^="sxs${w.__ourusSxsPage}-"]`);
-    const kids = (parent: number | 'root'): number[] => {
-      const all = [...document.querySelectorAll(`.block-container[data-uid^="sxs${w.__ourusSxsPage}-"]`)];
-      return all.filter((e) => index(container(e)) === parent).map(index) as number[];
-    };
-    const pressed = el(press);
-    const anchor = pressed?.querySelector(':scope > .block-body > .anchor')?.getBoundingClientRect();
-    if (!pressed || !anchor) return null;
-    const from = { x: anchor.left + anchor.width / 2, y: anchor.top + anchor.height / 2 };
-    const box = (i: number) => el(i)!.getBoundingClientRect();
-    const siblings = kids(index(container(pressed))).filter((i) => i !== press);
-    const before = kids(to.parent).filter((i) => i !== press)[0];
-    const own = index(container(pressed)) === to.parent && (siblings.filter((i) => i < press).pop() ?? null) === to.after;
-    let target: { x: number; y: number };
-    // its own place: over itself
-    if (own) target = { x: box(press).left + 60, y: box(press).top + 8 };
-    // after a block: its bottom, left of its children (a level is 32 px)
-    else if (to.after !== null) target = { x: box(to.after).left + 16, y: box(to.after).bottom - 4 };
-    // first: before the first child, at its top
-    else if (before !== undefined) target = { x: box(before).left + 16, y: box(before).top + 4 };
-    // in a childless block, its lower half, right
-    else if (to.parent !== 'root') target = { x: box(to.parent).left + 60, y: box(to.parent).bottom - 4 };
-    else return null;
-    return { from, to: target };
-  }, { press, to: drop.to });
+  const at = await page.evaluate(
+    ({ press, to }) => {
+      const w = window as any;
+      // (a drop is a case's first action: block i is the one `load` made i-th)
+      const el = (i: number) =>
+        document.querySelector(`.block-container[data-uid="sxs${w.__ourusSxsPage}-${i}"]`) as HTMLElement | null;
+      const index = (e: Element | null | undefined): number | 'root' =>
+        e ? Number(e.getAttribute('data-uid')!.split('-').pop()) : 'root';
+      const container = (e: Element) =>
+        e.parentElement?.closest(`.block-container[data-uid^="sxs${w.__ourusSxsPage}-"]`);
+      const kids = (parent: number | 'root'): number[] => {
+        const all = [...document.querySelectorAll(`.block-container[data-uid^="sxs${w.__ourusSxsPage}-"]`)];
+        return all.filter((e) => index(container(e)) === parent).map(index) as number[];
+      };
+      const pressed = el(press);
+      const anchor = pressed?.querySelector(':scope > .block-body > .anchor')?.getBoundingClientRect();
+      if (!pressed || !anchor) return null;
+      const from = { x: anchor.left + anchor.width / 2, y: anchor.top + anchor.height / 2 };
+      const box = (i: number) => el(i)!.getBoundingClientRect();
+      const siblings = kids(index(container(pressed))).filter((i) => i !== press);
+      const before = kids(to.parent).filter((i) => i !== press)[0];
+      const own =
+        index(container(pressed)) === to.parent && (siblings.filter((i) => i < press).pop() ?? null) === to.after;
+      let target: { x: number; y: number };
+      // its own place: over itself
+      if (own) target = { x: box(press).left + 60, y: box(press).top + 8 };
+      // after a block: its bottom, left of its children (a level is 32 px)
+      else if (to.after !== null) target = { x: box(to.after).left + 16, y: box(to.after).bottom - 4 };
+      // first: before the first child, at its top
+      else if (before !== undefined) target = { x: box(before).left + 16, y: box(before).top + 4 };
+      // in a childless block, its lower half, right
+      else if (to.parent !== 'root') target = { x: box(to.parent).left + 60, y: box(to.parent).bottom - 4 };
+      else return null;
+      return { from, to: target };
+    },
+    { press, to: drop.to },
+  );
   if (!at) throw new Unsupported('the pressed block has no bullet on screen');
   await gesture(page, at.from, at.to, settle);
 }

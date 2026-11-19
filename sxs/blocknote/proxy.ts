@@ -14,8 +14,14 @@ export const rules: ProxyRules = {
   hosts: ['www.blocknotejs.org', 'img.shields.io', 'avatars.githubusercontent.com', 'github.com'],
   respond(req: ProxyRequest): ProxyResponse | undefined {
     const { hostname, pathname } = req.url;
-    if (hostname === 'img.shields.io' || hostname === 'avatars.githubusercontent.com' || (hostname === 'github.com' && /^\/[\w.-]+\.png$/.test(pathname))) return { status: 404, headers: [], body: Buffer.alloc(0) };
-    if (req.method === 'POST' && req.url.pathname === '/monitoring') return { status: 200, headers: [['content-type', 'application/json']], body: Buffer.from('{}') };
+    if (
+      hostname === 'img.shields.io' ||
+      hostname === 'avatars.githubusercontent.com' ||
+      (hostname === 'github.com' && /^\/[\w.-]+\.png$/.test(pathname))
+    )
+      return { status: 404, headers: [], body: Buffer.alloc(0) };
+    if (req.method === 'POST' && req.url.pathname === '/monitoring')
+      return { status: 200, headers: [['content-type', 'application/json']], body: Buffer.from('{}') };
     if (req.url.searchParams.has('_rsc')) return { status: 204, headers: [], body: Buffer.alloc(0) };
     return undefined;
   },

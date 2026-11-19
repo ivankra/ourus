@@ -43,8 +43,15 @@ export const versions = (want?: { app: string; installer: string }): Promise<Ver
       mkdirSync(files, { recursive: true });
       const unlock = await takeLock(record(`${files}.lock`), true, "Obsidian's downloads");
       try {
-        const [app, installer] = want ? [want.app, want.installer] : await launcher.resolveVersion(process.env.OBSIDIAN_VERSION?.trim() || 'latest', 'latest');
-        return { app, installer, appPath: await launcher.downloadApp(app), installerPath: await launcher.downloadInstaller(installer) };
+        const [app, installer] = want
+          ? [want.app, want.installer]
+          : await launcher.resolveVersion(process.env.OBSIDIAN_VERSION?.trim() || 'latest', 'latest');
+        return {
+          app,
+          installer,
+          appPath: await launcher.downloadApp(app),
+          installerPath: await launcher.downloadInstaller(installer),
+        };
       } finally {
         unlock();
       }
@@ -89,7 +96,15 @@ export interface Started {
 }
 
 /** Starts an instance in `dir` on `display` (else an Xvfb of its own), once its DevTools port answers. */
-export async function startInstance(dir: string, say: (line: string) => void, { display, spawnChild = detachedSpawn, want }: { display?: string; spawnChild?: SpawnChild; want?: { app: string; installer: string } } = {}): Promise<Started> {
+export async function startInstance(
+  dir: string,
+  say: (line: string) => void,
+  {
+    display,
+    spawnChild = detachedSpawn,
+    want,
+  }: { display?: string; spawnChild?: SpawnChild; want?: { app: string; installer: string } } = {},
+): Promise<Started> {
   const v = await versions(want);
   const config = join(dir, 'config');
   rmSync(config, { recursive: true, force: true });
@@ -105,12 +120,21 @@ export async function startInstance(dir: string, say: (line: string) => void, { 
   const xvfb = display ? null : await startXvfb(say, { detached: true });
   const port = await freePort();
   const log = join(dir, 'obsidian.log');
-  const proc = spawnChild(v.installerPath, [`--user-data-dir=${config}`, `--remote-debugging-port=${port}`, ...FLAGS], { log, env: { ...process.env, DISPLAY: display ?? xvfb!.display } });
+  const proc = spawnChild(v.installerPath, [`--user-data-dir=${config}`, `--remote-debugging-port=${port}`, ...FLAGS], {
+    log,
+    env: { ...process.env, DISPLAY: display ?? xvfb!.display },
+  });
   const tail = (): string => readFileSync(log, 'utf8').split('\n').slice(-20).join('\n');
   try {
     for (const t0 = Date.now(); ; await sleep(100)) {
       if (proc.exitCode !== null) throw new Error(`Obsidian exited (${proc.exitCode}):\n${tail()}`);
-      if (await fetch(`http://127.0.0.1:${port}/json/version`).then((r) => r.ok, () => false)) break;
+      if (
+        await fetch(`http://127.0.0.1:${port}/json/version`).then(
+          (r) => r.ok,
+          () => false,
+        )
+      )
+        break;
       if (Date.now() - t0 > 60000) throw new Error(`Obsidian's debugging port didn't answer in 60s:\n${tail()}`);
     }
   } catch (e) {

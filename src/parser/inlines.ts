@@ -87,7 +87,12 @@ export interface InlineConfig {
   readonly stops: Uint8Array;
 }
 
-export function compileInlines(rules: readonly MdInlineRule[], delimiters: readonly MdDelimiterRule[], brackets: readonly MdBracketRule[], textRules: readonly MdTextRule[]): InlineConfig {
+export function compileInlines(
+  rules: readonly MdInlineRule[],
+  delimiters: readonly MdDelimiterRule[],
+  brackets: readonly MdBracketRule[],
+  textRules: readonly MdTextRule[],
+): InlineConfig {
   const byChar = new Map<number, MdInlineRule[]>();
   for (const rule of rules) {
     // (each trigger a code point, an emoji whole: two sharing a high surrogate are two)
@@ -365,7 +370,18 @@ export class MdInlineParser {
     this.pos = end;
     const node = this.addText(start, end);
     if ((canOpen || canClose) && (!rule.accepts || rule.accepts(length))) {
-      const d: Delimiter = { char, width, rule, count: length, length, node, canOpen, canClose, prev: this.delimiters, next: null };
+      const d: Delimiter = {
+        char,
+        width,
+        rule,
+        count: length,
+        length,
+        node,
+        canOpen,
+        canClose,
+        prev: this.delimiters,
+        next: null,
+      };
       if (d.prev) d.prev.next = d;
       this.delimiters = d;
     }
@@ -394,7 +410,11 @@ export class MdInlineParser {
       let opener = closer.prev;
       let found = false;
       while (opener && opener !== bottom && opener !== limit) {
-        const oddMatch = !!closer.rule.ruleOfThree && (closer.canOpen || opener.canClose) && closer.length % 3 !== 0 && (opener.length + closer.length) % 3 === 0;
+        const oddMatch =
+          !!closer.rule.ruleOfThree &&
+          (closer.canOpen || opener.canClose) &&
+          closer.length % 3 !== 0 &&
+          (opener.length + closer.length) % 3 === 0;
         if (opener.char === closer.char && opener.canOpen && !oddMatch) {
           found = true;
           break;
@@ -460,7 +480,16 @@ export class MdInlineParser {
   /** Pushes a `[` (or `![`) whose text node is `node`; `index` is the offset of the `[`. */
   addBracket(node: Node, index: number, image: boolean, kind: string | null = null): void {
     if (this.brackets) this.brackets.bracketAfter = true;
-    this.brackets = { node, prev: this.brackets, prevDelimiter: this.delimiters, index, image, kind, id: this.bracketIds++, bracketAfter: false };
+    this.brackets = {
+      node,
+      prev: this.brackets,
+      prevDelimiter: this.delimiters,
+      index,
+      image,
+      kind,
+      id: this.bracketIds++,
+      bracketAfter: false,
+    };
   }
 
   /** Whether an opener can still make a link: not a link opener opened before a link was made. */
@@ -572,7 +601,12 @@ export class MdInlineParser {
               continue;
             }
             const run: Node[] = [];
-            for (let m: Node | null = n; m && m !== after && runPiece(m) && (m === n || m.from === m.prev!.to); m = m.next) run.push(m);
+            for (
+              let m: Node | null = n;
+              m && m !== after && runPiece(m) && (m === n || m.from === m.prev!.to);
+              m = m.next
+            )
+              run.push(m);
             n = run[run.length - 1]!.next;
             this.applyTextRule(rule, run);
           }
@@ -609,7 +643,11 @@ export class MdInlineParser {
       const a = nodes[first]!;
       const b = nodes[last]!;
       // (inside an escape or an entity: none)
-      if ((a.type !== 'text' && m.from !== starts[first]) || (b.type !== 'text' && m.to !== (starts[last + 1] ?? decoded.length))) continue;
+      if (
+        (a.type !== 'text' && m.from !== starts[first]) ||
+        (b.type !== 'text' && m.to !== (starts[last + 1] ?? decoded.length))
+      )
+        continue;
       const from = a.type === 'text' ? a.from + (m.from - starts[first]!) : a.from;
       const to = b.type === 'text' ? b.from + (m.to - starts[last]!) : b.to;
       // the text past the match, a node of its own
@@ -679,7 +717,8 @@ function freeze(root: Node): MdInline[] {
     if (node.type === 'text') {
       if (node.to === node.from) continue;
       const prev = level.out[level.out.length - 1];
-      if (prev && prev.type === 'text' && prev.to === node.from) level.out[level.out.length - 1] = { type: 'text', from: prev.from, to: node.to };
+      if (prev && prev.type === 'text' && prev.to === node.from)
+        level.out[level.out.length - 1] = { type: 'text', from: prev.from, to: node.to };
       else level.out.push({ type: 'text', from: node.from, to: node.to });
       continue;
     }

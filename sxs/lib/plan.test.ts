@@ -8,7 +8,27 @@ import { adapt } from './plan.ts';
 
 const F = '```';
 const plan = (clipboard: string[], opts = {}) => {
-  const [t] = readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: rare', ...clipboard, F, '', `${F}markdown`, '- a┃', F, '', '> paste', '', `${F}markdown`, '- ax┃', F].join('\n'));
+  const [t] = readSpec(
+    'x.md',
+    [
+      '## A',
+      '',
+      `${F}yaml`,
+      'tags: rare',
+      ...clipboard,
+      F,
+      '',
+      `${F}markdown`,
+      '- a┃',
+      F,
+      '',
+      '> paste',
+      '',
+      `${F}markdown`,
+      '- ax┃',
+      F,
+    ].join('\n'),
+  );
   const a = adapt(driver, t!, opts);
   assert.ok('plan' in a, 'skip' in a ? a.skip : '');
   return a.plan;

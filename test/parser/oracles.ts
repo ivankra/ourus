@@ -17,7 +17,15 @@ import { spawnSync } from 'node:child_process';
 import fc from 'fast-check';
 import { commonmark } from '../../src/parser/flavor.ts';
 import { defineFlavor } from '../../src/parser/flavor.ts';
-import { autolink, footnotes, gfmCore, strikethrough, table, tagfilter, tasklistExtension } from '../../src/parser/gfm.ts';
+import {
+  autolink,
+  footnotes,
+  gfmCore,
+  strikethrough,
+  table,
+  tagfilter,
+  tasklistExtension,
+} from '../../src/parser/gfm.ts';
 import { MdTree } from '../../src/parser/syntax.ts';
 import { BLOCKS, INLINES, arbDoc } from './generators.ts';
 
@@ -34,12 +42,35 @@ if (process.env.COMMONMARK_JS) {
   commonmarkJs = (md) => renderer.render(parser.parse(md));
 }
 const cmarkGfm = (args: string[]): Render | null =>
-  process.env.CMARK_GFM ? (md) => spawnSync(process.env.CMARK_GFM!, ['--unsafe', ...args], { input: md, encoding: 'utf8' }).stdout : null;
+  process.env.CMARK_GFM
+    ? (md) => spawnSync(process.env.CMARK_GFM!, ['--unsafe', ...args], { input: md, encoding: 'utf8' }).stdout
+    : null;
 const cmarkCore = cmarkGfm([]);
-const cmarkAll = cmarkGfm(['-e', 'footnotes', '-e', 'table', '-e', 'strikethrough', '-e', 'autolink', '-e', 'tagfilter', '-e', 'tasklist']);
+const cmarkAll = cmarkGfm([
+  '-e',
+  'footnotes',
+  '-e',
+  'table',
+  '-e',
+  'strikethrough',
+  '-e',
+  'autolink',
+  '-e',
+  'tagfilter',
+  '-e',
+  'tasklist',
+]);
 
 /** GFM with task items where cmark-gfm finds them (ourus also finds them in quotes and after another marker). */
-const gfm = defineFlavor('gfm (cmark-gfm task items)', [gfmCore, table, tasklistExtension({ cmark: true }), strikethrough, autolink, tagfilter, footnotes]);
+const gfm = defineFlavor('gfm (cmark-gfm task items)', [
+  gfmCore,
+  table,
+  tasklistExtension({ cmark: true }),
+  strikethrough,
+  autolink,
+  tagfilter,
+  footnotes,
+]);
 
 interface Check {
   readonly name: string;
@@ -50,7 +81,10 @@ interface Check {
 const checks: Check[] = [];
 if (commonmarkJs) {
   const reference = commonmarkJs;
-  checks.push({ name: 'commonmark.js', compare: (md) => ({ want: reference(md), got: MdTree.parse(md, commonmark).renderHtml() }) });
+  checks.push({
+    name: 'commonmark.js',
+    compare: (md) => ({ want: reference(md), got: MdTree.parse(md, commonmark).renderHtml() }),
+  });
 }
 if (cmarkCore && cmarkAll && commonmarkJs) {
   const reference = commonmarkJs;
@@ -59,7 +93,11 @@ if (cmarkCore && cmarkAll && commonmarkJs) {
     compare(md) {
       // cmark-gfm's renderer writes nested <strong> once: not a reading difference
       const core = cmarkCore(md);
-      if (core !== reference(md).replace(/<strong>((?:(?!<\/?strong>).)*?)<strong>/gs, '<strong>$1') && core !== reference(md)) return 'cmark and commonmark.js read the document differently';
+      if (
+        core !== reference(md).replace(/<strong>((?:(?!<\/?strong>).)*?)<strong>/gs, '<strong>$1') &&
+        core !== reference(md)
+      )
+        return 'cmark and commonmark.js read the document differently';
       return { want: cmarkAll(md), got: MdTree.parse(md, gfm).renderHtml() };
     },
   });
@@ -71,7 +109,10 @@ if (!checks.length) {
 
 let failed = 0;
 for (const check of checks) {
-  for (const [vocabulary, docs] of [['blocks', arbDoc(BLOCKS, { endings: ['\n'] })], ['inlines', arbDoc(INLINES, { endings: ['\n'] })]] as const) {
+  for (const [vocabulary, docs] of [
+    ['blocks', arbDoc(BLOCKS, { endings: ['\n'] })],
+    ['inlines', arbDoc(INLINES, { endings: ['\n'] })],
+  ] as const) {
     const samples = fc.sample(docs, { numRuns: count, seed });
     const diffs: { md: string; want: string; got: string }[] = [];
     const skipped = new Map<string, number>();
@@ -93,7 +134,9 @@ for (const check of checks) {
     }
     failed += diffs.length;
     const extra = [...skipped].map(([why, n]) => `${n} skipped (${why})`).join(', ');
-    console.log(`${check.name}, ${vocabulary}: ${compared - diffs.length}/${compared} agree${extra ? '; ' + extra : ''}`);
+    console.log(
+      `${check.name}, ${vocabulary}: ${compared - diffs.length}/${compared} agree${extra ? '; ' + extra : ''}`,
+    );
     for (const d of diffs.sort((a, b) => a.md.length - b.md.length).slice(0, show)) {
       console.log(`  md   ${JSON.stringify(d.md)}\n  want ${JSON.stringify(d.want)}\n  got  ${JSON.stringify(d.got)}`);
     }

@@ -6,7 +6,8 @@ import { CLOSETAG, OPENTAG } from './blocks.ts';
 import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule } from './inlines.ts';
 import { scanDestination, scanLabel, scanTitle, skipSpnl } from './refs.ts';
 
-const reEmailAutolink = /<([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)>/y;
+const reEmailAutolink =
+  /<([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)>/y;
 const reAutolink = /<([A-Za-z][A-Za-z0-9.+-]{1,31}:[^<>\x00-\x20]*)>/y;
 const reTag = new RegExp(`(?:${OPENTAG}|${CLOSETAG})`, 'iy');
 const reEntityHere = new RegExp(ENTITY, 'y');
@@ -79,7 +80,8 @@ export const codeSpanRule: MdInlineRule = {
       return true;
     }
     let value = text.slice(after, close).replace(/\n/g, ' ');
-    if (value.length > 2 && value[0] === ' ' && value[value.length - 1] === ' ' && /[^ ]/.test(value)) value = value.slice(1, -1);
+    if (value.length > 2 && value[0] === ' ' && value[value.length - 1] === ' ' && /[^ ]/.test(value))
+      value = value.slice(1, -1);
     p.pos = close + length;
     p.add(new Node('code', start, p.pos, { value }));
     return true;

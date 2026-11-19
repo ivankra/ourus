@@ -25,7 +25,10 @@ export const MdFlavor = {
     const key = `${flavor.name} without ${name}`;
     let built = withouts.get(flavor)?.get(key);
     if (!built) {
-      built = defineFlavor(key, flavor.extensions.filter((e) => e.name !== name));
+      built = defineFlavor(
+        key,
+        flavor.extensions.filter((e) => e.name !== name),
+      );
       if (!withouts.has(flavor)) withouts.set(flavor, new Map());
       withouts.get(flavor)!.set(key, built);
     }

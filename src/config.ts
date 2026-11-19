@@ -18,19 +18,74 @@
 export type AutoCloseOpener = '```' | '~~~' | '$$' | '%%' | '<!--' | '`' | '(' | '[' | '{' | '[[' | '((' | '$';
 
 /** Each opener's closer, in the order a list of them is written. */
-export const AUTO_CLOSERS: Readonly<Record<AutoCloseOpener, string>> = { '```': '```', '~~~': '~~~', '$$': '$$', '%%': '%%', '<!--': '-->', '`': '`', '(': ')', '[': ']', '{': '}', '[[': ']]', '((': '))', '$': '$' };
+export const AUTO_CLOSERS: Readonly<Record<AutoCloseOpener, string>> = {
+  '```': '```',
+  '~~~': '~~~',
+  $$: '$$',
+  '%%': '%%',
+  '<!--': '-->',
+  '`': '`',
+  '(': ')',
+  '[': ']',
+  '{': '}',
+  '[[': ']]',
+  '((': '))',
+  $: '$',
+};
 
 /** A character that, typed over a selection, wraps it (`autoWrap`). */
 export type AutoWrapper = '`' | '*' | '_' | '~' | '=' | '^' | '(' | '[' | '{' | "'" | '"' | '$';
 
 /** Each wrapper's closer, in the order a list of them is written. */
-export const AUTO_WRAPS: Readonly<Record<AutoWrapper, string>> = { '`': '`', '*': '*', _: '_', '~': '~', '=': '=', '^': '^', '(': ')', '[': ']', '{': '}', "'": "'", '"': '"', $: '$' };
+export const AUTO_WRAPS: Readonly<Record<AutoWrapper, string>> = {
+  '`': '`',
+  '*': '*',
+  _: '_',
+  '~': '~',
+  '=': '=',
+  '^': '^',
+  '(': ')',
+  '[': ']',
+  '{': '}',
+  "'": "'",
+  '"': '"',
+  $: '$',
+};
 
 /** An element of markup a host may draw (`decorations`). */
-export type Decoration = 'bullet' | 'number' | 'checkbox' | 'heading' | 'setext' | 'quote' | 'callout' | 'fence' | 'math' | 'comment' | 'table' | 'rule' | 'footnote' | 'blockId';
+export type Decoration =
+  | 'bullet'
+  | 'number'
+  | 'checkbox'
+  | 'heading'
+  | 'setext'
+  | 'quote'
+  | 'callout'
+  | 'fence'
+  | 'math'
+  | 'comment'
+  | 'table'
+  | 'rule'
+  | 'footnote'
+  | 'blockId';
 
 /** Every element a host may draw, in the order a list of them is written. */
-export const DECORATIONS: readonly Decoration[] = ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'comment', 'table', 'rule', 'footnote', 'blockId'];
+export const DECORATIONS: readonly Decoration[] = [
+  'bullet',
+  'number',
+  'checkbox',
+  'heading',
+  'setext',
+  'quote',
+  'callout',
+  'fence',
+  'math',
+  'comment',
+  'table',
+  'rule',
+  'footnote',
+  'blockId',
+];
 
 /** Whether the host draws `element` (`decorations`). */
 export const decorates = (config: OurusConfig, element: Decoration): boolean => config.decorations.includes(element);
@@ -705,7 +760,9 @@ export interface OurusConfig {
 }
 
 /** The values each option takes, its default first, for readers of string settings (spec files, frontmatter). */
-const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: readonly [OurusConfig[K], ...OurusConfig[K][]] } = {
+const CONFIG_VALUES: {
+  readonly [K in Exclude<keyof OurusConfig, ListOption>]: readonly [OurusConfig[K], ...OurusConfig[K][]];
+} = {
   // How the text reads: every command
   flavor: ['gfm', 'commonmark', 'obsidian'],
   // The outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
@@ -761,7 +818,9 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
 };
 
 /** A list option's elements, in the order its value lists them, and its default. */
-const LIST_OPTIONS: { readonly [K in ListOption]: { readonly elements: OurusConfig[K]; readonly defaults: OurusConfig[K] } } = {
+const LIST_OPTIONS: {
+  readonly [K in ListOption]: { readonly elements: OurusConfig[K]; readonly defaults: OurusConfig[K] };
+} = {
   autoClose: { elements: Object.keys(AUTO_CLOSERS) as AutoCloseOpener[], defaults: ['```', '~~~', '$$', '%%', '<!--'] },
   autoWrap: { elements: Object.keys(AUTO_WRAPS) as AutoWrapper[], defaults: ['`', '*', '_', '~', '=', '(', '[', '{'] },
   decorations: { elements: DECORATIONS, defaults: [] },
@@ -776,7 +835,8 @@ const CONFIG_DEFAULTS = {
 /** A list option's value checked: its elements, each once, in their order; or what is wrong with it. */
 function listValue(key: ListOption, value: unknown): readonly string[] | string {
   const { elements } = LIST_OPTIONS[key];
-  if (!Array.isArray(value)) return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(value)}`;
+  if (!Array.isArray(value))
+    return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(value)}`;
   // (by index: an undefined element, or a hole, is wrong too)
   const at = Array.from(value as unknown[]).findIndex((v) => !(elements as readonly unknown[]).includes(v));
   const wrong = at < 0 ? undefined : (value as unknown[])[at];
@@ -822,9 +882,12 @@ export const OurusConfig = {
         config[key] = list;
         continue;
       }
-      const allowed = Object.hasOwn(CONFIG_VALUES, key) ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key] : undefined;
+      const allowed = Object.hasOwn(CONFIG_VALUES, key)
+        ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key]
+        : undefined;
       if (!allowed) throw new TypeError(`unknown option "${key}"`);
-      if (!allowed.includes(value)) throw new TypeError(`option "${key}" takes ${allowed.join(', ')}, not ${JSON.stringify(value)}`);
+      if (!allowed.includes(value))
+        throw new TypeError(`option "${key}" takes ${allowed.join(', ')}, not ${JSON.stringify(value)}`);
       config[key] = value;
     }
     return config as unknown as OurusConfig;
@@ -834,7 +897,10 @@ export const OurusConfig = {
   same(a: OurusConfig, b: OurusConfig): boolean {
     if (a === b) return true;
     const lists = Object.keys(LIST_OPTIONS) as ListOption[];
-    return Object.keys(CONFIG_VALUES).every((key) => a[key as keyof OurusConfig] === b[key as keyof OurusConfig]) && lists.every((key) => a[key].join(' ') === b[key].join(' '));
+    return (
+      Object.keys(CONFIG_VALUES).every((key) => a[key as keyof OurusConfig] === b[key as keyof OurusConfig]) &&
+      lists.every((key) => a[key].join(' ') === b[key].join(' '))
+    );
   },
 
   /**
@@ -852,7 +918,9 @@ export const OurusConfig = {
         continue;
       }
       // (an option of its own, not a property every object has: `constructor`, `toString`)
-      const allowed = Object.hasOwn(CONFIG_VALUES, key) ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key] : undefined;
+      const allowed = Object.hasOwn(CONFIG_VALUES, key)
+        ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key]
+        : undefined;
       if (!allowed) return `unknown option "${key}"`;
       const value = allowed.find((v) => String(v) === text);
       if (value === undefined) return `option "${key}" takes ${allowed.join(', ')}, not "${text}"`;

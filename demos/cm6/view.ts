@@ -11,9 +11,27 @@
 // - keys for the view's commands, and a breadcrumb panel naming the zoom root's ancestors.
 
 import { foldEffect, foldService, foldedRanges, unfoldEffect } from '@codemirror/language';
-import { Annotation, EditorSelection, EditorState, Prec, Transaction, type StateEffect, type StateEffectType, type StateField, type AnnotationType } from '@codemirror/state';
+import {
+  Annotation,
+  EditorSelection,
+  EditorState,
+  Prec,
+  Transaction,
+  type StateEffect,
+  type StateEffectType,
+  type StateField,
+  type AnnotationType,
+} from '@codemirror/state';
 import { Decoration, EditorView, keymap, showPanel, type DecorationSet, type Panel } from '@codemirror/view';
-import { executeCommand, leavesZoom, type OurusCommand, type OurusDoc, type OurusNode, type OurusView, OurusSuccess } from '../../src/index.ts';
+import {
+  executeCommand,
+  leavesZoom,
+  type OurusCommand,
+  type OurusDoc,
+  type OurusNode,
+  type OurusView,
+  OurusSuccess,
+} from '../../src/index.ts';
 
 /** Marks the transactions this module makes to bring CodeMirror's folds in line with the view's. */
 const syncing = Annotation.define<boolean>();
@@ -44,7 +62,8 @@ function nodeOfFold(view: OurusView, range: { from: number; to: number }): Ourus
   const row: OurusNode[] = [];
   for (let n: OurusNode | null = doc.rowOwner(line); n && n.startLine === line; n = n.children[0] ?? null) row.push(n);
   const ending: OurusNode[] = [];
-  for (let n: OurusNode | null = doc.nodeAtLine(line) ?? null; n && n.kind !== 'root'; n = n.parent) if (n.textLastLine === line) ending.push(n);
+  for (let n: OurusNode | null = doc.nodeAtLine(line) ?? null; n && n.kind !== 'root'; n = n.parent)
+    if (n.textLastLine === line) ending.push(n);
   const exact = [...row, ...ending].filter((n) => {
     const r = doc.foldRange(n);
     return r && r.from === range.from && r.to === range.to;
@@ -84,7 +103,8 @@ export function outlineView({ field, setView, planned }: Wiring) {
 
   // the view's folds into CodeMirror, after every transaction that changed the view
   const toEditor = EditorView.updateListener.of((u) => {
-    if (u.startState.field(field) === u.state.field(field) || u.transactions.some((tr) => tr.annotation(syncing))) return;
+    if (u.startState.field(field) === u.state.field(field) || u.transactions.some((tr) => tr.annotation(syncing)))
+      return;
     const view = u.state.field(field);
     const doc = view.doc;
     const want = new Map<string, { from: number; to: number }>();
@@ -125,9 +145,18 @@ export function outlineView({ field, setView, planned }: Wiring) {
     const view = tr.startState.field(field);
     if (view.zoom === null && !tr.effects.some((e) => e.is(setView))) return tr;
     const user = tr.annotation(Transaction.userEvent);
-    if (view.zoom !== null && tr.docChanged && user && !tr.annotation(planned) && !tr.isUserEvent('undo') && !tr.isUserEvent('redo')) {
+    if (
+      view.zoom !== null &&
+      tr.docChanged &&
+      user &&
+      !tr.annotation(planned) &&
+      !tr.isUserEvent('undo') &&
+      !tr.isUserEvent('redo')
+    ) {
       const changes: { from: number; to: number; insert: string }[] = [];
-      tr.changes.iterChanges((fromA, toA, _b, _e, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
+      tr.changes.iterChanges((fromA, toA, _b, _e, inserted) =>
+        changes.push({ from: fromA, to: toA, insert: inserted.toString() }),
+      );
       const caret = tr.newSelection.main;
       if (leavesZoom(view, view.doc.update({ changes, caret: caret.empty ? caret.head : undefined }))) return [];
     }
@@ -143,13 +172,18 @@ export function outlineView({ field, setView, planned }: Wiring) {
   });
 
   /** A view command: its result's view and selection, no text changed. */
-  const viewCommand = (command: OurusCommand) => (editor: EditorView): boolean => {
-    const { anchor, head } = editor.state.selection.main;
-    const result = executeCommand(editor.state.field(field).withSelection({ anchor, head }), command);
-    if (!(result instanceof OurusSuccess)) return true;
-    editor.dispatch({ effects: [setView.of(result.view), EditorView.scrollIntoView(result.view.selection.head, { y: 'start' })], selection: result.view.selection });
-    return true;
-  };
+  const viewCommand =
+    (command: OurusCommand) =>
+    (editor: EditorView): boolean => {
+      const { anchor, head } = editor.state.selection.main;
+      const result = executeCommand(editor.state.field(field).withSelection({ anchor, head }), command);
+      if (!(result instanceof OurusSuccess)) return true;
+      editor.dispatch({
+        effects: [setView.of(result.view), EditorView.scrollIntoView(result.view.selection.head, { y: 'start' })],
+        selection: result.view.selection,
+      });
+      return true;
+    };
   const keys = Prec.high(
     keymap.of([
       { key: 'Mod-ArrowUp', run: viewCommand({ type: 'fold' }) },
@@ -196,5 +230,10 @@ export function outlineView({ field, setView, planned }: Wiring) {
 /** A node's text as a title: its first line, markup aside. */
 function titleOf(doc: OurusDoc, node: OurusNode): string {
   const text = doc.textOf(node)?.text ?? '';
-  return text.split('\n')[0]!.replace(/^#+\s*|^\[.\]\s*/, '').trim() || node.kind;
+  return (
+    text
+      .split('\n')[0]!
+      .replace(/^#+\s*|^\[.\]\s*/, '')
+      .trim() || node.kind
+  );
 }

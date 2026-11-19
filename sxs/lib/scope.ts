@@ -20,7 +20,10 @@ import { createServer } from 'node:http';
 
 const require = createRequire(import.meta.url);
 // Playwright's own bundled `ws` (a dependency already, exported by `playwright-core`)
-const { ws: WebSocket, wsServer: WebSocketServer } = require('playwright-core/lib/utilsBundle') as { ws: any; wsServer: any };
+const { ws: WebSocket, wsServer: WebSocketServer } = require('playwright-core/lib/utilsBundle') as {
+  ws: any;
+  wsServer: any;
+};
 
 type Msg = { id?: number; method?: string; sessionId?: string; params?: any; result?: any; error?: unknown };
 
@@ -32,12 +35,16 @@ export interface Scoped {
 
 /** A scoped endpoint for `contextId` of the browser at `cdp` (`http://127.0.0.1:<port>`). */
 export async function scopeTo(cdp: string, contextId: string): Promise<Scoped> {
-  const version = (await (await fetch(`${cdp}/json/version`, { signal: AbortSignal.timeout(10000) })).json()) as { webSocketDebuggerUrl: string };
+  const version = (await (await fetch(`${cdp}/json/version`, { signal: AbortSignal.timeout(10000) })).json()) as {
+    webSocketDebuggerUrl: string;
+  };
   const upstreamUrl = version.webSocketDebuggerUrl;
   const http = createServer((_req, res) => res.writeHead(404).end());
   const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false, maxPayload: 256 * 1024 * 1024 });
   const sockets = new Set<any>();
-  http.on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, (client: any) => wss.emit('connection', client)));
+  http.on('upgrade', (req, socket, head) =>
+    wss.handleUpgrade(req, socket, head, (client: any) => wss.emit('connection', client)),
+  );
   wss.on('connection', (client: any) => {
     sockets.add(client);
     const upstream = new WebSocket(upstreamUrl, { perMessageDeflate: false, maxPayload: 256 * 1024 * 1024 });
@@ -62,9 +69,13 @@ export async function scopeTo(cdp: string, contextId: string): Promise<Scoped> {
       const s = data.toString();
       try {
         const m = JSON.parse(s) as Msg;
-        if (m.id !== undefined && (m.method === 'Target.attachToTarget' || m.method === 'Target.attachToBrowserTarget')) opening.add(m.id);
+        if (m.id !== undefined && (m.method === 'Target.attachToTarget' || m.method === 'Target.attachToBrowserTarget'))
+          opening.add(m.id);
         if (m.method === 'Target.attachToTarget' && m.params?.targetId) asked.add(m.params.targetId);
-        if (process.env.OURUS_SXS_SCOPE_DEBUG) console.error(`-> ${m.id} ${m.method} ${m.sessionId?.slice(0, 6) ?? ''} ${JSON.stringify(m.params ?? {}).slice(0, 120)}`);
+        if (process.env.OURUS_SXS_SCOPE_DEBUG)
+          console.error(
+            `-> ${m.id} ${m.method} ${m.sessionId?.slice(0, 6) ?? ''} ${JSON.stringify(m.params ?? {}).slice(0, 120)}`,
+          );
       } catch {}
       if (upstream.readyState === WebSocket.OPEN) upstream.send(s);
       else pending.push(s);
@@ -77,7 +88,10 @@ export async function scopeTo(cdp: string, contextId: string): Promise<Scoped> {
       } catch {
         return;
       }
-      if (process.env.OURUS_SXS_SCOPE_DEBUG) console.error(`<- ${m.id ?? ''} ${m.method ?? ''} ${m.sessionId?.slice(0, 6) ?? ''} ${m.method === 'Target.attachedToTarget' ? `${m.params.targetInfo.type}@${m.params.targetInfo.browserContextId?.slice(0, 6)} ${m.params.sessionId.slice(0, 6)}` : ''}${m.error ? JSON.stringify(m.error) : ''}`);
+      if (process.env.OURUS_SXS_SCOPE_DEBUG)
+        console.error(
+          `<- ${m.id ?? ''} ${m.method ?? ''} ${m.sessionId?.slice(0, 6) ?? ''} ${m.method === 'Target.attachedToTarget' ? `${m.params.targetInfo.type}@${m.params.targetInfo.browserContextId?.slice(0, 6)} ${m.params.sessionId.slice(0, 6)}` : ''}${m.error ? JSON.stringify(m.error) : ''}`,
+        );
       // an answer to a request of ours (a detach), not the client's
       if (m.id !== undefined && m.id >= 1e9) return;
       if (m.id !== undefined) {
@@ -89,14 +103,23 @@ export async function scopeTo(cdp: string, contextId: string): Promise<Scoped> {
         const { sessionId, targetInfo, waitingForDebugger } = m.params;
         // at the root, the context decides (or the client asked for it: the browser's own target, one it
         // attached to by id); under a session let through, it is that target's
-        const ours = m.sessionId ? allowed.has(m.sessionId) : targetInfo?.browserContextId === contextId || targetInfo?.type === 'browser' || asked.delete(targetInfo?.targetId);
+        const ours = m.sessionId
+          ? allowed.has(m.sessionId)
+          : targetInfo?.browserContextId === contextId ||
+            targetInfo?.type === 'browser' ||
+            asked.delete(targetInfo?.targetId);
         if (ours) {
           allowed.add(sessionId);
           client.send(s);
         } else if (!m.sessionId || !allowed.has(m.sessionId)) {
           // another run's target: let go at once, so that it never waits on this connection
           if (waitingForDebugger) toUpstream({ id: own++, method: 'Runtime.runIfWaitingForDebugger', sessionId });
-          toUpstream({ id: own++, method: 'Target.detachFromTarget', params: { sessionId }, ...(m.sessionId && { sessionId: m.sessionId }) });
+          toUpstream({
+            id: own++,
+            method: 'Target.detachFromTarget',
+            params: { sessionId },
+            ...(m.sessionId && { sessionId: m.sessionId }),
+          });
         }
         return;
       }

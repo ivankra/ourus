@@ -39,7 +39,8 @@ function markOnly(tree: MdTree, line: number, kind: string): MdLineMarkup {
  * text where it has no closing sequence, as a paragraph's are.
  */
 function headingMarkup(tree: MdTree, leaf: MdBlockAt, line: number): MdLineMarkup {
-  if (leaf.block.attrs.setext) return line === leaf.lastLine ? markOnly(tree, line, 'underline') : plainMarkup(tree, line);
+  if (leaf.block.attrs.setext)
+    return line === leaf.lastLine ? markOnly(tree, line, 'underline') : plainMarkup(tree, line);
   const { text } = tree;
   const info = tree.line(line);
   const from = skip(text, info.contentFrom, info.to);

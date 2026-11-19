@@ -43,7 +43,8 @@ const FENCE = /^(`{3,}|~{3,})([^`\n]*)\n([\s\S]*)\n\1$/;
 const LANGUAGE = 'SYS_A70';
 
 /** The fence a code block reads back with (a code block keeps none): Markdown's, the shortest run of backticks, three or more, longer than any in the code. */
-const fenceFor = (code: string): string => '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
+const fenceFor = (code: string): string =>
+  '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
 
 /** A node as the page makes and reads it. */
 interface Item {
@@ -69,7 +70,18 @@ interface Item {
  */
 function toItem(depth: number, block: string): Item & { prefix: number; cut?: number } {
   const code = FENCE.exec(block);
-  if (code) return { depth, content: code[3]!, todo: false, done: false, section: false, numbered: false, code: true, ...(code[2]!.trim() && { language: code[2]!.trim() }), prefix: code[1]!.length + code[2]!.length + 1 };
+  if (code)
+    return {
+      depth,
+      content: code[3]!,
+      todo: false,
+      done: false,
+      section: false,
+      numbered: false,
+      code: true,
+      ...(code[2]!.trim() && { language: code[2]!.trim() }),
+      prefix: code[1]!.length + code[2]!.length + 1,
+    };
   // the first line the name, the rest its description
   const br = block.indexOf('\n');
   const text = br < 0 ? block : block.slice(0, br);
@@ -88,7 +100,18 @@ function toItem(depth: number, block: string): Item & { prefix: number; cut?: nu
   const hash = !literal && prefix === (numbered?.[0].length ?? 0) && /^\\#/.test(content);
   if (hash) content = content.slice(1);
   const cut = literal ? prefix + literal[1]!.length : hash ? prefix : undefined;
-  return { depth, content, todo: !!task, done: !!task && task[1] !== ' ', section: !!heading, numbered: !!numbered, code: false, prefix, ...(cut !== undefined && { cut }), ...(description !== undefined && { description }) };
+  return {
+    depth,
+    content,
+    todo: !!task,
+    done: !!task && task[1] !== ' ',
+    section: !!heading,
+    numbered: !!numbered,
+    code: false,
+    prefix,
+    ...(cut !== undefined && { cut }),
+    ...(description !== undefined && { description }),
+  };
 }
 
 /** A node's canonical text, and the length of the prefix its number (`number`, where numbered), checkbox and section stand for. */
@@ -98,14 +121,23 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
     const info = it.language && it.language !== 'plaintext' ? it.language : '';
     return { text: `${fence}${info}\n${it.content}\n${fence}`, prefix: fence.length + info.length + 1 };
   }
-  const prefix = (number !== null ? `${number}. ` : '') + (it.todo ? (it.done ? '[x] ' : '[ ] ') : '') + (it.section ? '# ' : '');
+  const prefix =
+    (number !== null ? `${number}. ` : '') + (it.todo ? (it.done ? '[x] ' : '[ ] ') : '') + (it.section ? '# ' : '');
   const plain = !prefix || prefix === `${number}. `;
   const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
   // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
   const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.content);
-  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : hash ? '\\' + it.content : it.content;
+  const content = literal
+    ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length)
+    : hash
+      ? '\\' + it.content
+      : it.content;
   const cut = literal ? literal[0].length : hash ? 0 : undefined;
-  return { text: prefix + content + (it.description !== undefined ? `\n${it.description}` : ''), prefix: prefix.length, ...(cut !== undefined && { cut }) };
+  return {
+    text: prefix + content + (it.description !== undefined ? `\n${it.description}` : ''),
+    prefix: prefix.length,
+    ...(cut !== undefined && { cut }),
+  };
 }
 
 const HOME = 'SXS_HOME';
@@ -159,7 +191,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // a press on a bullet takes the focus from the name being edited, and a drop selects nothing
@@ -216,27 +253,37 @@ export const driver: Driver = {
   holds(doc) {
     const o = doc as Outline;
     // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
-    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Tana holds as the text #';
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text)))
+      return 'heading with no text (# alone), which Tana holds as the text #';
     // a no-break space: held as a space
     if (o.blocks.some((b) => b.text.includes('\u00a0'))) return 'no-break space, which Tana holds as a space';
     // a character outside the Basic Multilingual Plane (an emoji): its two UTF-16 units put the caret past
     // where Tana counts it
-    if (o.blocks.some((b) => /[\u{10000}-\u{10ffff}]/u.test(b.text))) return 'character outside the Basic Multilingual Plane, where the caret lands elsewhere';
+    if (o.blocks.some((b) => /[\u{10000}-\u{10ffff}]/u.test(b.text)))
+      return 'character outside the Basic Multilingual Plane, where the caret lands elsewhere';
     const fenced = o.blocks.map((b) => /^(`{3,}|~{3,})/.test(b.text) && b.text.includes('\n'));
     if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "code block's fences that don't match";
     const fences = o.blocks.map((b) => FENCE.exec(b.text));
-    if (fences.some((f) => f && (f[1] !== fenceFor(f[3]!) || f[2] !== f[2]!.trim()))) return "code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language";
+    if (fences.some((f) => f && (f[1] !== fenceFor(f[3]!) || f[2] !== f[2]!.trim())))
+      return "code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language";
     // a block's later lines are its node's description, which an empty last line isn't
-    if (o.blocks.some((b, i) => b.text.endsWith('\n') && !fenced[i])) return "block's text ending in a line break: an empty description is none";
-    if (o.blocks.some((b) => /^#{2,6} /.test(b.text.replace(/^\[[ xX]\] /, '')))) return "heading other than H1: Tana's (a section) has one level";
+    if (o.blocks.some((b, i) => b.text.endsWith('\n') && !fenced[i]))
+      return "block's text ending in a line break: an empty description is none";
+    if (o.blocks.some((b) => /^#{2,6} /.test(b.text.replace(/^\[[ xX]\] /, ''))))
+      return "heading other than H1: Tana's (a section) has one level";
     if (o.sel) {
       const b = o.blocks[o.sel.block]!.text;
       const it = toItem(0, b);
       // before a to-do's `[ ] ` is its checkbox focused, as Up and Down leave it (`load` focuses it)
       const onCheckbox = it.todo && !it.numbered && o.sel.anchor === 0 && o.sel.head === 0;
-      if ((Math.min(o.sel.anchor, o.sel.head) < it.prefix && !onCheckbox) || (it.code && Math.max(o.sel.anchor, o.sel.head) > b.length - it.prefix)) return "caret in a number, a task's checkbox, a heading's # or a code block's fences";
+      if (
+        (Math.min(o.sel.anchor, o.sel.head) < it.prefix && !onCheckbox) ||
+        (it.code && Math.max(o.sel.anchor, o.sel.head) > b.length - it.prefix)
+      )
+        return "caret in a number, a task's checkbox, a heading's # or a code block's fences";
       const br = it.code ? -1 : b.indexOf('\n');
-      if (br >= 0 && Math.min(o.sel.anchor, o.sel.head) <= br && Math.max(o.sel.anchor, o.sel.head) > br) return "selection across a node's name and its description, each an editor of its own";
+      if (br >= 0 && Math.min(o.sel.anchor, o.sel.head) <= br && Math.max(o.sel.anchor, o.sel.head) > br)
+        return "selection across a node's name and its description, each an editor of its own";
     }
     // numbering is a parent's: all its children numbered, from 1, or none
     const kids = new Map<number, number[]>();
@@ -249,14 +296,19 @@ export const driver: Driver = {
     });
     for (const list of kids.values()) {
       const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
-      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'list numbered in part, or not from 1';
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1))
+        return 'list numbered in part, or not from 1';
     }
     return undefined;
   },
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => typeof (window as any).bootTest === 'function' && (window as any).appState?.nodeSpace, null, { timeout: 120000 });
+    await page.waitForFunction(
+      () => typeof (window as any).bootTest === 'function' && (window as any).appState?.nodeSpace,
+      null,
+      { timeout: 120000 },
+    );
     const version = await page.evaluate(async (home) => {
       const w = window as any;
       const now = Date.now();
@@ -265,18 +317,50 @@ export const driver: Driver = {
         { id: 'SXS', props: { created: now, name: 'Root node for file:SXS' }, children: [home] },
         { id: home, props: { created: now, name: 'Home', _docType: 'home', _ownerId: 'SXS' }, children: [] },
       ];
-      await w.bootTest({ caseFiles: [{ fileId: 'SXS', storeData: { formatVersion: 1, docs, editors: [], workspaces: {}, lastTxid: 0, lastFbKey: '', optimisticTransIds: [], currentWorkspaceId: 'SXS' } }] }, { openSidebar: false });
+      await w.bootTest(
+        {
+          caseFiles: [
+            {
+              fileId: 'SXS',
+              storeData: {
+                formatVersion: 1,
+                docs,
+                editors: [],
+                workspaces: {},
+                lastTxid: 0,
+                lastFbKey: '',
+                optimisticTransIds: [],
+                currentWorkspaceId: 'SXS',
+              },
+            },
+          ],
+        },
+        { openSidebar: false },
+      );
       // the user `bootTest` makes hasn't been through onboarding, which would take the app to /welcome
       w.appState.nodeSpace.appUser.setOnboardingCompleted(true);
       return document.querySelector('meta[name="ui-version"]')?.getAttribute('content') ?? undefined;
     }, HOME);
-    await page.waitForFunction(() => (window as any).appState.layoutManager.currentPanelUIState?.firstPanel && document.querySelector('[data-editable-wrapper]'), null, { timeout: 30000 });
+    await page.waitForFunction(
+      () =>
+        (window as any).appState.layoutManager.currentPanelUIState?.firstPanel &&
+        document.querySelector('[data-editable-wrapper]'),
+      null,
+      { timeout: 30000 },
+    );
     if (!page.url().startsWith(this.url)) throw new Error(`Tana went to ${page.url()} after booting its test mode`);
     // ready once a key does what it should: Tab indents
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await idle();
       await page.keyboard.press('Tab');
       await idle();
@@ -291,16 +375,28 @@ export const driver: Driver = {
     const o = doc as Outline;
     const items = o.blocks.map((b) => toItem(b.depth, b.text));
     // a caret in the name (its text's offset), or past the first line in the description
-    const local = (p: number, it: (typeof items)[number], b: string): number => (it.description !== undefined && p > b.indexOf('\n') ? p - b.indexOf('\n') - 1 : p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0));
+    const local = (p: number, it: (typeof items)[number], b: string): number =>
+      it.description !== undefined && p > b.indexOf('\n')
+        ? p - b.indexOf('\n') - 1
+        : p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
     // a selection of nodes: the caret at the first one's start, then Escape and Shift+Down (`selectsBlocks`)
     const selected = !o.sel && o.selected?.length ? o.selected : null;
-    const sel = selected ? { block: selected[0]!, anchor: 0, head: 0, inDescription: false, onCheckbox: false } : o.sel && (() => {
-      const b = o.blocks[o.sel!.block]!.text;
-      const it = items[o.sel!.block]!;
-      const inDescription = it.description !== undefined && Math.min(o.sel!.anchor, o.sel!.head) > b.indexOf('\n');
-      const onCheckbox = it.todo && !it.numbered && o.sel!.anchor === 0 && o.sel!.head === 0;
-      return { block: o.sel!.block, anchor: local(o.sel!.anchor, it, b), head: local(o.sel!.head, it, b), inDescription, onCheckbox };
-    })();
+    const sel = selected
+      ? { block: selected[0]!, anchor: 0, head: 0, inDescription: false, onCheckbox: false }
+      : o.sel &&
+        (() => {
+          const b = o.blocks[o.sel!.block]!.text;
+          const it = items[o.sel!.block]!;
+          const inDescription = it.description !== undefined && Math.min(o.sel!.anchor, o.sel!.head) > b.indexOf('\n');
+          const onCheckbox = it.todo && !it.numbered && o.sel!.anchor === 0 && o.sel!.head === 0;
+          return {
+            block: o.sel!.block,
+            anchor: local(o.sel!.anchor, it, b),
+            head: local(o.sel!.head, it, b),
+            inDescription,
+            onCheckbox,
+          };
+        })();
     await page.evaluate(
       async ({ items, sel, home, SECTION, NUMBERED, LANGUAGE, view }) => {
         const w = window as any;
@@ -335,7 +431,15 @@ export const driver: Driver = {
               parent.createMetaNodeIfMissing();
               parent.metaNode.addNewListView('Default');
               const view = parent.metaNode.userOrDefaultView;
-              view.addChild(view.parentFile.nodeFactory.createTupleWithAttr('', '', ns.getNodeIfInMemory(NUMBERED), [view.parentFile.createNodeWithName()], {}));
+              view.addChild(
+                view.parentFile.nodeFactory.createTupleWithAttr(
+                  '',
+                  '',
+                  ns.getNodeIfInMemory(NUMBERED),
+                  [view.parentFile.createNodeWithName()],
+                  {},
+                ),
+              );
             }
             if (it.depth > 0 && chain[it.depth].children.length === 1) parents.push(chain.slice(0, it.depth + 1));
             chain[it.depth + 1] = n;
@@ -365,7 +469,9 @@ export const driver: Driver = {
             panel().setRootNode(root);
             for (let i = 0; i < 300 && panel().rootNode?.id !== root; i++) await sleep(10);
             paths = chains.map((c) => (c.includes(root) ? c.slice(c.indexOf(root)).join('|') : ''));
-            for (const [i, c] of chains.entries()) if (c.includes(root) && c.at(-1) !== root && items[i + 1] && items[i + 1]!.depth > items[i]!.depth) panel().expand(nodes(paths[i]!));
+            for (const [i, c] of chains.entries())
+              if (c.includes(root) && c.at(-1) !== root && items[i + 1] && items[i + 1]!.depth > items[i]!.depth)
+                panel().expand(nodes(paths[i]!));
           }
           for (const i of view.folded) if (paths[i]) panel().collapse(nodes(paths[i]!));
           await w.__ourusIdle.wait({ shortTimer: 300, quiet: 40, timeout: 3000 });
@@ -382,12 +488,18 @@ export const driver: Driver = {
             button.focus();
             await sleep(10);
           }
-          if (document.activeElement !== button) throw new Error(`the to-do's checkbox didn't take the focus (focus: ${document.activeElement?.parentElement?.id})`);
+          if (document.activeElement !== button)
+            throw new Error(
+              `the to-do's checkbox didn't take the focus (focus: ${document.activeElement?.parentElement?.id})`,
+            );
           return;
         }
         // the name's editor, or the description's (`<path>|description`)
-        const wrapper = document.getElementById(sel.inDescription ? `${paths[sel.block]}|description` : paths[sel.block]!);
-        if (!wrapper) throw new Error(`no editor for ${sel.inDescription ? 'the description of ' : ''}node ${sel.block}`);
+        const wrapper = document.getElementById(
+          sel.inDescription ? `${paths[sel.block]}|description` : paths[sel.block]!,
+        );
+        if (!wrapper)
+          throw new Error(`no editor for ${sel.inDescription ? 'the description of ' : ''}node ${sel.block}`);
         const span = wrapper.querySelector('.editable') as HTMLElement;
         // a point at a plain-text offset in the span
         const point = (off: number): [Node, number] => {
@@ -411,11 +523,14 @@ export const driver: Driver = {
             r.setEnd(n, o);
             return r.toString().length;
           };
-          return offset(s.anchorNode!, s.anchorOffset) === sel.anchor && offset(s.focusNode!, s.focusOffset) === sel.head;
+          return (
+            offset(s.anchorNode!, s.anchorOffset) === sel.anchor && offset(s.focusNode!, s.focusOffset) === sel.head
+          );
         };
         const place = async () => {
           for (let i = 0; i < 200 && !placed(); i++) {
-            if (document.activeElement === span) getSelection()!.setBaseAndExtent(...point(sel.anchor), ...point(sel.head));
+            if (document.activeElement === span)
+              getSelection()!.setBaseAndExtent(...point(sel.anchor), ...point(sel.head));
             await sleep(10);
           }
         };
@@ -454,7 +569,16 @@ export const driver: Driver = {
         const markdown = (root: Node): { text: string; at: number[] } => {
           let text = '';
           const at: number[] = [];
-          const marks: Record<string, string> = { B: '**', STRONG: '**', I: '*', EM: '*', CODE: '`', S: '~~', STRIKE: '~~', DEL: '~~' };
+          const marks: Record<string, string> = {
+            B: '**',
+            STRONG: '**',
+            I: '*',
+            EM: '*',
+            CODE: '`',
+            S: '~~',
+            STRIKE: '~~',
+            DEL: '~~',
+          };
           const walk = (n: Node) => {
             if (n.nodeType === Node.TEXT_NODE) {
               // a no-break space is how an editable span keeps a space visible at its end
@@ -481,7 +605,10 @@ export const driver: Driver = {
         const active = document.activeElement as HTMLElement | null;
         const span = active?.classList.contains('editable') ? active : null;
         // a to-do's checkbox, which Up and Down go to on their way into its node (`<path>|donecheck`)
-        const checkbox = active?.tagName === 'BUTTON' && active.parentElement?.id.endsWith('|donecheck') ? active.parentElement.id.slice(0, -'|donecheck'.length) : null;
+        const checkbox =
+          active?.tagName === 'BUTTON' && active.parentElement?.id.endsWith('|donecheck')
+            ? active.parentElement.id.slice(0, -'|donecheck'.length)
+            : null;
         // a description's editor is `<path>|description`, beside its name's
         const editorId = checkbox ?? span?.closest('[data-editable-wrapper]')?.id ?? '';
         const inDescription = !checkbox && editorId.endsWith('|description');
@@ -491,7 +618,22 @@ export const driver: Driver = {
         // none of them)
         // (zoomed, paths start at the zoom root, the panel's title its own node's editor)
         const focused = path ? path.slice(path.lastIndexOf('|') + 1) : null;
-        const flat: { depth: number; content: string; todo: boolean; done: boolean; section: boolean; numbered: boolean; number: number | null; code: boolean; language?: string; description?: string; id: string; at: number[]; descAt?: number[]; chain: string[] }[] = [];
+        const flat: {
+          depth: number;
+          content: string;
+          todo: boolean;
+          done: boolean;
+          section: boolean;
+          numbered: boolean;
+          number: number | null;
+          code: boolean;
+          language?: string;
+          description?: string;
+          id: string;
+          at: number[];
+          descAt?: number[];
+          chain: string[];
+        }[] = [];
         const chain: string[] = [docId];
         const walk = (node: any, depth: number) => {
           const numbered = !!(node.hasView && node.metaNode.userOrDefaultView?.tupleNodeMap.get(NUMBERED));
@@ -502,14 +644,32 @@ export const driver: Driver = {
             // the node being edited from its editor, ahead of the model, which follows its input; a code
             // block's code as it is (its editor's markup is highlighting)
             const root = c.id === focused && span && !inDescription ? span : parsed(c.name ?? '');
-            const { text, at } = c.isCodeBlock ? { text: root.textContent ?? '', at: [...Array((root.textContent ?? '').length + 1).keys()] } : markdown(root);
-            const language: string | undefined = c.isCodeBlock ? c.tupleNodeMap.get(LANGUAGE)?.tupleValue?.name : undefined;
+            const { text, at } = c.isCodeBlock
+              ? { text: root.textContent ?? '', at: [...Array((root.textContent ?? '').length + 1).keys()] }
+              : markdown(root);
+            const language: string | undefined = c.isCodeBlock
+              ? c.tupleNodeMap.get(LANGUAGE)?.tupleValue?.name
+              : undefined;
             // its description, the lines after its name: one being edited, empty or not, from its editor
             const editing = c.id === focused && inDescription;
             const desc = editing ? markdown(span!) : c.description ? markdown(parsed(c.description)) : null;
             chain.length = depth + 1;
             chain.push(c.id);
-            flat.push({ depth, content: text, todo: !!c.hasOwnDoneStateAsCheckboxSetting, done: !!c.isDone, section: ((c.getOwnNodeFlags?.() ?? 0) & SECTION) !== 0, numbered, number: numbered ? k + 1 : null, code: !!c.isCodeBlock, ...(language && { language }), ...(desc && { description: desc.text, descAt: desc.at }), id: c.id, at, chain: [...chain] });
+            flat.push({
+              depth,
+              content: text,
+              todo: !!c.hasOwnDoneStateAsCheckboxSetting,
+              done: !!c.isDone,
+              section: ((c.getOwnNodeFlags?.() ?? 0) & SECTION) !== 0,
+              numbered,
+              number: numbered ? k + 1 : null,
+              code: !!c.isCodeBlock,
+              ...(language && { language }),
+              ...(desc && { description: desc.text, descAt: desc.at }),
+              id: c.id,
+              at,
+              chain: [...chain],
+            });
             walk(c, depth + 1);
           }
         };
@@ -528,7 +688,9 @@ export const driver: Driver = {
             r.setEnd(n, o);
             const k = r.toString().length;
             // in the description: past the name and its line break (-2: the read adds the name's length)
-            return inDescription ? -2 - ((f.descAt ?? [])[k] ?? (f.description ?? '').length) : (f.at[k] ?? f.content.length);
+            return inDescription
+              ? -2 - ((f.descAt ?? [])[k] ?? (f.description ?? '').length)
+              : (f.at[k] ?? f.content.length);
           };
           sel = { block, anchor: offset(s.anchorNode!, s.anchorOffset), head: offset(s.focusNode!, s.focusOffset) };
         }
@@ -538,10 +700,11 @@ export const driver: Driver = {
         const selectedIds: string[] = (panel?.selectedNodes ?? []).map((n: any) => n?.id ?? n);
         const all = new Set(selectedIds.map((id) => flat.findIndex((f) => f.id === id)).filter((i) => i >= 0));
         const under = (i: number): boolean => {
-          for (let j = i - 1, d = flat[i]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d) {
-            if (all.has(j)) return true;
-            d = flat[j]!.depth;
-          }
+          for (let j = i - 1, d = flat[i]!.depth; j >= 0 && d > 0; j--)
+            if (flat[j]!.depth < d) {
+              if (all.has(j)) return true;
+              d = flat[j]!.depth;
+            }
           return false;
         };
         const selected = [...all].filter((i) => !under(i)).sort((a, b) => a - b);
@@ -549,8 +712,19 @@ export const driver: Driver = {
         // with children not expanded, by its path from the panel's root (from the test's own where outside it)
         const root: string | undefined = panel?.rootNode?.id;
         const zoom = flat.findIndex((f) => f.id === root);
-        const pathOf = (f: (typeof flat)[number]): string[] => (root && f.chain.includes(root) ? f.chain.slice(f.chain.indexOf(root)) : f.chain);
-        const view = viewed ? { folded: flat.flatMap((f, k) => ((flat[k + 1]?.depth ?? -1) > f.depth && !panel.isExpanded(pathOf(f).map((id) => ns.getNodeOrPlaceholder(id))) ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+        const pathOf = (f: (typeof flat)[number]): string[] =>
+          root && f.chain.includes(root) ? f.chain.slice(f.chain.indexOf(root)) : f.chain;
+        const view = viewed
+          ? {
+              folded: flat.flatMap((f, k) =>
+                (flat[k + 1]?.depth ?? -1) > f.depth &&
+                !panel.isExpanded(pathOf(f).map((id) => ns.getNodeOrPlaceholder(id)))
+                  ? [k]
+                  : [],
+              ),
+              zoom: zoom >= 0 ? zoom : null,
+            }
+          : undefined;
         return { flat, sel: selected.length ? null : sel, selected, view };
       },
       { SECTION, NUMBERED, LANGUAGE, viewed: viewed(page).on },
@@ -562,8 +736,10 @@ export const driver: Driver = {
       const { prefix, cut } = texts[raw.sel.block]!;
       // -1: on the checkbox, before the to-do's `[ ] `; -2 - k: k into the description, after the name's line
       const name = raw.flat[raw.sel.block]!;
-      const nameEnd = texts[raw.sel.block]!.text.length - (name.description !== undefined ? name.description.length + 1 : 0);
-      const at = (p: number): number => (p <= -2 ? nameEnd + 1 + (-2 - p) : p < 0 ? 0 : prefix + p + (cut !== undefined && p > cut ? 1 : 0));
+      const nameEnd =
+        texts[raw.sel.block]!.text.length - (name.description !== undefined ? name.description.length + 1 : 0);
+      const at = (p: number): number =>
+        p <= -2 ? nameEnd + 1 + (-2 - p) : p < 0 ? 0 : prefix + p + (cut !== undefined && p > cut ? 1 : 0);
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
     return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
@@ -623,45 +799,55 @@ async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promis
   // over the rows, the node's name and when it was edited)
   await page.mouse.move(1, 1);
   await settle();
-  const at = await page.evaluate(({ press, rows, seam, to }) => {
-    const w = window as any;
-    const ns = w.appState.nodeSpace;
-    // the blocks as `read` has them: each node's path in the panel, its parent's block
-    const flat: { path: string; parent: number | 'root' }[] = [];
-    const walk = (node: any, path: string, parent: number | 'root') => {
-      for (const c of node.children.filter((c: any) => !c.isTuple)) {
-        const k = flat.push({ path: `${path}|${c.id}`, parent }) - 1;
-        walk(c, `${path}|${c.id}`, k);
-      }
-    };
-    walk(ns.getNodeOrPlaceholder(w.__ourusTana), w.__ourusTana, 'root');
-    // a node's element (the drop target), its row the first child
-    const element = (i: number): HTMLElement | null => document.getElementById(flat[i]!.path)?.closest('[data-containing-block]') ?? null;
-    const centre = (e: Element) => {
-      const r = e.getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    };
-    const pressed = element(press ?? rows[0]!)?.firstElementChild?.querySelector('.bulletSide');
-    if (!pressed) return 'the pressed node has no bullet on screen';
-    // the parent's children, those in flight taken out
-    const kids = flat.flatMap((f, i) => (f.parent === to.parent && !rows.includes(i) ? [i] : []));
-    const next = kids[to.after === null ? 0 : kids.indexOf(to.after) + 1];
-    const [target, before] = next !== undefined && (next === seam.below || to.after === null) ? [next, true] : to.after !== null ? [to.after, false] : [null, false];
-    if (target === null) return 'a place inside a node with no children: Tana drops before or after a node';
-    const el = element(target)!;
-    const r = el.getBoundingClientRect();
-    const row = el.firstElementChild!.getBoundingClientRect();
-    const x = centre(el.firstElementChild!.querySelector('.bulletSide')!).x;
-    // a quarter of the row in from the element's edge, else nearer its middle, at its own; in the
-    // bullet's column, else further right (a selection's toolbar, under it once the mouse passed over
-    // it, hides the row below's left)
-    for (const at of [x, row.right - 40])
-      for (let d = row.height / 4; d < r.height / 2; d += 2) {
-        const y = before ? r.top + d : r.bottom - d;
-        if (document.elementFromPoint(at, y)?.closest('[data-containing-block]') === el) return { from: centre(pressed), to: { x: at, y } };
-      }
-    return `no point of the ${before ? 'top' : 'bottom'} half of the node's element that is its own`;
-  }, { press: drop.press, rows: drop.rows, seam: drop.seam, to: drop.to });
+  const at = await page.evaluate(
+    ({ press, rows, seam, to }) => {
+      const w = window as any;
+      const ns = w.appState.nodeSpace;
+      // the blocks as `read` has them: each node's path in the panel, its parent's block
+      const flat: { path: string; parent: number | 'root' }[] = [];
+      const walk = (node: any, path: string, parent: number | 'root') => {
+        for (const c of node.children.filter((c: any) => !c.isTuple)) {
+          const k = flat.push({ path: `${path}|${c.id}`, parent }) - 1;
+          walk(c, `${path}|${c.id}`, k);
+        }
+      };
+      walk(ns.getNodeOrPlaceholder(w.__ourusTana), w.__ourusTana, 'root');
+      // a node's element (the drop target), its row the first child
+      const element = (i: number): HTMLElement | null =>
+        document.getElementById(flat[i]!.path)?.closest('[data-containing-block]') ?? null;
+      const centre = (e: Element) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      };
+      const pressed = element(press ?? rows[0]!)?.firstElementChild?.querySelector('.bulletSide');
+      if (!pressed) return 'the pressed node has no bullet on screen';
+      // the parent's children, those in flight taken out
+      const kids = flat.flatMap((f, i) => (f.parent === to.parent && !rows.includes(i) ? [i] : []));
+      const next = kids[to.after === null ? 0 : kids.indexOf(to.after) + 1];
+      const [target, before] =
+        next !== undefined && (next === seam.below || to.after === null)
+          ? [next, true]
+          : to.after !== null
+            ? [to.after, false]
+            : [null, false];
+      if (target === null) return 'a place inside a node with no children: Tana drops before or after a node';
+      const el = element(target)!;
+      const r = el.getBoundingClientRect();
+      const row = el.firstElementChild!.getBoundingClientRect();
+      const x = centre(el.firstElementChild!.querySelector('.bulletSide')!).x;
+      // a quarter of the row in from the element's edge, else nearer its middle, at its own; in the
+      // bullet's column, else further right (a selection's toolbar, under it once the mouse passed over
+      // it, hides the row below's left)
+      for (const at of [x, row.right - 40])
+        for (let d = row.height / 4; d < r.height / 2; d += 2) {
+          const y = before ? r.top + d : r.bottom - d;
+          if (document.elementFromPoint(at, y)?.closest('[data-containing-block]') === el)
+            return { from: centre(pressed), to: { x: at, y } };
+        }
+      return `no point of the ${before ? 'top' : 'bottom'} half of the node's element that is its own`;
+    },
+    { press: drop.press, rows: drop.rows, seam: drop.seam, to: drop.to },
+  );
   if (typeof at === 'string') throw new Unsupported(at);
   await gesture(page, at.from, at.to, settle);
 }

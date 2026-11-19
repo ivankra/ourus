@@ -4,7 +4,18 @@
 // anything. A host corrects a stray block id with them (attaching it: removed, then added on the
 // node); its menu of corrections is its own. And the block ids a paste keeps: only the new ones.
 
-import { OurusProse, blockIdTargetOf, blockIdsOf, closingFrameStart, isBlockIdName, withoutBlockIds, type BlockId, type OurusDoc, type OurusNode, nameOf } from '../doc/index.ts';
+import {
+  OurusProse,
+  blockIdTargetOf,
+  blockIdsOf,
+  closingFrameStart,
+  isBlockIdName,
+  withoutBlockIds,
+  type BlockId,
+  type OurusDoc,
+  type OurusNode,
+  nameOf,
+} from '../doc/index.ts';
 import type { OurusView } from '../view/index.ts';
 import { trimMd } from '../text/index.ts';
 import { OurusDraft } from '../writer/index.ts';
@@ -17,14 +28,18 @@ function nodeAt(view: OurusView, pos: number): OurusNode | null {
   const at = view.locate(pos);
   if (at.zone === 'gap') return at.owner;
   // (past the final line break: the last node, whose gap that is, as the nodes acted on are found)
-  if (at.zone === 'none' && pos === view.doc.text.length && view.doc.rootNode.lastDescendant !== view.doc.rootNode) return view.doc.rootNode.lastDescendant;
+  if (at.zone === 'none' && pos === view.doc.text.length && view.doc.rootNode.lastDescendant !== view.doc.rootNode)
+    return view.doc.rootNode.lastDescendant;
   return 'node' in at ? at.node : null;
 }
 
 /** The block id a link to `node` uses: the one not shadowed whose target is what a block id on `node` names. */
 function blockIdNaming(doc: OurusDoc, node: OurusNode): BlockId | null {
   const target = blockIdTargetOf(node);
-  return (target && doc.blockIds().find((b) => !b.shadowed && b.target && 'id' in b.target && b.target.id === target.id)) ?? null;
+  return (
+    (target && doc.blockIds().find((b) => !b.shadowed && b.target && 'id' in b.target && b.target.id === target.id)) ??
+    null
+  );
 }
 
 /** A name for a new block id: six random letters and digits, as Obsidian makes them, none the note has. */
@@ -43,7 +58,11 @@ function madeUpName(doc: OurusDoc): string {
  * a second is written too, the first kept: which counts, or whether a block has two, is the host's to
  * decide, as whether a name is unique (a made-up one is new).
  */
-export function addBlockIdCommand(ctx: CommandContext, name: string | undefined, id: number | undefined): OurusResult | null {
+export function addBlockIdCommand(
+  ctx: CommandContext,
+  name: string | undefined,
+  id: number | undefined,
+): OurusResult | null {
   const doc = ctx.doc;
   const view = ctx.view;
   if (!doc.mdTree.flavor.has('blockIds')) return new OurusRejected('not-expressible', 'the flavor has no block ids');
@@ -52,8 +71,10 @@ export function addBlockIdCommand(ctx: CommandContext, name: string | undefined,
   const target = node && blockIdTargetOf(node);
   if (!target) return new OurusRejected('block-id', 'no node at the selection a block id can name');
   // (a paragraph that is only a block id is one: another on it would make it text)
-  if (doc.blockIds().some((b) => b.owner === target && b.stray)) return new OurusRejected('block-id', 'it is a block id itself');
-  if (name !== undefined && !isBlockIdName(name)) return new OurusRejected('block-id', `"${name}" is no block id's name: letters, digits and dashes`);
+  if (doc.blockIds().some((b) => b.owner === target && b.stray))
+    return new OurusRejected('block-id', 'it is a block id itself');
+  if (name !== undefined && !isBlockIdName(name))
+    return new OurusRejected('block-id', `"${name}" is no block id's name: letters, digits and dashes`);
   const named = name ?? madeUpName(doc);
   const draft = ctx.draft();
   const on = writeBlockId(doc, draft, target, named);
@@ -62,10 +83,19 @@ export function addBlockIdCommand(ctx: CommandContext, name: string | undefined,
   keepCaret(ctx, draft, on, id !== undefined ? 'after' : 'kept');
   const result = ctx.apply(draft);
   // (a block with no form a block id is written in here, a footnote's: not written)
-  if (result instanceof OurusFailed) return new OurusRejected('not-expressible', `a block id can't be written on the ${nameOf(target)} here`);
+  if (result instanceof OurusFailed)
+    return new OurusRejected('not-expressible', `a block id can't be written on the ${nameOf(target)} here`);
   if (!(result instanceof OurusSuccess)) return result;
-  const written = result.view.doc.blockIds().find((b) => b.name === named && !!b.target && 'id' in b.target && b.target.id === target.id);
-  return written ? result : new OurusFailed({ phase: 'command', code: 'block-id-unwritten', detail: `^${named}, written, doesn't name node ${target.id}` });
+  const written = result.view.doc
+    .blockIds()
+    .find((b) => b.name === named && !!b.target && 'id' in b.target && b.target.id === target.id);
+  return written
+    ? result
+    : new OurusFailed({
+        phase: 'command',
+        code: 'block-id-unwritten',
+        detail: `^${named}, written, doesn't name node ${target.id}`,
+      });
 }
 
 /**
@@ -90,9 +120,11 @@ function writeBlockId(doc: OurusDoc, draft: OurusDraft, target: OurusNode, name:
   if (text instanceof OurusProse) {
     const end = closingFrameStart(text);
     const before = text.text.slice(0, end);
-    const written = target.kind === 'quote' ? `\n^${name}` : before === '' || /[ \t]$/.test(before) ? `^${name}` : ` ^${name}`;
+    const written =
+      target.kind === 'quote' ? `\n^${name}` : before === '' || /[ \t]$/.test(before) ? `^${name}` : ` ^${name}`;
     draft.setText(on, text.splice(end, end, written));
-  } else if (text.type === 'blockquote') draft.setText(on, text.splice(text.text.length, text.text.length, `\n^${name}`));
+  } else if (text.type === 'blockquote')
+    draft.setText(on, text.splice(text.text.length, text.text.length, `\n^${name}`));
   else draft.setText(on, text.withBlockIdLines([...text.blockIdLines, { blankLines: 1, line: `^${name}` }]));
   return on;
 }
@@ -101,18 +133,36 @@ function writeBlockId(doc: OurusDoc, draft: OurusDraft, target: OurusNode, name:
  * The caret after an edit of `node`'s block ids: `after` the block id written (the text's end);
  * `kept` where it was, in `node`'s text (clamped to it), or elsewhere as it was.
  */
-function keepCaret(ctx: CommandContext, draft: OurusDraft, node: OurusNode, where: 'after' | 'kept', removed?: { readonly from: number; readonly to: number }): void {
+function keepCaret(
+  ctx: CommandContext,
+  draft: OurusDraft,
+  node: OurusNode,
+  where: 'after' | 'kept',
+  removed?: { readonly from: number; readonly to: number },
+): void {
   const text = draft.touched(node.id).text!;
   const end = text.text.length;
   const at = ctx.view.locate(ctx.selection.head);
   // (past what was removed from the string, moved back by it; in it, where it was)
-  const mapped = (offset: number): number => (!removed || offset <= removed.from ? offset : offset >= removed.to ? offset - (removed.to - removed.from) : removed.from);
+  const mapped = (offset: number): number =>
+    !removed || offset <= removed.from
+      ? offset
+      : offset >= removed.to
+        ? offset - (removed.to - removed.from)
+        : removed.from;
   if (where === 'after') draft.setCaret(node, end, -1);
-  else if ((at.zone === 'text' || at.zone === 'frame') && at.node === node) draft.setCaret(node, Math.min(mapped(at.offset), end), -1);
-  else if (at.zone === 'blockIdLine' && at.node === node) draft.setCaret(node, text instanceof OurusProse ? closingFrameStart(text) : end, -1);
+  else if ((at.zone === 'text' || at.zone === 'frame') && at.node === node)
+    draft.setCaret(node, Math.min(mapped(at.offset), end), -1);
+  else if (at.zone === 'blockIdLine' && at.node === node)
+    draft.setCaret(node, text instanceof OurusProse ? closingFrameStart(text) : end, -1);
   // (in a marker or a prefix on the node's first line, its own or a container's on it: at its text's
   // start, the line written again, where it was a place no longer)
-  else if ((at.zone === 'marker' || at.zone === 'prefix') && 'node' in at && (at.node === node || at.node.startLine === node.startLine)) draft.setCaret(node, text instanceof OurusProse ? text.textStart(0) : 0, 1);
+  else if (
+    (at.zone === 'marker' || at.zone === 'prefix') &&
+    'node' in at &&
+    (at.node === node || at.node.startLine === node.startLine)
+  )
+    draft.setCaret(node, text instanceof OurusProse ? text.textStart(0) : 0, 1);
   else draft.setCaretAt(ctx.selection.head);
 }
 
@@ -122,31 +172,47 @@ function keepCaret(ctx: CommandContext, draft: OurusDraft, node: OurusNode, wher
  * a block inside an item, the item's). Only the block id goes: ` ^id` off its text, its line with the
  * blank lines it would leave doubled, a stray one's paragraph.
  */
-export function removeBlockIdCommand(ctx: CommandContext, name: string | undefined, node: number | undefined): OurusResult | null {
+export function removeBlockIdCommand(
+  ctx: CommandContext,
+  name: string | undefined,
+  node: number | undefined,
+): OurusResult | null {
   const doc = ctx.doc;
   const view = ctx.view;
   let b: BlockId | null;
   if (name !== undefined) {
     const named = doc.blockIds().filter((x) => x.name === name && (node === undefined || x.owner.id === node));
-    if (named.length > 1) return new OurusRejected('block-id', `the note has ^${name} ${named.length} times: say which by its node`);
+    if (named.length > 1)
+      return new OurusRejected('block-id', `the note has ^${name} ${named.length} times: say which by its node`);
     b = named[0] ?? null;
   } else {
     const at = node !== undefined ? (doc.node(node) ?? null) : nodeAt(view, ctx.selection.head);
     if (node !== undefined && !at) return new OurusRejected('no-such-node', `no node ${node}`);
     b = at ? blockIdNaming(doc, at) : null;
   }
-  if (!b) return new OurusRejected('block-id', name !== undefined ? `no block id ^${name}${node !== undefined ? ` on node ${node}` : ''}` : 'no block id names the node at the selection');
+  if (!b)
+    return new OurusRejected(
+      'block-id',
+      name !== undefined
+        ? `no block id ^${name}${node !== undefined ? ` on node ${node}` : ''}`
+        : 'no block id names the node at the selection',
+    );
   const removed = b;
   const draft = ctx.draft();
   const owner = removeBlockIds(doc, draft, [removed]);
   // (the part of its owner's string it took, where it was in it)
-  const part = owner && !removed.carried ? blockIdsOf(doc.textOf(owner)!).find((b) => !b.carried && doc.posOf(owner, b.from) === removed.from) : undefined;
-  if (owner) keepCaret(ctx, draft, owner, 'kept', part && !part.carried ? { from: part.partFrom, to: part.partTo } : undefined);
+  const part =
+    owner && !removed.carried
+      ? blockIdsOf(doc.textOf(owner)!).find((b) => !b.carried && doc.posOf(owner, b.from) === removed.from)
+      : undefined;
+  if (owner)
+    keepCaret(ctx, draft, owner, 'kept', part && !part.carried ? { from: part.partFrom, to: part.partTo } : undefined);
   else draft.setCaretAt(ctx.selection.head);
   const result = ctx.apply(draft);
   if (!(result instanceof OurusSuccess)) return result;
   // (its text holding the name again before it, which then ends it: refused, not half done)
-  if (result.view.doc.blockIds().some((x) => x.name === removed.name && x.owner.id === removed.owner.id)) return new OurusRejected('block-id', `the text has ^${removed.name} again, which would end it then`);
+  if (result.view.doc.blockIds().some((x) => x.name === removed.name && x.owner.id === removed.owner.id))
+    return new OurusRejected('block-id', `the text has ^${removed.name} again, which would end it then`);
   return result;
 }
 
@@ -160,7 +226,10 @@ function removeBlockIds(doc: OurusDoc, draft: OurusDraft, ids: readonly BlockId[
   // twice goes, the other stays)
   const byOwner = new Map<OurusNode, Set<number>>();
   for (const b of ids) {
-    const k = doc.blockIds().filter((x) => x.owner === b.owner).indexOf(b);
+    const k = doc
+      .blockIds()
+      .filter((x) => x.owner === b.owner)
+      .indexOf(b);
     (byOwner.get(b.owner) ?? byOwner.set(b.owner, new Set()).get(b.owner)!).add(k);
   }
   let last: OurusNode | null = null;
@@ -168,7 +237,12 @@ function removeBlockIds(doc: OurusDoc, draft: OurusDraft, ids: readonly BlockId[
     const text = doc.textOf(owner)!;
     const left = withoutBlockIds(text, which);
     // (a paragraph that was only the block id: no node left)
-    if (owner.kind === 'paragraph' && left instanceof OurusProse && trimMd(left.text) === '' && !left.blockIdLines.length) {
+    if (
+      owner.kind === 'paragraph' &&
+      left instanceof OurusProse &&
+      trimMd(left.text) === '' &&
+      !left.blockIdLines.length
+    ) {
       if (owner.children.length) draft.dissolve(owner);
       else draft.remove([owner]);
       continue;

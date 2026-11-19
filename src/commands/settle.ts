@@ -14,13 +14,19 @@ import { settleSteps } from '../writer/index.ts';
  * settles as the selection moves. An empty zoom root stays while the zoom holds it: settled away, the view would go
  * to its parent with the caret outside it. No fold opens, a hidden node written again or not.
  */
-export function settlePlaceholders(view: OurusView): { readonly view: OurusView; readonly changes: readonly ChangeSpec[] } | null {
+export function settlePlaceholders(
+  view: OurusView,
+): { readonly view: OurusView; readonly changes: readonly ChangeSpec[] } | null {
   const doc = view.doc;
   const given = view.selection;
   const root = view.zoomRoot;
   const text = root && doc.textOf(root);
   const zoomedEmpty = text instanceof OurusProse && text.empty;
-  const steps = settleSteps(doc, given, zoomedEmpty ? (pos) => doc.nodeAtLine(doc.lineAt(pos).index)?.id === root!.id : undefined);
+  const steps = settleSteps(
+    doc,
+    given,
+    zoomedEmpty ? (pos) => doc.nodeAtLine(doc.lineAt(pos).index)?.id === root!.id : undefined,
+  );
   if (!steps.length) return null;
   let after = view;
   let changes: readonly ChangeSpec[] = [];

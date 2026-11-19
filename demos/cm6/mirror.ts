@@ -36,7 +36,8 @@ interface Spot {
 /** A whitespace-only text node is shown between inline neighbours, and in preformatted text. */
 function shown(t: Text): boolean {
   if (/\S/.test(t.data) || t.parentElement?.closest('pre')) return true;
-  const inline = (n: Node | null) => n instanceof Text || (n instanceof Element && getComputedStyle(n).display.startsWith('inline'));
+  const inline = (n: Node | null) =>
+    n instanceof Text || (n instanceof Element && getComputedStyle(n).display.startsWith('inline'));
   return inline(t.previousSibling) && inline(t.nextSibling);
 }
 
@@ -68,7 +69,8 @@ function alignFirst(a: string, b: string, limit: number): Int32Array | null {
   let found = -1;
   for (let d = 0; d <= limit && found < 0; d++) {
     for (let k = -d; k <= d; k += 2) {
-      let x = k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!) ? v[offset + k + 1]! : v[offset + k - 1]! + 1;
+      let x =
+        k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!) ? v[offset + k + 1]! : v[offset + k - 1]! + 1;
       let y = x - k;
       while (x < n && y < m && a[x] === b[y]) x++, y++;
       v[offset + k] = x;
@@ -173,10 +175,19 @@ export class Mirror {
     };
     for (const range of this.view.state.selection.ranges) {
       if (!range.empty) {
-        for (const r of this.rects(this.spot(range.from), this.spot(range.to))) mark(this.selections, 'mirror-selection', r.left, r.top, r.width, r.height);
+        for (const r of this.rects(this.spot(range.from), this.spot(range.to)))
+          mark(this.selections, 'mirror-selection', r.left, r.top, r.width, r.height);
       }
       const caret = this.caret(this.spot(range.head));
-      if (caret) mark(this.cursors, range === this.view.state.selection.main ? 'mirror-cursor mirror-cursor-primary' : 'mirror-cursor', caret.x, caret.top, 0, caret.height);
+      if (caret)
+        mark(
+          this.cursors,
+          range === this.view.state.selection.main ? 'mirror-cursor mirror-cursor-primary' : 'mirror-cursor',
+          caret.x,
+          caret.top,
+          0,
+          caret.height,
+        );
     }
     // the same blink as the editor's caret, which restarts it on every change of selection
     const theirs = this.view.scrollDOM.querySelector<HTMLElement>('.cm-cursorLayer');
@@ -228,7 +239,8 @@ export class Mirror {
     const bottom = top + this.pane.clientHeight;
     const margin = Math.min(caret.height, this.pane.clientHeight / 4);
     if (caret.top < top + margin) this.pane.scrollTop = Math.max(0, this.pane.scrollTop + caret.top - top - margin);
-    else if (caret.top + caret.height > bottom - margin) this.pane.scrollTop += caret.top + caret.height - bottom + margin;
+    else if (caret.top + caret.height > bottom - margin)
+      this.pane.scrollTop += caret.top + caret.height - bottom + margin;
   }
 
   /** Where a source position falls in the pane's text. */
@@ -245,7 +257,11 @@ export class Mirror {
     // a line of markup alone: the empty block it makes, by its count among such lines between the text around
     const lineStart = this.source.lastIndexOf('\n', pos - 1) + 1;
     const lineEnd = this.source.indexOf('\n', pos);
-    if (lineStart > before && (lineEnd < 0 ? after === match.length : after >= lineEnd) && this.source.slice(lineStart, lineEnd < 0 ? undefined : lineEnd).trim()) {
+    if (
+      lineStart > before &&
+      (lineEnd < 0 ? after === match.length : after >= lineEnd) &&
+      this.source.slice(lineStart, lineEnd < 0 ? undefined : lineEnd).trim()
+    ) {
       const lo = before >= 0 ? match[before]! + 1 : 0;
       const hi = after < match.length ? match[after]! : this.text.length;
       const empties = this.items.filter((item) => item.empty && item.start >= lo && item.start < hi);

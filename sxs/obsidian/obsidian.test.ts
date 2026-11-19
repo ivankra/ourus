@@ -55,7 +55,16 @@ test('read back, a tab with no item to go into, or in a mix, is two spaces', () 
 });
 
 test('spaces to tabs and back is where it started', () => {
-  for (const drawn of ['- a\n  - b┃\n    - c\n', '1. a\n   b┃\n', '- «x\n      y»\n', '┃\n  \n', '9. a┃\n   - x\n10. b\n    - y\n', '- a\n  ```\n  co┃de\n\n      y\n  ```\n', '- a\n    * x\n- b┃\n']) assert.equal(spaces(tabs(drawn)), drawn);
+  for (const drawn of [
+    '- a\n  - b┃\n    - c\n',
+    '1. a\n   b┃\n',
+    '- «x\n      y»\n',
+    '┃\n  \n',
+    '9. a┃\n   - x\n10. b\n    - y\n',
+    '- a\n  ```\n  co┃de\n\n      y\n  ```\n',
+    '- a\n    * x\n- b┃\n',
+  ])
+    assert.equal(spaces(tabs(drawn)), drawn);
 });
 
 test('a document indented with tabs already is taken as written', () => {

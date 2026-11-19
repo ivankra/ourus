@@ -213,7 +213,12 @@ export interface Driver {
    * process), a `session` the runner plays it through. `headed` asks for it to be shown. Where it waits
    * for room (the pool, full), null once `gone` says the worker is no longer wanted.
    */
-  launch?(opts: { headed: boolean; fresh: boolean; say: (line: string) => void; gone?: () => boolean }): Promise<AppPage | null>;
+  launch?(opts: {
+    headed: boolean;
+    fresh: boolean;
+    say: (line: string) => void;
+    gone?: () => boolean;
+  }): Promise<AppPage | null>;
   /**
    * Loads the app in `page` (already pointed at nothing, or a window `launch` started, to be reloaded
    * so that the runner's init script runs) and makes it ready; returns its version, if known.

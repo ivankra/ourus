@@ -55,7 +55,8 @@ export function continuationAsWas(old: string, origin: OurusNode, line: MdLine):
       flush();
       const marker = old.slice(p.from, p.to);
       const next = pieces[k + 1];
-      const spaced = !!next && next.container.block.type !== 'blockquote' && next.toColumn > next.fromColumn && marker.endsWith('>');
+      const spaced =
+        !!next && next.container.block.type !== 'blockquote' && next.toColumn > next.fromColumn && marker.endsWith('>');
       // (its space a column of a tab it took part of, `>→`: written as the space, its column counted)
       const partial = p.partialTab && marker.endsWith('>');
       out += spaced || partial ? marker + ' ' : marker;
@@ -63,7 +64,10 @@ export function continuationAsWas(old: string, origin: OurusNode, line: MdLine):
       return;
     }
     // (a footnote's label: its later lines four columns in, as the definition reads them)
-    const width = p.kind === 'footnote' ? 4 : (own && p.container.block === own ? own.attrs.contentColumn! : p.toColumn) - p.fromColumn;
+    const width =
+      p.kind === 'footnote'
+        ? 4
+        : (own && p.container.block === own ? own.attrs.contentColumn! : p.toColumn) - p.fromColumn;
     column += width;
     run += width;
   });
@@ -74,7 +78,9 @@ export function continuationAsWas(old: string, origin: OurusNode, line: MdLine):
 /** The marker `place` gives an item whose marker was `was`: its number as written where it is the one it had (`007.`). */
 export function markerOf(place: ListPlace, was: string): string {
   if (place.type === 'bullet') return place.marker;
-  return /^\d+/.test(was) && parseInt(was, 10) === place.number && was.endsWith(place.marker) ? was : `${place.number}${place.marker}`;
+  return /^\d+/.test(was) && parseInt(was, 10) === place.number && was.endsWith(place.marker)
+    ? was
+    : `${place.number}${place.marker}`;
 }
 
 /** Whether `line`'s prefix has a quote's marker. */
@@ -132,7 +138,13 @@ export function indentUnitOf(doc: OurusDoc): 'tab' | 2 | 4 {
 function nestingOf(doc: OurusDoc, parent: OurusNode, child: OurusNode): 'tab' | 2 | 4 | null {
   const outer = parent.block.attrs;
   const own = child.block.attrs;
-  if (outer.markerColumn === undefined || outer.contentColumn === undefined || own.markerColumn === undefined || own.markerStart === undefined) return null;
+  if (
+    outer.markerColumn === undefined ||
+    outer.contentColumn === undefined ||
+    own.markerColumn === undefined ||
+    own.markerStart === undefined
+  )
+    return null;
   // a tab in its indentation past the parent's marker (one that starts before it and reaches past it too)
   const line = doc.mdTree.line(child.startLine);
   let column = 0;
@@ -166,7 +178,12 @@ function tabbedOf(doc: OurusDoc): boolean {
 
 /** Whether an item's indentation on `line` has a tab: in its prefix, or one it takes part of. */
 const itemTabs = (line: MdLine, old: string): boolean =>
-  line.prefix.some((p) => p.container.block.type === 'item' && (/^[ \t]*/.exec(old.slice(p.from, p.to))![0].includes('\t') || (p.partialTab && /^[ \t]*$/.test(old.slice(p.from, p.to)))));
+  line.prefix.some(
+    (p) =>
+      p.container.block.type === 'item' &&
+      (/^[ \t]*/.exec(old.slice(p.from, p.to))![0].includes('\t') ||
+        (p.partialTab && /^[ \t]*$/.test(old.slice(p.from, p.to)))),
+  );
 
 /** Blocks of lines whose indentation past their first line is their own. */
 const CODE = new Set(['code_block', 'math_block', 'comment_block', 'html_block']);

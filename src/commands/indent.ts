@@ -17,17 +17,23 @@ import { emptyQuote, tabLedLazyLine } from './quote.ts';
  * the host's (rule 1).
  */
 export function indentCommand(ctx: CommandContext): OurusResult | null {
-  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return new OurusDeferred('host-default');
+  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head))
+    return new OurusDeferred('host-default');
   const nodes = oneRun(ctx, true);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
-  if (first.kind === 'heading') return ctx.config.headings === 'section' ? changeHeadingLevels(ctx, nodes, 1) : new OurusRejected('heading-block', 'a heading that owns nothing stays where it is');
+  if (first.kind === 'heading')
+    return ctx.config.headings === 'section'
+      ? changeHeadingLevels(ctx, nodes, 1)
+      : new OurusRejected('heading-block', 'a heading that owns nothing stays where it is');
   if (first.kind === 'paragraph' || first.kind === 'atom') return blocksIntoItems(ctx, nodes);
   // (a quote that is a container: only an item goes under another)
-  if (first.kind !== 'item') return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} doesn't go under the node above`);
+  if (first.kind !== 'item')
+    return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} doesn't go under the node above`);
   const above = first.prev;
   if (!above) return new OurusRejected('no-previous-sibling');
-  if (above.kind !== 'item' && above.kind !== 'quote') return new OurusRejected('not-expressible', 'only a list item can hold list items');
+  if (above.kind !== 'item' && above.kind !== 'quote')
+    return new OurusRejected('not-expressible', 'only a list item can hold list items');
   const draft = ctx.draft().remove(nodes).append(above, 'last', nodes);
   selectionInText(ctx, draft, true);
   return ctx.apply(draft);
@@ -42,8 +48,10 @@ export function itemTextsRefused(ctx: CommandContext, nodes: readonly OurusNode[
   for (const n of nodes) {
     const t = ctx.doc.textOf(n);
     if (!(t instanceof OurusAtom)) continue;
-    if (t.type === 'indented_code') return new OurusRejected('not-expressible', "indented code can't be an item's text");
-    if (t.type === 'blockquote' && tabLedLazyLine(ctx, n, t)) return new OurusRejected('not-expressible', "a quote's lazy line led by a tab can't follow a marker");
+    if (t.type === 'indented_code')
+      return new OurusRejected('not-expressible', "indented code can't be an item's text");
+    if (t.type === 'blockquote' && tabLedLazyLine(ctx, n, t))
+      return new OurusRejected('not-expressible', "a quote's lazy line led by a tab can't follow a marker");
   }
   return null;
 }
@@ -64,7 +72,12 @@ function blocksIntoItems(ctx: CommandContext, nodes: readonly OurusNode[]): Ouru
   // what follows it); the list it owned follows it, as a block in a quote owns none
   if (above?.kind === 'quote') {
     let into = above;
-    for (let end = into.children[into.children.length - 1]; end?.kind === 'heading'; end = into.children[into.children.length - 1]) into = end;
+    for (
+      let end = into.children[into.children.length - 1];
+      end?.kind === 'heading';
+      end = into.children[into.children.length - 1]
+    )
+      into = end;
     const draft = ctx.draft().remove(nodes).append(into, 'last', nodes);
     selectionInText(ctx, draft, true);
     return ctx.apply(draft);
@@ -72,12 +85,21 @@ function blocksIntoItems(ctx: CommandContext, nodes: readonly OurusNode[]): Ouru
   const section = parent.kind === 'root' || parent.kind === 'heading';
   // (a node that adopts the list after it, `listParent`: a paragraph, any block, none)
   const holds = !!above && section && ctx.doc.adoptsLists(above);
-  if (!holds && !section && above?.kind !== 'paragraph' && above?.kind !== 'item') return above ? new OurusRejected('not-expressible', 'only a paragraph or an item can hold list items') : new OurusRejected('no-previous-sibling');
+  if (!holds && !section && above?.kind !== 'paragraph' && above?.kind !== 'item')
+    return above
+      ? new OurusRejected('not-expressible', 'only a paragraph or an item can hold list items')
+      : new OurusRejected('no-previous-sibling');
   // (an empty quote read as an atom carrying a block id: as an item's text, `- >`, the id's line below it
   // would be the item's, no quote's line to carry it)
   for (const node of nodes) {
     const text = ctx.doc.textOf(node);
-    if (text instanceof OurusAtom && text.type === 'blockquote' && text.blockIdLines.length && emptyQuote(ctx, node, text)) return new OurusRejected('not-expressible', 'the block id would be the item\'s, with no quote text to carry it');
+    if (
+      text instanceof OurusAtom &&
+      text.type === 'blockquote' &&
+      text.blockIdLines.length &&
+      emptyQuote(ctx, node, text)
+    )
+      return new OurusRejected('not-expressible', "the block id would be the item's, with no quote text to carry it");
   }
   const draft = ctx.draft();
   for (const node of nodes) draft.convert(node, 'item');

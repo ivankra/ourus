@@ -4,13 +4,29 @@
 // (Pandoc's list markers, say) replaces or wraps them by name.
 
 import { DOCUMENT_FRAME, PARAGRAPH, commonMarkStarts, isCommonMarkStartChar, newParagraph } from './blocks.ts';
-import { compileInlines, type MdBracketRule, type MdDelimiterRule, type InlineConfig, type MdInlineRule, type MdTextRule } from './inlines.ts';
+import {
+  compileInlines,
+  type MdBracketRule,
+  type MdDelimiterRule,
+  type InlineConfig,
+  type MdInlineRule,
+  type MdTextRule,
+} from './inlines.ts';
 import { commonMarkBrackets, commonMarkDelimiters, commonMarkInlines } from './inline-rules.ts';
 import { coreInlineText } from './inline-text.ts';
 import { coreLineMarkup, type MdLineMarkupOf } from './markup.ts';
 import type { MdBlockSpec, MdBlockStart, MdFrame, MdLeafRole } from './machine.ts';
 import type { MdHtmlRenderer, MdRenderRules } from './html.ts';
-import { escapeParagraph, firstNonParagraph, markupEscapeAt, markupEscapes, type MdEscapeAt, type MdEscapedParagraph, type MdLineContext, type MdParagraphPlace } from './readback.ts';
+import {
+  escapeParagraph,
+  firstNonParagraph,
+  markupEscapeAt,
+  markupEscapes,
+  type MdEscapeAt,
+  type MdEscapedParagraph,
+  type MdLineContext,
+  type MdParagraphPlace,
+} from './readback.ts';
 import type { MdBlock, MdBlockAt, MdInlineText } from './types.ts';
 import type { MdTree } from './syntax.ts';
 
@@ -106,7 +122,12 @@ export interface MdFlavor {
    * does (`readback.ts`); `above`, in `continuation`, the paragraph's line they follow; `lazy`, in
    * `quoteStart`, the lines written without the quote's `>`.
    */
-  firstNonParagraph(lines: readonly string[], context?: MdLineContext, above?: string, lazy?: readonly boolean[]): number;
+  firstNonParagraph(
+    lines: readonly string[],
+    context?: MdLineContext,
+    above?: string,
+    lazy?: readonly boolean[],
+  ): number;
   /**
    * Whether a backslash at `at` in `line` (a line's content past its containers' prefix) is at one of
    * the flavor's markup-escape positions, where it can break block syntax and means nothing inline
@@ -228,10 +249,14 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
 function mergeRender(a: MdRenderRules, b: MdRenderRules): MdRenderRules {
   // (the hooks composed, the earlier extension's first: one's `start` replacing another's would leave
   // that one's `end` without what its `start` set up, GFM's footnotes; the filtered tags joined)
-  const both = <T extends (r: MdHtmlRenderer) => void>(x: T | undefined, y: T | undefined): T | undefined => (x && y ? (((r: MdHtmlRenderer) => (x(r), y(r))) as T) : (x ?? y));
+  const both = <T extends (r: MdHtmlRenderer) => void>(x: T | undefined, y: T | undefined): T | undefined =>
+    x && y ? (((r: MdHtmlRenderer) => (x(r), y(r))) as T) : (x ?? y);
   const start = both(a.start, b.start);
   const end = both(a.end, b.end);
-  const filteredTags = a.filteredTags && b.filteredTags ? [...new Set([...a.filteredTags, ...b.filteredTags])] : (a.filteredTags ?? b.filteredTags);
+  const filteredTags =
+    a.filteredTags && b.filteredTags
+      ? [...new Set([...a.filteredTags, ...b.filteredTags])]
+      : (a.filteredTags ?? b.filteredTags);
   return {
     ...a,
     ...b,

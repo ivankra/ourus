@@ -58,11 +58,21 @@ interface Snapshot {
   readonly text: string;
   readonly placeholders: readonly number[];
   readonly nodes: readonly { readonly id: number; readonly kind: string; readonly startLine: number }[];
-  readonly lines: readonly { readonly from: number; readonly to: number; readonly contentFrom: number; readonly blank: boolean }[];
+  readonly lines: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly contentFrom: number;
+    readonly blank: boolean;
+  }[];
   readonly doc: any;
 }
 /** A command as given: its type, and what it carries (a text, a clipboard, a drop's nodes and place). */
-type Given = { readonly type: string; readonly text?: string; readonly clipboard?: Record<string, string>; readonly [key: string]: unknown };
+type Given = {
+  readonly type: string;
+  readonly text?: string;
+  readonly clipboard?: Record<string, string>;
+  readonly [key: string]: unknown;
+};
 interface Core {
   parse(text: string, config: Record<string, unknown>, placeholders?: readonly number[]): Snapshot;
   execute(doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any;
@@ -82,15 +92,28 @@ async function load(root: string): Promise<Core> {
   // (a tree whose view holds the selection: commands and settling act at the view's, and a result's is its view's)
   const selecting = !!api.OurusView?.prototype.withSelection;
   const run = (doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
-    const result = selecting ? api.executeCommand(viewOf(doc.doc).withSelection(selection), command) : api.executeCommand(viewOf(doc.doc), command, selection);
+    const result = selecting
+      ? api.executeCommand(viewOf(doc.doc).withSelection(selection), command)
+      : api.executeCommand(viewOf(doc.doc), command, selection);
     // (the status as a plain field, whatever the tree's API: classes, or a `status` of its own, whose
     // 'applied' is 'success' now)
     // (a tree with `OurusFailed`: a write failure, a refusal of `write-failed` in the trees before it)
-    if (api.OurusFailed && result instanceof api.OurusFailed) return { status: 'rejected', reason: 'write-failed', detail: result.detail };
-    const status = api.OurusSuccess ? (result instanceof api.OurusSuccess ? 'success' : result instanceof api.OurusRejected ? 'rejected' : 'deferredToHost') : result.status === 'applied' ? 'success' : result.status;
+    if (api.OurusFailed && result instanceof api.OurusFailed)
+      return { status: 'rejected', reason: 'write-failed', detail: result.detail };
+    const status = api.OurusSuccess
+      ? result instanceof api.OurusSuccess
+        ? 'success'
+        : result instanceof api.OurusRejected
+          ? 'rejected'
+          : 'deferredToHost'
+      : result.status === 'applied'
+        ? 'success'
+        : result.status;
     // (a deferral's `reason`, which trees before `DeferReason` don't give, not compared)
     if (status === 'deferredToHost') return { ...result, status, reason: undefined };
-    return status === 'success' ? { ...result, status, doc: snap(docOf(result)), ...(selecting && { selection: result.view.selection }) } : { ...result, status };
+    return status === 'success'
+      ? { ...result, status, doc: snap(docOf(result)), ...(selecting && { selection: result.view.selection }) }
+      : { ...result, status };
   };
   // (a tree before `autoClose`: `closeBackticks`, `none`, `fences` or `all`, what the list says of a backtick)
   const { OurusConfig: config } = await import(join(root, 'src/config.ts'));
@@ -106,16 +129,27 @@ async function load(root: string): Promise<Core> {
       given = { ...rest, markup: decorations.length ? 'decorated' : 'text' };
     }
     // (an option newer than the tree: left out, the tree doing what it did before the option)
-    if (config.has) given = Object.fromEntries(Object.entries(given).filter(([key]) => key === 'orderedLists' || key === 'listNumbers' || key === 'autoClose' || config.has(key)));
+    if (config.has)
+      given = Object.fromEntries(
+        Object.entries(given).filter(
+          ([key]) => key === 'orderedLists' || key === 'listNumbers' || key === 'autoClose' || config.has(key),
+        ),
+      );
     // (and a value newer than the tree, of an option it has: left out too, `copyAtCaret: text`)
-    if (config.values) given = Object.fromEntries(Object.entries(given).filter(([key, value]) => !Array.isArray(config.values[key]) || config.values[key].includes(value)));
+    if (config.values)
+      given = Object.fromEntries(
+        Object.entries(given).filter(
+          ([key, value]) => !Array.isArray(config.values[key]) || config.values[key].includes(value),
+        ),
+      );
     if (!Array.isArray(given.autoClose) || config.has?.('autoClose')) return given;
     const { autoClose, ...rest } = given as { autoClose: string[] };
     return { ...rest, closeBackticks: !autoClose.length ? 'none' : autoClose.includes('`') ? 'all' : 'fences' };
   };
   // (a tree before `MarkSet` held offsets: tagged marks, `createPlaceholder`, `points()`, `setMarks`)
   const { createPlaceholder } = await import(join(root, 'src/text/index.ts'));
-  const marks = (placeholders: readonly number[]): unknown => (createPlaceholder ? placeholders.map((pos) => createPlaceholder(pos)) : { placeholders });
+  const marks = (placeholders: readonly number[]): unknown =>
+    createPlaceholder ? placeholders.map((pos) => createPlaceholder(pos)) : { placeholders };
   const snap = (doc: any): Snapshot => {
     const nodes: Snapshot['nodes'][number][] = [];
     const visit = (node: any): void => {
@@ -123,17 +157,34 @@ async function load(root: string): Promise<Core> {
       node.children.forEach(visit);
     };
     visit(doc.rootNode);
-    return { text: doc.text, placeholders: [...(doc.marks.points?.() ?? doc.marks.placeholders)], nodes, lines: doc.mdTree.lines, doc };
+    return {
+      text: doc.text,
+      placeholders: [...(doc.marks.points?.() ?? doc.marks.placeholders)],
+      nodes,
+      lines: doc.mdTree.lines,
+      doc,
+    };
   };
   return {
-    parse: (text, config, placeholders = []) => snap(api.OurusDoc.parse(text, { config: configFor(config), marks: marks(placeholders) })),
+    parse: (text, config, placeholders = []) =>
+      snap(api.OurusDoc.parse(text, { config: configFor(config), marks: marks(placeholders) })),
     execute: run,
     // (a tree before `OurusDocUpdate` takes the changes apart: `update(changes, params)`)
-    edit: (s, changes, caret) => snap(s.doc.update.length ? s.doc.update(changes, { caret }) : s.doc.update({ changes, caret })),
+    edit: (s, changes, caret) =>
+      snap(s.doc.update.length ? s.doc.update(changes, { caret }) : s.doc.update({ changes, caret })),
     // (a tree before `update`'s `text`: `replace(text, marks)`)
-    replace: (s, text, placeholders) => snap(s.doc.replace ? s.doc.replace(text, marks(placeholders)) : s.doc.update(createPlaceholder ? { text, setMarks: marks(placeholders) } : { text, marks: marks(placeholders) })),
+    replace: (s, text, placeholders) =>
+      snap(
+        s.doc.replace
+          ? s.doc.replace(text, marks(placeholders))
+          : s.doc.update(
+              createPlaceholder ? { text, setMarks: marks(placeholders) } : { text, marks: marks(placeholders) },
+            ),
+      ),
     settle: (s, caret) => {
-      const settled = selecting ? api.settlePlaceholders(viewOf(s.doc).withSelection(caret)) : api.settlePlaceholders(viewOf(s.doc), caret);
+      const settled = selecting
+        ? api.settlePlaceholders(viewOf(s.doc).withSelection(caret))
+        : api.settlePlaceholders(viewOf(s.doc), caret);
       return settled && { changes: settled.changes, doc: snap(docOf(settled)) };
     },
   };
@@ -149,25 +200,145 @@ const generator = (start: number): ((n: number) => number) => {
 };
 const random = generator(11);
 const blocks = [
-  'p', 'p', 'two\nlines', '- i', '- i', '  - c', '    - g', '- [ ] t', '- [x] t', '# H', '## S', 'S\n---', '```\nx\n```', '> q', '> - q', '1. n', '2. m', '- ',
-  '> [!note] q', '| a | b |\n|---|---|', '$$\nm\n$$', '%%\nm\n%%', '- [[w]] #t',
+  'p',
+  'p',
+  'two\nlines',
+  '- i',
+  '- i',
+  '  - c',
+  '    - g',
+  '- [ ] t',
+  '- [x] t',
+  '# H',
+  '## S',
+  'S\n---',
+  '```\nx\n```',
+  '> q',
+  '> - q',
+  '1. n',
+  '2. m',
+  '- ',
+  '> [!note] q',
+  '| a | b |\n|---|---|',
+  '$$\nm\n$$',
+  '%%\nm\n%%',
+  '- [[w]] #t',
   // text that reads as something else at a line's start, for splits, joins and pastes to escape
-  'p - x', '- i 1. x', 'p # h', '# H - x', 'p > q', 'p\n[r]: /u', '- i ``` c', 'p ---', 'p 2) x', '[a]: b c',
+  'p - x',
+  '- i 1. x',
+  'p # h',
+  '# H - x',
+  'p > q',
+  'p\n[r]: /u',
+  '- i ``` c',
+  'p ---',
+  'p 2) x',
+  '[a]: b c',
   // blocks of an item, as users write them under one: a quote as its first block, math, code
-  '- > q', '- i\n  $$\n  m\n  $$', '- i\n  ```js\n  x\n  ```', '- i\n\n      code',
+  '- > q',
+  '- i\n  $$\n  m\n  $$',
+  '- i\n  ```js\n  x\n  ```',
+  '- i\n\n      code',
 ];
-const commands = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'paste', 'pastePlain', 'deleteSubtree', 'duplicateSubtree', 'insertText', 'copy', 'cut'];
+const commands = [
+  'indent',
+  'outdent',
+  'moveSubtreeUp',
+  'moveSubtreeDown',
+  'enter',
+  'shiftEnter',
+  'deleteContentBackward',
+  'deleteContentForward',
+  'deleteSoftLineBackward',
+  'paste',
+  'pastePlain',
+  'deleteSubtree',
+  'duplicateSubtree',
+  'insertText',
+  'copy',
+  'cut',
+];
 // what users paste: besides Markdown of each kind, a line copied with its line break, and a block
 // copied from inside a list from its fence on (its other lines keep the item's indentation)
-const pastes = ['x', '- a\n- b', '> q', '```\nc\n```', 'one\ntwo', '1. a\n2. b\n', 'x\n', '```js\n    c\n    ```', '# h\ntext\n', '| a |\n| - |\n| 1 |\n', '- [ ] t\n  - c\n', 'p\n- a\n- b\n'];
+const pastes = [
+  'x',
+  '- a\n- b',
+  '> q',
+  '```\nc\n```',
+  'one\ntwo',
+  '1. a\n2. b\n',
+  'x\n',
+  '```js\n    c\n    ```',
+  '# h\ntext\n',
+  '| a |\n| - |\n| 1 |\n',
+  '- [ ] t\n  - c\n',
+  'p\n- a\n- b\n',
+];
 /** Every flavor with the defaults, then every other value of every option (in the default flavor), one at a time. */
 const configs: Record<string, unknown>[] = [
-  { flavor: 'gfm' }, { flavor: 'commonmark' }, { flavor: 'obsidian' },
-  { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { enterOnEmptyItem: 'exit' }, { enterOnEmptyItem: 'unwrap' }, { enterMidItem: 'child' }, { enterAtTextStart: 'stay' },
-  { backspaceAtTopItem: 'refuse' }, { backspaceAtItemStart: 'body' }, { backspaceAtItemStart: 'unwrap' }, { backspaceAtItemStart: 'logseq' }, { quirkEnterMidHeading: 'workflowy' }, { quirkPasteCaret: 'roam' }, { quirkPasteCaret: 'athens' }, { quirkPasteText: 'dynalist' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
-  { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { taskEditing: 'unwrap' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
-  { pasteSeams: 'open' }, { pasteOverSelection: 'ignore' }, { pasteOverNodes: 'after' }, { pasteOverNodes: 'nothing' }, { heldSpace: 'trim' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
-  { decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'comment', 'rule', 'footnote', 'blockId'] }, { autoClose: ['```', '~~~', '`'] }, { autoClose: [] }, { autoClose: ['```', '~~~', '`', '(', '[', '{'] }, { autoClose: ['```', '~~~', '[[', '(('] },
+  { flavor: 'gfm' },
+  { flavor: 'commonmark' },
+  { flavor: 'obsidian' },
+  { outdent: 'logical' },
+  { bullet: '*' },
+  { enterOnEmptyItem: 'outdent' },
+  { enterOnEmptyItem: 'exit' },
+  { enterOnEmptyItem: 'unwrap' },
+  { enterMidItem: 'child' },
+  { enterAtTextStart: 'stay' },
+  { backspaceAtTopItem: 'refuse' },
+  { backspaceAtItemStart: 'body' },
+  { backspaceAtItemStart: 'unwrap' },
+  { backspaceAtItemStart: 'logseq' },
+  { quirkEnterMidHeading: 'workflowy' },
+  { quirkPasteCaret: 'roam' },
+  { quirkPasteCaret: 'athens' },
+  { quirkPasteText: 'dynalist' },
+  { emptyItemWithChildren: 'refuse' },
+  { joinWithChildren: 'refuse' },
+  { handleFenceContents: false },
+  { headingEditing: 'block' },
+  { taskEditing: 'text' },
+  { taskEditing: 'block' },
+  { taskEditing: 'unwrap' },
+  { enterTask: 'plain' },
+  { enterSplitSpace: 'drop' },
+  { enterSplitSpace: 'start' },
+  { pasteLines: 'items' },
+  { pastePlainLines: 'items' },
+  { pastePlainLines: 'enter' },
+  { pasteOnParent: 'after' },
+  { pasteSeams: 'open' },
+  { pasteOverSelection: 'ignore' },
+  { pasteOverNodes: 'after' },
+  { pasteOverNodes: 'nothing' },
+  { heldSpace: 'trim' },
+  { pasteAtTextStart: 'before' },
+  { pasteParagraphList: 'children' },
+  { pasteListForm: 'own' },
+  { copyAtCaret: 'host' },
+  { copySelection: 'nodes' },
+  {
+    decorations: [
+      'bullet',
+      'number',
+      'checkbox',
+      'heading',
+      'setext',
+      'quote',
+      'callout',
+      'fence',
+      'math',
+      'comment',
+      'rule',
+      'footnote',
+      'blockId',
+    ],
+  },
+  { autoClose: ['```', '~~~', '`'] },
+  { autoClose: [] },
+  { autoClose: ['```', '~~~', '`', '(', '[', '{'] },
+  { autoClose: ['```', '~~~', '[[', '(('] },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);
@@ -193,17 +364,23 @@ interface Found {
   dump: Example[];
 }
 /** Whether a run failed to write: a bug, as one that threw is. */
-const failsToWrite = (r: { status: string; reason?: string }): boolean => (r.status === 'rejected' && r.reason === 'write-failed') || r.status === 'threw';
+const failsToWrite = (r: { status: string; reason?: string }): boolean =>
+  (r.status === 'rejected' && r.reason === 'write-failed') || r.status === 'threw';
 const label = (r: { status: string; reason?: string }): string => `${r.status}${r.reason ? ' ' + r.reason : ''}`;
 const drawn = (text: string, sel: { anchor: number; head: number }): string => {
   const [from, to] = [Math.min(sel.anchor, sel.head), Math.max(sel.anchor, sel.head)];
-  return JSON.stringify(from === to ? text.slice(0, from) + '┃' + text.slice(from) : text.slice(0, from) + '«' + text.slice(from, to) + '»' + text.slice(to));
+  return JSON.stringify(
+    from === to
+      ? text.slice(0, from) + '┃' + text.slice(from)
+      : text.slice(0, from) + '«' + text.slice(from, to) + '»' + text.slice(to),
+  );
 };
 /**
  * What a host sees of a snapshot: text, placeholders, and the outline's nodes, each id as `number`
  * gives it (an outcome's renumbering: `outcome`).
  */
-const seen = (doc: Snapshot, number: (id: number) => number): string => JSON.stringify([doc.text, doc.placeholders, doc.nodes.map((n) => `${n.kind}@${n.startLine}#${number(n.id)}`)]);
+const seen = (doc: Snapshot, number: (id: number) => number): string =>
+  JSON.stringify([doc.text, doc.placeholders, doc.nodes.map((n) => `${n.kind}@${n.startLine}#${number(n.id)}`)]);
 const outcome = (core: Core, start: Snapshot, r: any): string => {
   if (r.status !== 'success') return label(r);
   const settledHere = core.settle(r.doc, r.selection.head);
@@ -220,7 +397,17 @@ const outcome = (core: Core, start: Snapshot, r: any): string => {
   const ids = new Map<number, number>();
   const number = (id: number): number => ids.get(id) ?? (ids.set(id, ids.size), ids.size - 1);
   for (const n of start.nodes) number(n.id);
-  return JSON.stringify([label(r), seen(r.doc, number), r.selection, r.changes, settledHere && [settledHere.changes, seen(settledHere.doc, number)], settledAway && [settledAway.changes, seen(settledAway.doc, number)], seen(typed, number), seen(left, number), seen(undone, number)]);
+  return JSON.stringify([
+    label(r),
+    seen(r.doc, number),
+    r.selection,
+    r.changes,
+    settledHere && [settledHere.changes, seen(settledHere.doc, number)],
+    settledAway && [settledAway.changes, seen(settledAway.doc, number)],
+    seen(typed, number),
+    seen(left, number),
+    seen(undone, number),
+  ]);
 };
 /** A command's result, or what it threw (a host would see the exception): an outcome of its own. */
 const attempt = (core: Core, doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
@@ -235,7 +422,17 @@ const attempt = (core: Core, doc: Snapshot, command: Given, selection: { anchor:
 const aspect = (a: string, b: string): string => {
   if (!a.startsWith('[') || !b.startsWith('[')) return '';
   const [x, y] = [JSON.parse(a), JSON.parse(b)];
-  const names = ['status', 'snapshot', 'selection', 'changes', 'settled at the caret', 'settled elsewhere', 'typed at the caret', 'typed, then left', 'undone'];
+  const names = [
+    'status',
+    'snapshot',
+    'selection',
+    'changes',
+    'settled at the caret',
+    'settled elsewhere',
+    'typed at the caret',
+    'typed, then left',
+    'undone',
+  ];
   const i = names.findIndex((_, k) => JSON.stringify(x[k]) !== JSON.stringify(y[k]));
   return i < 0 ? '' : ` (${names[i]})`;
 };
@@ -254,10 +451,18 @@ for (let d = 0; isMainThread && d < documents; d++) {
   for (let k = 0; k < count; k++) {
     // blank lines between blocks, empty or (as editors leave them) indented
     const blank = (): string => [' ', '  ', '      '][random(3)]!.slice(0, random(2) === 0 ? 0 : undefined);
-    text += blocks[random(blocks.length)]!.replace(/(p|i|c|g|t|H|S|q|n|m)$/m, (x) => x + k) + '\n' + Array.from({ length: random(3) === 0 ? 1 + random(2) : 0 }, () => blank() + '\n').join('');
+    text +=
+      blocks[random(blocks.length)]!.replace(/(p|i|c|g|t|H|S|q|n|m)$/m, (x) => x + k) +
+      '\n' +
+      Array.from({ length: random(3) === 0 ? 1 + random(2) : 0 }, () => blank() + '\n').join('');
   }
   // the flavor named, so a copy from before, whose default may be another, reads it the same
-  docs.push({ text, config: { flavor: OurusConfig.defaults.flavor, ...configs[d % configs.length]! }, placeholders: [], pastes });
+  docs.push({
+    text,
+    config: { flavor: OurusConfig.defaults.flavor, ...configs[d % configs.length]! },
+    placeholders: [],
+    pastes,
+  });
 }
 // every buffer the spec draws, with its case's options (a case of every flavor in one, chosen by its
 // ID, so a case added or a file renamed changes no other case's), and its clipboards among the
@@ -269,7 +474,8 @@ for (const file of isMainThread ? specFiles() : []) {
   for (const t of readSpecFile(file)) {
     if (t.initial.clipboard?.['text/plain'] !== undefined) specPastes.add(readText(t.initial.clipboard['text/plain']));
     const config: Record<string, unknown> = { ...specConfig(t.options) };
-    config.flavor ??= OurusConfig.values.flavor[createHash('sha256').update(t.name).digest()[0]! % OurusConfig.values.flavor.length];
+    config.flavor ??=
+      OurusConfig.values.flavor[createHash('sha256').update(t.name).digest()[0]! % OurusConfig.values.flavor.length];
     for (const buffer of [t.initial.buffer, ...t.steps.map((step) => step.expect.buffer)]) {
       if (buffer === undefined) continue;
       const { text, placeholders } = readDrawing(buffer);
@@ -301,15 +507,23 @@ async function play(share: readonly number[]): Promise<Found> {
     for (let lineNo = 0; lineNo < lines.length; lineNo++) {
       const line = lines[lineNo]!;
       // on a blank line (the gap of the node above), carets at its edges
-      const blankSelections = line.blank ? [...new Set([line.from, line.to])].map((pos) => ({ anchor: pos, head: pos })) : null;
+      const blankSelections = line.blank
+        ? [...new Set([line.from, line.to])].map((pos) => ({ anchor: pos, head: pos }))
+        : null;
       // carets at the line's edges, its text start, and after the first space in its text (mid-text)
       const space = oldDoc.text.indexOf(' ', line.contentFrom + 1);
       const mid = space > 0 && space < line.to ? space + 1 : line.contentFrom;
-      const selections = blankSelections ?? [...new Set([line.from, line.to, line.contentFrom, Math.min(line.to, line.contentFrom + 1), mid])].map((pos) => ({ anchor: pos, head: pos }));
+      const selections =
+        blankSelections ??
+        [...new Set([line.from, line.to, line.contentFrom, Math.min(line.to, line.contentFrom + 1), mid])].map(
+          (pos) => ({ anchor: pos, head: pos }),
+        );
       // a selection inside the line's text, and one reaching into the next line
-      if (!blankSelections && line.to > line.contentFrom + 1) selections.push({ anchor: line.contentFrom + 1, head: line.to });
+      if (!blankSelections && line.to > line.contentFrom + 1)
+        selections.push({ anchor: line.contentFrom + 1, head: line.to });
       const next = lines[lineNo + 1];
-      if (!blankSelections && next && random(2) === 0) selections.push({ anchor: line.contentFrom, head: Math.min(next.to, next.contentFrom + 1) });
+      if (!blankSelections && next && random(2) === 0)
+        selections.push({ anchor: line.contentFrom, head: Math.min(next.to, next.contentFrom + 1) });
       for (const drawnSelection of selections) {
         // a placeholder off the caret's line is one a host has settled already, as the caret left it
         // (the new copy's settling, for both): the run starts from there
@@ -317,11 +531,25 @@ async function play(share: readonly number[]): Promise<Found> {
         const settled = placeholders.some((p) => p < from || p > to) ? after.settle(newDoc, drawnSelection.head) : null;
         const runText = settled ? settled.doc.text : text;
         const runPlaceholders = settled ? settled.doc.placeholders : placeholders;
-        const selection = settled ? { anchor: mapPos(settled.changes as ChangeSpec[], drawnSelection.anchor), head: mapPos(settled.changes as ChangeSpec[], drawnSelection.head) } : drawnSelection;
-        const [oldAt, newAt] = settled ? [before.parse(runText, config, runPlaceholders), after.parse(runText, config, runPlaceholders)] : [oldDoc, newDoc];
+        const selection = settled
+          ? {
+              anchor: mapPos(settled.changes as ChangeSpec[], drawnSelection.anchor),
+              head: mapPos(settled.changes as ChangeSpec[], drawnSelection.head),
+            }
+          : drawnSelection;
+        const [oldAt, newAt] = settled
+          ? [before.parse(runText, config, runPlaceholders), after.parse(runText, config, runPlaceholders)]
+          : [oldDoc, newDoc];
         for (const type of commands) {
           // typing: a code fence's characters, the ones ourus handles
-          const command = type === 'paste' ? { type, clipboard: { 'text/plain': pastes[random(pastes.length)]! } } : type === 'pastePlain' ? { type, text: pastes[random(pastes.length)] } : type === 'insertText' ? { type, text: random(2) ? '~' : '`' } : { type };
+          const command =
+            type === 'paste'
+              ? { type, clipboard: { 'text/plain': pastes[random(pastes.length)]! } }
+              : type === 'pastePlain'
+                ? { type, text: pastes[random(pastes.length)] }
+                : type === 'insertText'
+                  ? { type, text: random(2) ? '~' : '`' }
+                  : { type };
           compare(command, oldAt, newAt, selection, runText, runPlaceholders, !!settled);
         }
       }
@@ -329,15 +557,27 @@ async function play(share: readonly number[]): Promise<Found> {
     // drops: each node pressed, and a paste dragged in, the caret at the document's start; every place
     // the new copy's pickup lists, dropped in both
     const caret = { anchor: 0, head: 0 };
-    const pickups = [...newDoc.nodes.filter((n) => n.kind !== 'root').map((n): Given => ({ type: 'drag', pressed: n.id })), { type: 'drag', clipboard: { 'text/plain': pastes[random(pastes.length)]! } }];
+    const pickups = [
+      ...newDoc.nodes.filter((n) => n.kind !== 'root').map((n): Given => ({ type: 'drag', pressed: n.id })),
+      { type: 'drag', clipboard: { 'text/plain': pastes[random(pastes.length)]! } },
+    ];
     for (const pickup of pickups) {
       const picked = attempt(after, newDoc, pickup, caret);
       if (picked.status !== 'success' || !picked.dropMap) continue;
-      for (const seam of picked.dropMap.seams) for (const point of seam.points) compare(point.drop, oldDoc, newDoc, caret, text, placeholders, false);
+      for (const seam of picked.dropMap.seams)
+        for (const point of seam.points) compare(point.drop, oldDoc, newDoc, caret, text, placeholders, false);
     }
 
     /** `command` in both copies, its outcomes compared: a group where they differ, a failure where the new one fails to write. */
-    function compare(command: Given, oldAt: Snapshot, newAt: Snapshot, selection: { anchor: number; head: number }, runText: string, runPlaceholders: readonly number[], settled: boolean): void {
+    function compare(
+      command: Given,
+      oldAt: Snapshot,
+      newAt: Snapshot,
+      selection: { anchor: number; head: number },
+      runText: string,
+      runPlaceholders: readonly number[],
+      settled: boolean,
+    ): void {
       const type = command.type;
       const was = attempt(before, oldAt, command, selection);
       const a = outcome(before, oldAt, was);
@@ -349,15 +589,37 @@ async function play(share: readonly number[]): Promise<Found> {
       if (failsToWrite(result)) {
         // what was typed or pasted: a paste's is its clipboard's text; a drop's, its place
         const given = command.clipboard?.['text/plain'] ?? command.text;
-        const place = 'to' in command || 'at' in command ? ` to ${JSON.stringify(command.to ?? command.at)}${'nodes' in command ? ` moving ${JSON.stringify(command.nodes)}` : ''}` : '';
+        const place =
+          'to' in command || 'at' in command
+            ? ` to ${JSON.stringify(command.to ?? command.at)}${'nodes' in command ? ` moving ${JSON.stringify(command.nodes)}` : ''}`
+            : '';
         const shown = `${drawn(runText, selection)}${runPlaceholders.length ? ` ◌${JSON.stringify(runPlaceholders)}` : ''} [${JSON.stringify(config)}]${given !== undefined ? ` ${type === 'insertText' ? 'typing' : 'pasting'} ${JSON.stringify(given)}` : ''}${place}`;
         note(found.failures, type, at, () => `${shown}: ${result.detail ?? result.reason ?? ''}`);
         found.failing.push({ at, text: `${type} ${shown}`, old: failsToWrite(was) });
-        if (process.env.DIFF_DUMP) found.dump.push({ at, text: JSON.stringify({ type, text: runText, selection, config, placeholders: runPlaceholders, paste: given, ...(place && { command }), detail: result.detail ?? result.reason, ...(settled ? { settled: true } : {}) }) });
+        if (process.env.DIFF_DUMP)
+          found.dump.push({
+            at,
+            text: JSON.stringify({
+              type,
+              text: runText,
+              selection,
+              config,
+              placeholders: runPlaceholders,
+              paste: given,
+              ...(place && { command }),
+              detail: result.detail ?? result.reason,
+              ...(settled ? { settled: true } : {}),
+            }),
+          });
       }
       if (a === b) return;
       const short = (o: string): string => (o.startsWith('[') ? JSON.parse(o)[0] : o);
-      note(found.groups, `${type} [${JSON.stringify(config)}]: ${short(a)} → ${short(b)}${aspect(a, b)}`, at, () => `${drawn(runText, selection)}\n           was ${a.slice(0, width)}\n           now ${b.slice(0, width)}`);
+      note(
+        found.groups,
+        `${type} [${JSON.stringify(config)}]: ${short(a)} → ${short(b)}${aspect(a, b)}`,
+        at,
+        () => `${drawn(runText, selection)}\n           was ${a.slice(0, width)}\n           now ${b.slice(0, width)}`,
+      );
     }
   }
   return found;
@@ -396,16 +658,35 @@ const merge = (all: Groups[]): Map<string, { count: number; examples: string[] }
       merged.set(key, m);
     }
   }
-  return new Map([...merged].map(([key, g]) => [key, { count: g.count, examples: g.examples.sort(order).slice(0, examples).map((e) => e.text) }]));
+  return new Map(
+    [...merged].map(([key, g]) => [
+      key,
+      {
+        count: g.count,
+        examples: g.examples
+          .sort(order)
+          .slice(0, examples)
+          .map((e) => e.text),
+      },
+    ]),
+  );
 };
 const runs = parts.reduce((n, p) => n + p.runs, 0);
 const groups = merge(parts.map((p) => p.groups));
 const failures = merge(parts.map((p) => p.failures));
-const dump = parts.flatMap((p) => p.dump).sort(order).map((e) => e.text);
+const dump = parts
+  .flatMap((p) => p.dump)
+  .sort(order)
+  .map((e) => e.text);
 
 console.log(`${runs} command runs on ${documents} documents: ${oldRoot} → ${newRoot}`);
 // ties by key, so the order is the same however many workers found them
-const sorted = [...groups].sort(([x, gx], [y, gy]) => Number(y.includes('→ rejected')) - Number(x.includes('→ rejected')) || gy.count - gx.count || (x < y ? -1 : x > y ? 1 : 0));
+const sorted = [...groups].sort(
+  ([x, gx], [y, gy]) =>
+    Number(y.includes('→ rejected')) - Number(x.includes('→ rejected')) ||
+    gy.count - gx.count ||
+    (x < y ? -1 : x > y ? 1 : 0),
+);
 for (const [key, group] of sorted) {
   console.log(`${String(group.count).padStart(6)} ${key}`);
   for (const example of group.examples) console.log(`         ${example}`);
@@ -417,7 +698,9 @@ if (groups.size === 0) console.log('no differences');
 if (process.env.DIFF_DUMP) writeFileSync(process.env.DIFF_DUMP, dump.join('\n') + (dump.length ? '\n' : ''));
 const failing = parts.flatMap((p) => p.failing).sort(order);
 console.log(`\n${failing.length} runs fail to write in ${newRoot}${failing.length ? ':' : ''}`);
-for (const [type, failure] of [...failures].sort(([x, fx], [y, fy]) => fy.count - fx.count || (x < y ? -1 : x > y ? 1 : 0))) {
+for (const [type, failure] of [...failures].sort(
+  ([x, fx], [y, fy]) => fy.count - fx.count || (x < y ? -1 : x > y ? 1 : 0),
+)) {
   console.log(`${String(failure.count).padStart(6)} ${type}`);
   for (const example of failure.examples) console.log(`         ${example}`);
 }
@@ -427,7 +710,13 @@ const list = (title: string, keys: string[]): void => {
   for (const key of keys.slice(0, examples * 3)) console.log(`    ${key}`);
   if (keys.length > examples * 3) console.log(`    … ${keys.length - examples * 3} more`);
 };
-list('runs fail to write that the old copy writes (regressions)', failing.filter((f) => !f.old).map((f) => f.text));
-list('runs fail to write in both copies', failing.filter((f) => f.old).map((f) => f.text));
+list(
+  'runs fail to write that the old copy writes (regressions)',
+  failing.filter((f) => !f.old).map((f) => f.text),
+);
+list(
+  'runs fail to write in both copies',
+  failing.filter((f) => f.old).map((f) => f.text),
+);
 // a refactoring must change nothing; a behavior change, each difference judged; no run fails to write
 process.exitCode = groups.size === 0 && failing.length === 0 ? 0 : 1;

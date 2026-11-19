@@ -2,7 +2,14 @@
 // `test/bugs.ts`, and any test file a repro moves to once its bug is fixed.
 
 import assert from 'node:assert/strict';
-import { executeCommand, OurusFailed, OurusRejected, OurusSuccess, type OurusCommand, type OurusResult } from '../../src/commands/index.ts';
+import {
+  executeCommand,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+  type OurusCommand,
+  type OurusResult,
+} from '../../src/commands/index.ts';
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
 import { MdFlavor, MdHtmlParser, MdTree } from '../../src/parser/index.ts';
@@ -36,7 +43,9 @@ export function executeAfter(result: OurusResult, command: OurusCommand): OurusR
 /** What a result was, for an assertion's message. */
 function resultSummary(result: OurusResult): string {
   if (result instanceof OurusFailed) return `failed (${result.phase} ${result.code}): ${result.detail}`;
-  return result instanceof OurusRejected ? `rejected ${result.reason}: ${result.detail ?? ''}` : result.constructor.name;
+  return result instanceof OurusRejected
+    ? `rejected ${result.reason}: ${result.detail ?? ''}`
+    : result.constructor.name;
 }
 
 /** Fails where `result` is a write failure: applied and refused on purpose both pass. */
@@ -56,7 +65,11 @@ export function appliedText(result: OurusResult): string {
 }
 
 /** What paste makes of clipboard HTML: its Markdown, that rendered, and the text the rendering shows. */
-export function convertPastedHtml(source: string): { readonly markdown: string; readonly rendered: string; readonly shown: string } {
+export function convertPastedHtml(source: string): {
+  readonly markdown: string;
+  readonly rendered: string;
+  readonly shown: string;
+} {
   const { markdown } = MdHtmlParser.parse(source);
   const rendered = MdTree.parse(markdown, MdFlavor.gfm).renderHtml();
   return { markdown, rendered, shown: rendered.replace(/<[^>]*>/g, '') };

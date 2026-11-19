@@ -37,7 +37,10 @@ function moveGaps(): Map<string, string[]> {
           for (const parent of parents) {
             const children = parent === 'root' ? doc.rootNode.children : parent.children;
             for (const after of [null, ...children]) {
-              const to = { parent: parent === 'root' ? ('root' as const) : parent.id, after: after === null ? null : after.id };
+              const to = {
+                parent: parent === 'root' ? ('root' as const) : parent.id,
+                after: after === null ? null : after.id,
+              };
               let failure: string | null = null;
               try {
                 const r = executeCommand(view.withSelection(end), { type: 'moveSubtree', nodes: [node.id], to });
@@ -45,7 +48,11 @@ function moveGaps(): Map<string, string[]> {
               } catch (e) {
                 failure = `throws: ${(e as Error).message}`;
               }
-              if (failure) gaps.set(t.name, [...(gaps.get(t.name) ?? []), `${flavor}: node ${node.id} to ${JSON.stringify(to)}: ${failure}`]);
+              if (failure)
+                gaps.set(t.name, [
+                  ...(gaps.get(t.name) ?? []),
+                  `${flavor}: node ${node.id} to ${JSON.stringify(to)}: ${failure}`,
+                ]);
             }
           }
         }
@@ -57,7 +64,9 @@ function moveGaps(): Map<string, string[]> {
 
 test('every node moved to every place is a refusal or a result, but at the known starts', () => {
   const gaps = moveGaps();
-  const found = [...gaps].filter(([name]) => !(name in KNOWN)).map(([name, list]) => `${name}: ${list.length} (${list[0]})`);
+  const found = [...gaps]
+    .filter(([name]) => !(name in KNOWN))
+    .map(([name, list]) => `${name}: ${list.length} (${list[0]})`);
   const fixed = Object.keys(KNOWN).filter((name) => !gaps.has(name));
   assert.deepEqual(found, [], 'starts whose moves fail to write');
   assert.deepEqual(fixed, [], 'known starts with no failure now: drop them from KNOWN');

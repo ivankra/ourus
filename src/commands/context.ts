@@ -13,7 +13,6 @@ import { OurusDraft } from '../writer/index.ts';
 import type { OurusResult, OurusSelection } from './types.ts';
 import { OurusFailed, OurusRejected, OurusSuccess } from './types.ts';
 
-
 export class CommandContext {
   /** The view the command acts in: its document, the selection it acts at, and the folds and zoom it keeps to. */
   readonly view: OurusView;
@@ -62,7 +61,9 @@ export class CommandContext {
   }
 
   get to(): Located {
-    return (this.#to ??= this.collapsed ? this.from : this.view.locate(Math.max(this.selection.anchor, this.selection.head)));
+    return (this.#to ??= this.collapsed
+      ? this.from
+      : this.view.locate(Math.max(this.selection.anchor, this.selection.head)));
   }
 
   /**
@@ -70,12 +71,21 @@ export class CommandContext {
    * Markdown can't say it, or `write-failed` where the writer failed (a bug).
    */
   apply(draft: OurusDraft): OurusResult | null {
-    if (draft.from !== this.doc) throw new Error("a draft of another document than the context's: make a context on its view");
+    if (draft.from !== this.doc)
+      throw new Error("a draft of another document than the context's: make a context on its view");
     const applied = draft.done();
-    if ('reason' in applied) return applied.reason === 'write-failed' ? new OurusFailed(applied) : new OurusRejected(applied.reason, applied.detail);
+    if ('reason' in applied)
+      return applied.reason === 'write-failed'
+        ? new OurusFailed(applied)
+        : new OurusRejected(applied.reason, applied.detail);
     const { moved, merged } = applied.blockIds;
     const view = this.view.withDoc(applied.doc, applied.changes).withSelection(applied.selection);
-    return new OurusSuccess({ view, changes: applied.changes, ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }) });
+    return new OurusSuccess({
+      view,
+      changes: applied.changes,
+      ...(moved.length && { movedBlockIds: moved }),
+      ...(merged.length && { mergedBlockIds: merged }),
+    });
   }
 
   /** The view after a host's kind of edit of the document (`OurusView.update`), the view carried. */
@@ -89,11 +99,15 @@ export class CommandContext {
  * about block ids, together: every step's moves and merges, in order, and the nodes they removed on
  * purpose, as the applied result has them.
  */
-export function blockIdsDeclaredBy(steps: readonly OurusResult[]): Pick<OurusSuccess, 'movedBlockIds' | 'mergedBlockIds' | 'removedNodes'> {
+export function blockIdsDeclaredBy(
+  steps: readonly OurusResult[],
+): Pick<OurusSuccess, 'movedBlockIds' | 'mergedBlockIds' | 'removedNodes'> {
   const moved = steps.flatMap((r) => (r instanceof OurusSuccess ? (r.movedBlockIds ?? []) : []));
   const merged = steps.flatMap((r) => (r instanceof OurusSuccess ? (r.mergedBlockIds ?? []) : []));
   const removed = steps.flatMap((r) => (r instanceof OurusSuccess ? (r.removedNodes ?? []) : []));
-  return { ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }), ...(removed.length && { removedNodes: removed }) };
+  return {
+    ...(moved.length && { movedBlockIds: moved }),
+    ...(merged.length && { mergedBlockIds: merged }),
+    ...(removed.length && { removedNodes: removed }),
+  };
 }
-
-

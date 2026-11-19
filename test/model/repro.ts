@@ -11,6 +11,12 @@ const doc = parseWithMarks(s.text, s.placeholders);
 const view = OurusView.of(doc);
 const r = playActions({ view: view.withSelection(drawnSelection(view, s)), clipboard: {} }, process.argv.slice(3));
 console.log(draw(lift(doc).root).join('\n'));
-console.log('--', process.argv.slice(3).join(' '), '→', r.last && resultStatus(r.last), r.last instanceof OurusRejected ? r.last.reason + ' ' + (r.last.detail ?? '') : '');
+console.log(
+  '--',
+  process.argv.slice(3).join(' '),
+  '→',
+  r.last && resultStatus(r.last),
+  r.last instanceof OurusRejected ? r.last.reason + ' ' + (r.last.detail ?? '') : '',
+);
 console.log(drawDoc(r.view, r.view.selection));
 console.log(draw(lift(r.view.doc).root).join('\n'));

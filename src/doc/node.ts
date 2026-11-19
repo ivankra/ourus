@@ -45,7 +45,15 @@ export class PersistentNode {
    */
   readonly text: OurusText | null | undefined;
 
-  constructor(kind: OurusNodeKind, block: MdBlock, head: MdBlock | null, lines: number, offsets: readonly number[], children: readonly PersistentNode[], blockIdCount = 0) {
+  constructor(
+    kind: OurusNodeKind,
+    block: MdBlock,
+    head: MdBlock | null,
+    lines: number,
+    offsets: readonly number[],
+    children: readonly PersistentNode[],
+    blockIdCount = 0,
+  ) {
     this.kind = kind;
     this.block = block;
     this.head = head;
@@ -66,8 +74,22 @@ export class PersistentNode {
     gap: number,
     children: readonly PersistentNode[],
   ): PersistentNode {
-    const node = Object.create(PersistentNode.prototype) as { -readonly [K in keyof PersistentNode]: PersistentNode[K] };
-    Object.assign(node, { id, kind, block: null, head: null, gap, lines: 0, offsets: [], blockIdCount: 0, children, source, text });
+    const node = Object.create(PersistentNode.prototype) as {
+      -readonly [K in keyof PersistentNode]: PersistentNode[K];
+    };
+    Object.assign(node, {
+      id,
+      kind,
+      block: null,
+      head: null,
+      gap,
+      lines: 0,
+      offsets: [],
+      blockIdCount: 0,
+      children,
+      source,
+      text,
+    });
     return node as PersistentNode;
   }
 
@@ -80,7 +102,9 @@ export class PersistentNode {
     const block = this.block;
     if (!block || this.kind === 'quote' || this.kind === 'root') return null;
     const own = this.kind === 'item' ? block.children[0] : block;
-    return own?.type === 'blockquote' && this.head !== null && (this.head === own || this.head === own.children[0]) ? own : null;
+    return own?.type === 'blockquote' && this.head !== null && (this.head === own || this.head === own.children[0])
+      ? own
+      : null;
   }
 
   /** Whether it was read from a document (it has blocks), not made or changed by a draft. */
@@ -178,7 +202,8 @@ export class OurusNode {
   get endLine(): LineIndex {
     if (this.#endLine < 0) {
       const node = this.persistentNode;
-      const own = node.kind === 'item' || node.kind === 'quote' ? this.startLine + node.block!.lines - 1 : this.ownLastLine;
+      const own =
+        node.kind === 'item' || node.kind === 'quote' ? this.startLine + node.block!.lines - 1 : this.ownLastLine;
       const n = node.children.length;
       this.#endLine = n ? Math.max(own, this.child(n - 1).endLine) : own;
     }
@@ -215,7 +240,9 @@ export class OurusNode {
 
   /** The sibling after it; null for the last. */
   get next(): OurusNode | null {
-    return this.parent && this.index + 1 < this.parent.persistentNode.children.length ? this.parent.child(this.index + 1) : null;
+    return this.parent && this.index + 1 < this.parent.persistentNode.children.length
+      ? this.parent.child(this.index + 1)
+      : null;
   }
 
   /** Its last descendant in document order: itself where it has no children. */
@@ -275,7 +302,9 @@ export class OurusNode {
   /** Whether `text`, set on it, would make it its quote's callout title: a quote's first paragraph whose first line opens a callout. */
   becomesTitle(text: OurusProse, callouts = true): boolean {
     // (`callouts`: whether the flavor has them; elsewhere a `[!type]` line is a quote's text)
-    return callouts && this.parent?.kind === 'quote' && this.index === 0 && mdCalloutAt(text.body.split('\n')[0]!) !== null;
+    return (
+      callouts && this.parent?.kind === 'quote' && this.index === 0 && mdCalloutAt(text.body.split('\n')[0]!) !== null
+    );
   }
 
   /** The node whose own lines hold line `line` (its text's, its block-id lines'), below this one: the deepest, where nested items share a line; or null. */

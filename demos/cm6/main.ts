@@ -13,8 +13,27 @@
 
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { cursorLineDown, cursorLineUp, invertedEffects, redo, selectLineDown, selectLineUp, undo } from '@codemirror/commands';
-import { Annotation, Compartment, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction, type StateEffectType } from '@codemirror/state';
+import {
+  cursorLineDown,
+  cursorLineUp,
+  invertedEffects,
+  redo,
+  selectLineDown,
+  selectLineUp,
+  undo,
+} from '@codemirror/commands';
+import {
+  Annotation,
+  Compartment,
+  EditorSelection,
+  EditorState,
+  Prec,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+  Transaction,
+  type StateEffectType,
+} from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { tags } from '@lezer/highlight';
@@ -41,7 +60,23 @@ import './hljs.css';
 import 'katex/dist/katex.min.css';
 import { Mirror } from './mirror.ts';
 import { outlineView } from './view.ts';
-import { OurusProse, OurusDoc, OurusView, executeCommand, mapPos, settlePlaceholders, type OurusConfig, type ChangeSpec, type OurusCommand, type OurusNode, type OurusResult, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../../src/index.ts';
+import {
+  OurusProse,
+  OurusDoc,
+  OurusView,
+  executeCommand,
+  mapPos,
+  settlePlaceholders,
+  type OurusConfig,
+  type ChangeSpec,
+  type OurusCommand,
+  type OurusNode,
+  type OurusResult,
+  OurusDeferred,
+  OurusFailed,
+  OurusRejected,
+  OurusSuccess,
+} from '../../src/index.ts';
 
 type Flavor = OurusConfig['flavor'];
 
@@ -53,7 +88,9 @@ const planned = Annotation.define<OurusView>();
 /** Replaces the view outright (settling placeholders can change no text at all). */
 const setView = StateEffect.define<OurusView>();
 /** The placeholders a step of history returns to (positions in the text after the step), mapped along later edits. */
-const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
+const setPlaceholders = StateEffect.define<readonly number[]>({
+  map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)),
+});
 /** The snapshot a step of history returns to, whose nodes (ids and all) it takes back where its text is the one returned to. */
 const returnTo = StateEffect.define<OurusDoc>();
 
@@ -80,14 +117,18 @@ const ourus = StateField.define<OurusView>({
     // changed (a move past an item written the same changes no character, its nodes' order alone);
     // another extension may have added changes to the transaction: then parse what committed
     const next = tr.annotation(planned);
-    if (!restored && next && next.doc.text.length === tr.newDoc.length && next.doc.text === tr.newDoc.toString()) return next;
+    if (!restored && next && next.doc.text.length === tr.newDoc.length && next.doc.text === tr.newDoc.toString())
+      return next;
     if (!tr.docChanged) return restored ? view.update(marksAt(restored)) : view;
     const changes: ChangeSpec[] = [];
-    tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
+    tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) =>
+      changes.push({ from: fromA, to: toA, insert: inserted.toString() }),
+    );
     // undo and redo restore the placeholders of the state they return to, and its nodes: an undone
     // move's node is the one it was, its fold kept (`withDoc`)
     const like = lastOf(tr, returnTo);
-    if (restored && like && like.text === tr.newDoc.toString() && like.isSameLineage(doc)) return view.withDoc(like.withConfig(doc.config));
+    if (restored && like && like.text === tr.newDoc.toString() && like.isSameLineage(doc))
+      return view.withDoc(like.withConfig(doc.config));
     if (restored) return view.update({ changes, ...marksAt(restored) });
     const caret = tr.newSelection.main;
     return view.update({ changes, caret: caret.empty ? caret.head : undefined });
@@ -95,7 +136,14 @@ const ourus = StateField.define<OurusView>({
 });
 
 /** Each step of history keeps the placeholders it replaced, and the snapshot it left, so undoing it brings them back. */
-const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourus).doc.marks.placeholders), returnTo.of(tr.startState.field(ourus).doc)] : []));
+const placeholderHistory = invertedEffects.of((tr) =>
+  tr.docChanged
+    ? [
+        setPlaceholders.of(tr.startState.field(ourus).doc.marks.placeholders),
+        returnTo.of(tr.startState.field(ourus).doc),
+      ]
+    : [],
+);
 
 let onResult: (type: OurusCommand['type'], result: OurusResult) => void = () => {};
 
@@ -185,10 +233,21 @@ const pasteHandler = EditorView.domEventHandlers({
     const data = event.clipboardData;
     const text = data?.getData('text/plain') ?? '';
     // (a clipboard of HTML or Markdown alone, an app's: ourus reads it, where CodeMirror pastes nothing)
-    if (!data || (!text && !(type === 'paste' && (data.types.includes('text/html') || data.types.includes('text/markdown'))))) return false;
-    const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
+    if (
+      !data ||
+      (!text && !(type === 'paste' && (data.types.includes('text/html') || data.types.includes('text/markdown'))))
+    )
+      return false;
+    const clipboard = Object.fromEntries(
+      ['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) =>
+        data.types.includes(t) ? [[t, data.getData(t)]] : [],
+      ),
+    );
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(view.state.field(ourus).withSelection({ anchor, head }), type === 'paste' ? { type, clipboard } : { type, text });
+    const result = executeCommand(
+      view.state.field(ourus).withSelection({ anchor, head }),
+      type === 'paste' ? { type, clipboard } : { type, text },
+    );
     onResult(type, result);
     if (result instanceof OurusDeferred) return false;
     event.preventDefault();
@@ -238,10 +297,16 @@ function vertical(motion: (view: EditorView) => boolean) {
       const own = doc.lineAt(range.head);
       const start = range.head > own.to ? range.head : doc.textStart(own.index);
       if (range.head >= start) return range;
-      return range.empty ? EditorSelection.cursor(start, 0, undefined, range.goalColumn) : EditorSelection.range(range.anchor, start, range.goalColumn);
+      return range.empty
+        ? EditorSelection.cursor(start, 0, undefined, range.goalColumn)
+        : EditorSelection.range(range.anchor, start, range.goalColumn);
     });
     if (ranges.some((range, i) => range !== state.selection.ranges[i])) {
-      view.dispatch({ selection: EditorSelection.create(ranges, state.selection.mainIndex), scrollIntoView: true, userEvent: 'select' });
+      view.dispatch({
+        selection: EditorSelection.create(ranges, state.selection.mainIndex),
+        scrollIntoView: true,
+        userEvent: 'select',
+      });
     }
     return true;
   };
@@ -295,10 +360,16 @@ const blockSelection = [
     const roots = state.field(ourus).selectedSubtrees(state.selection.main);
     if (!roots) return Decoration.none;
     const builder = new RangeSetBuilder<Decoration>();
-    for (const root of roots) for (let l = root.startLine; l <= root.endLine; l++) builder.add(doc.mdTree.starts[l]!, doc.mdTree.starts[l]!, Decoration.line({ class: 'ourus-block' }));
+    for (const root of roots)
+      for (let l = root.startLine; l <= root.endLine; l++)
+        builder.add(doc.mdTree.starts[l]!, doc.mdTree.starts[l]!, Decoration.line({ class: 'ourus-block' }));
     return builder.finish();
   }),
-  EditorView.editorAttributes.compute([ourus, 'selection'], (state): Record<string, string> => (state.field(ourus).selectedSubtrees(state.selection.main) ? { class: 'ourus-blocks' } : {})),
+  EditorView.editorAttributes.compute(
+    [ourus, 'selection'],
+    (state): Record<string, string> =>
+      state.field(ourus).selectedSubtrees(state.selection.main) ? { class: 'ourus-blocks' } : {},
+  ),
 ];
 
 /**
@@ -323,7 +394,13 @@ const escalateDrags = EditorState.transactionFilter.of((tr) => {
   try {
     const cover = ourusView.selectionOf(ourusView.touchedSubtrees(sel));
     const [from, to] = [Math.min(sel.from, cover.anchor), Math.max(sel.to, cover.head)];
-    return [tr, { selection: sel.head < sel.anchor ? EditorSelection.single(to, from) : EditorSelection.single(from, to), sequential: true }];
+    return [
+      tr,
+      {
+        selection: sel.head < sel.anchor ? EditorSelection.single(to, from) : EditorSelection.single(from, to),
+        sequential: true,
+      },
+    ];
   } catch {
     return tr;
   }
@@ -337,7 +414,8 @@ const currentNode = ViewPlugin.fromClass(
       this.decorations = this.build(view);
     }
     update(u: ViewUpdate) {
-      if (u.docChanged || u.selectionSet || u.startState.field(ourus) !== u.state.field(ourus)) this.decorations = this.build(u.view);
+      if (u.docChanged || u.selectionSet || u.startState.field(ourus) !== u.state.field(ourus))
+        this.decorations = this.build(u.view);
     }
     build(view: EditorView): DecorationSet {
       const doc = view.state.field(ourus).doc;
@@ -346,7 +424,11 @@ const currentNode = ViewPlugin.fromClass(
       if (!node) return builder.finish();
       for (let l = node.startLine; l <= node.endLine; l++) {
         const line = doc.mdTree.line(l);
-        builder.add(line.from, line.from, Decoration.line({ class: l <= node.textLastLine ? 'ourus-head' : 'ourus-subtree' }));
+        builder.add(
+          line.from,
+          line.from,
+          Decoration.line({ class: l <= node.textLastLine ? 'ourus-head' : 'ourus-subtree' }),
+        );
       }
       return builder.finish();
     }
@@ -382,7 +464,9 @@ const darkTheme = EditorView.theme(
   {
     '.cm-gutters': { backgroundColor: 'var(--bg)', color: 'var(--muted)', borderColor: 'var(--line)' },
     '.cm-selectionBackground': { background: 'var(--selection)' },
-    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { background: 'var(--selection-focused)' },
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+      background: 'var(--selection-focused)',
+    },
   },
   { dark: true },
 );
@@ -390,7 +474,8 @@ const themeFor = (dark: boolean) => (dark ? [darkTheme, syntaxHighlighting(darkH
 
 // ------------------------------------------------------------------ outline panel
 
-const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 const ATOM_LABELS: Record<string, string> = { thematic_break: 'hr', footnote_definition: 'note', refdef: 'ref' };
 
@@ -407,7 +492,8 @@ function nodeAt(doc: OurusDoc, pos: number): OurusNode | null {
 function label(n: OurusNode): string {
   const attrs = n.block.attrs;
   if (n.kind === 'heading') return `H${n.head!.attrs.level}`;
-  if (n.kind === 'item') return attrs.task ? (attrs.task.checked ? '☑' : '☐') : attrs.list!.type === 'ordered' ? '1.' : '•';
+  if (n.kind === 'item')
+    return attrs.task ? (attrs.task.checked ? '☑' : '☐') : attrs.list!.type === 'ordered' ? '1.' : '•';
   if (n.kind === 'paragraph') return '¶';
   if (n.kind === 'quote') return attrs.callout ? attrs.callout.kind : 'quote';
   return ATOM_LABELS[n.block.type] ?? n.block.type.replace('_block', '');
@@ -417,7 +503,12 @@ function label(n: OurusNode): string {
  * The outline in `panel`: the node the caret's text is in `current`, and, where the selection is a
  * subtree selection, its roots and everything under them `selected`, as the editor draws them.
  */
-function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OurusNode | null, selected: readonly OurusNode[] | null): void {
+function renderOutline(
+  panel: HTMLElement,
+  doc: OurusDoc,
+  current: OurusNode | null,
+  selected: readonly OurusNode[] | null,
+): void {
   const points = doc.marks.placeholders;
   const inSelection = new Set<number>();
   const add = (n: OurusNode): void => {
@@ -433,9 +524,19 @@ function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OurusNode | n
             const own = doc.textOf(n);
             const lines = (own instanceof OurusProse ? own.body : (own?.text ?? '')).split('\n').map((l) => l.trim());
             // an atom shows its first line of content: past a fence
-            const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '') : lines.join(' ');
-            const pos = own instanceof OurusProse ? doc.posOf(n, own.textStart(0)) : own ? doc.posOf(n, 0) : doc.mdTree.line(n.startLine).to;
-            const placeholders = points.some((pos) => pos >= doc.mdTree.line(n.startLine).from && pos <= doc.mdTree.line(n.textLastLine).to);
+            const text =
+              n.kind === 'atom'
+                ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '')
+                : lines.join(' ');
+            const pos =
+              own instanceof OurusProse
+                ? doc.posOf(n, own.textStart(0))
+                : own
+                  ? doc.posOf(n, 0)
+                  : doc.mdTree.line(n.startLine).to;
+            const placeholders = points.some(
+              (pos) => pos >= doc.mdTree.line(n.startLine).from && pos <= doc.mdTree.line(n.textLastLine).to,
+            );
             return `<li><div class="node${n.persistentNode === current?.persistentNode && !selected ? ' current' : ''}${inSelection.has(n.id) ? ' selected' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;
@@ -524,11 +625,18 @@ interface Renderer {
 const FLAVOR_NAMES: Record<Flavor, string> = { commonmark: 'CommonMark', gfm: 'GFM', obsidian: 'Obsidian' };
 
 /** By flavor: nothing, GFM, GFM and math (as each renderer's plugins have it). */
-const pick = <T,>(flavor: Flavor, commonmark: T, gfm: T, obsidian: T): T => (flavor === 'commonmark' ? commonmark : flavor === 'gfm' ? gfm : obsidian);
+const pick = <T>(flavor: Flavor, commonmark: T, gfm: T, obsidian: T): T =>
+  flavor === 'commonmark' ? commonmark : flavor === 'gfm' ? gfm : obsidian;
 
 const RENDERERS: Record<string, Renderer> = {
   // from the snapshot's own parse: the blocks are already read, incrementally, as the text changed
-  ourus: { name: 'ourus', setup: (flavor) => ({ reads: FLAVOR_NAMES[flavor], render: (doc) => doc.mdTree.renderHtml({ escapeRawHtml: true }) }) },
+  ourus: {
+    name: 'ourus',
+    setup: (flavor) => ({
+      reads: FLAVOR_NAMES[flavor],
+      render: (doc) => doc.mdTree.renderHtml({ escapeRawHtml: true }),
+    }),
+  },
   commonmark: {
     name: 'commonmark.js',
     setup: () => {
@@ -540,9 +648,20 @@ const RENDERERS: Record<string, Renderer> = {
   'markdown-it': {
     name: 'markdown-it',
     setup: (flavor) => {
-      const md = flavor === 'commonmark' ? new MarkdownIt('commonmark', { html: false }) : new MarkdownIt({ html: false, linkify: true }).use(taskLists).use(footnote);
+      const md =
+        flavor === 'commonmark'
+          ? new MarkdownIt('commonmark', { html: false })
+          : new MarkdownIt({ html: false, linkify: true }).use(taskLists).use(footnote);
       if (flavor === 'obsidian') md.use(mark);
-      return { reads: pick(flavor, "preset 'commonmark'", 'default preset, task lists, footnotes', 'default preset, task lists, footnotes, mark'), render: (doc) => md.render(doc.text) };
+      return {
+        reads: pick(
+          flavor,
+          "preset 'commonmark'",
+          'default preset, task lists, footnotes',
+          'default preset, task lists, footnotes, mark',
+        ),
+        render: (doc) => md.render(doc.text),
+      };
     },
   },
   marked: {
@@ -557,7 +676,10 @@ const RENDERERS: Record<string, Renderer> = {
     setup: (flavor) => {
       const extensions = pick(flavor, [], [gfm()], [gfm(), math()]);
       const htmlExtensions = pick(flavor, [], [gfmHtml()], [gfmHtml(), mathHtml({ throwOnError: false })]);
-      return { reads: pick(flavor, 'CommonMark', '+ gfm', '+ gfm, math'), render: (doc) => micromark(doc.text, { extensions, htmlExtensions }) };
+      return {
+        reads: pick(flavor, 'CommonMark', '+ gfm', '+ gfm, math'),
+        render: (doc) => micromark(doc.text, { extensions, htmlExtensions }),
+      };
     },
   },
   remark: {
@@ -565,7 +687,10 @@ const RENDERERS: Record<string, Renderer> = {
     setup: (flavor) => {
       const plugins: PluggableList = pick(flavor, [], [remarkGfm], [remarkGfm, remarkMath]);
       const processor = unified().use(remarkParse).use(plugins).use(remarkRehype).use(rehypeStringify);
-      return { reads: pick(flavor, 'CommonMark', '+ remark-gfm', '+ remark-gfm, remark-math'), render: (doc) => String(processor.processSync(doc.text)) };
+      return {
+        reads: pick(flavor, 'CommonMark', '+ remark-gfm', '+ remark-gfm, remark-math'),
+        render: (doc) => String(processor.processSync(doc.text)),
+      };
     },
   },
   showdown: {
@@ -573,7 +698,10 @@ const RENDERERS: Record<string, Renderer> = {
     setup: (flavor) => {
       const converter = new showdown.Converter();
       converter.setFlavor(flavor === 'commonmark' ? 'vanilla' : 'github');
-      return { reads: `flavor '${flavor === 'commonmark' ? 'vanilla' : 'github'}'`, render: (doc) => DOMPurify.sanitize(converter.makeHtml(doc.text)) };
+      return {
+        reads: `flavor '${flavor === 'commonmark' ? 'vanilla' : 'github'}'`,
+        render: (doc) => DOMPurify.sanitize(converter.makeHtml(doc.text)),
+      };
     },
   },
 };
@@ -594,7 +722,10 @@ function decorate(pane: HTMLElement): void {
     if (el.querySelector('.katex')) continue; // typeset by the renderer
     const target = el.matches('code') && el.parentElement?.tagName === 'PRE' ? el.parentElement : el;
     const out = document.createElement(target.tagName === 'DIV' || target.tagName === 'PRE' ? 'div' : 'span');
-    katex.render(el.textContent ?? '', out, { displayMode: el.matches('.math-display, .math-block'), throwOnError: false });
+    katex.render(el.textContent ?? '', out, {
+      displayMode: el.matches('.math-display, .math-block'),
+      throwOnError: false,
+    });
     target.replaceWith(out);
   }
   for (const el of pane.querySelectorAll<HTMLElement>('pre code[class*="language-"]')) {
@@ -620,7 +751,12 @@ function main(): void {
   // CodeMirror (most typing), which hides the last one
   let hideStatus = 0;
   onResult = (type, result) => {
-    status.className = result instanceof OurusSuccess ? 'success' : result instanceof OurusRejected || result instanceof OurusFailed ? 'rejected' : 'deferred';
+    status.className =
+      result instanceof OurusSuccess
+        ? 'success'
+        : result instanceof OurusRejected || result instanceof OurusFailed
+          ? 'rejected'
+          : 'deferred';
     status.textContent =
       result instanceof OurusRejected
         ? `${type}: rejected — ${result.reason}${result.detail ? ` (${result.detail.replace(/\.$/, '')})` : ''}`
@@ -640,7 +776,12 @@ function main(): void {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       const doc = view.state.field(ourus).doc;
-      renderOutline(panel, doc, nodeAt(doc, view.state.selection.main.head), view.state.field(ourus).selectedSubtrees(view.state.selection.main));
+      renderOutline(
+        panel,
+        doc,
+        nodeAt(doc, view.state.selection.main.head),
+        view.state.field(ourus).selectedSubtrees(view.state.selection.main),
+      );
       stats.textContent = `${doc.lineCount} lines · ${countNodes(doc.rootNode)} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
       // the renderer 'none': the pane hidden, nothing rendered
       previewPane.hidden = rendererSelect.value === 'none';
@@ -715,7 +856,8 @@ function main(): void {
   });
   const mirror = new Mirror(view, previewPane, preview);
   darkScheme.addEventListener('change', (e) => view.dispatch({ effects: theme.reconfigure(themeFor(e.matches)) }));
-  for (const type of ['wheel', 'mousedown', 'touchstart']) view.scrollDOM.addEventListener(type, () => (byHand = true), { passive: true });
+  for (const type of ['wheel', 'mousedown', 'touchstart'])
+    view.scrollDOM.addEventListener(type, () => (byHand = true), { passive: true });
   view.scrollDOM.addEventListener('scroll', () => byHand && !previewPane.hidden && mirror.scroll());
   // the pane's layout changes as it's resized, and as KaTeX's fonts arrive
   new ResizeObserver(() => refresh(view)).observe(preview);
@@ -745,7 +887,10 @@ function main(): void {
     if (!a) return;
     const href = a.getAttribute('href') ?? '';
     e.preventDefault();
-    if (href.startsWith('#')) preview.querySelector(`[id="${CSS.escape(decodeURIComponent(href.slice(1)))}"]`)?.scrollIntoView({ block: 'nearest' });
+    if (href.startsWith('#'))
+      preview
+        .querySelector(`[id="${CSS.escape(decodeURIComponent(href.slice(1)))}"]`)
+        ?.scrollIntoView({ block: 'nearest' });
   });
 
   panel.addEventListener('mousedown', (e) => {
@@ -768,7 +913,8 @@ function main(): void {
     });
     // pressed, as :active isn't on touch screens (iOS) or sticks (Chrome)
     button.addEventListener('pointerdown', () => button.classList.add('pressed'));
-    for (const type of ['pointerup', 'pointercancel', 'pointerleave']) button.addEventListener(type, () => button.classList.remove('pressed'));
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
+      button.addEventListener(type, () => button.classList.remove('pressed'));
   }
   // iOS leaves the page under its keyboard (Android shrinks it): the bar stays at the bottom of what's visible
   const viewport = window.visualViewport;
@@ -792,4 +938,3 @@ function main(): void {
 }
 
 main();
-

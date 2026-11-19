@@ -81,7 +81,15 @@ export function markdownRuns(md: string): Run[] | null {
     if (tok.startsWith('<') && !tag) return null;
     if (tag && tag[2] === 'a') href = tag[1] ? undefined : decode(tag[3] ?? '');
     else if (tag) on[TAGS[tag[2]!]!] += tag[1] ? -1 : 1;
-    else runs.push({ text: decode(tok), ...(on.bold && { bold: true }), ...(on.italic && { italic: true }), ...(on.strike && { strike: true }), ...(on.code && { code: true }), ...(href !== undefined && { href }) });
+    else
+      runs.push({
+        text: decode(tok),
+        ...(on.bold && { bold: true }),
+        ...(on.italic && { italic: true }),
+        ...(on.strike && { strike: true }),
+        ...(on.code && { code: true }),
+        ...(href !== undefined && { href }),
+      });
   }
   if (trail) runs.push({ text: trail });
   return runsAsMarkdown(runs).text === md ? runs : null;
@@ -105,7 +113,10 @@ const asTitle = (runs: readonly Run[]): (string | string[][])[][] =>
  * (`cut`); or why Notion can't have it. A free block is a text, or by its text a heading, a quote or
  * code; an item a to-do, numbered or a bullet.
  */
-function toNotion(text: string, free: boolean): { type: string; body: string; prefix: number; cut?: number; checked?: boolean; number?: number } | string {
+function toNotion(
+  text: string,
+  free: boolean,
+): { type: string; body: string; prefix: number; cut?: number; checked?: boolean; number?: number } | string {
   const heading = /^(#{1,6}) /.exec(text);
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
   if (free && heading) {
@@ -114,7 +125,10 @@ function toNotion(text: string, free: boolean): { type: string; body: string; pr
   }
   if (free && fence && fence[1]) return 'code block with a language (Notion names its own)';
   // (a code block always has a line in Notion: one with none, its fences together, it hasn't)
-  if (free && fence) return /^```\n```$/.test(text) ? 'code block with no line (Notion\'s has one)' : { type: 'code', body: fence[2]!, prefix: 4 };
+  if (free && fence)
+    return /^```\n```$/.test(text)
+      ? "code block with no line (Notion's has one)"
+      : { type: 'code', body: fence[2]!, prefix: 4 };
   if (free && text.startsWith('> ')) return { type: 'quote', body: text.slice(2), prefix: 2 };
   if (!free && heading) return 'heading as a list item (a heading is a block of its own)';
   if (!free && /^```/.test(text)) return 'code block as a list item (a code block is a block of its own)';
@@ -127,7 +141,8 @@ function toNotion(text: string, free: boolean): { type: string; body: string; pr
   const base = { type, prefix, ...(numbered && { number: Number(numbered[1]) }) };
   // a number that is text (after a numbered block's own number too): the escape's backslash off
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text.slice(prefix));
-  if (literal) return { ...base, body: literal[1] + text.slice(prefix + literal[0].length), cut: prefix + literal[1]!.length };
+  if (literal)
+    return { ...base, body: literal[1] + text.slice(prefix + literal[0].length), cut: prefix + literal[1]!.length };
   // and a `#` that is text (a heading is a block's type, its text plain)
   if (/^\\#/.test(text.slice(prefix))) return { ...base, body: text.slice(prefix + 1), cut: prefix };
   return { ...base, body: text.slice(prefix) };
@@ -144,7 +159,9 @@ function appOffset(offset: number, at: { prefix: number; cut?: number }, runs: r
 }
 
 /** The outline's blocks as Notion's (`NotionBlock`), or why Notion can't start from them. */
-function asNotion(blocks: readonly Block[]): { blocks: NotionBlock[]; runs: Run[][]; at: ReturnType<typeof toNotion>[] } | string {
+function asNotion(
+  blocks: readonly Block[],
+): { blocks: NotionBlock[]; runs: Run[][]; at: ReturnType<typeof toNotion>[] } | string {
   const out: NotionBlock[] = [];
   const runs: Run[][] = [];
   const at: ReturnType<typeof toNotion>[] = [];
@@ -158,10 +175,17 @@ function asNotion(blocks: readonly Block[]): { blocks: NotionBlock[]; runs: Run[
     last.length = b.depth + 1;
     // a numbered list counts on from its first's number: one that doesn't is another list Notion hasn't
     const prev = last[b.depth];
-    if (n.number !== undefined && prev != null && n.number !== prev + 1) return 'numbered list right after another (Notion numbers them as one)';
+    if (n.number !== undefined && prev != null && n.number !== prev + 1)
+      return 'numbered list right after another (Notion numbers them as one)';
     const start = n.number !== undefined && prev == null && n.number !== 1 ? n.number : undefined;
     last[b.depth] = n.number ?? null;
-    out.push({ depth: b.depth, type: n.type, title: asTitle(r), ...(n.checked !== undefined && { checked: n.checked }), ...(start !== undefined && { start }) });
+    out.push({
+      depth: b.depth,
+      type: n.type,
+      title: asTitle(r),
+      ...(n.checked !== undefined && { checked: n.checked }),
+      ...(start !== undefined && { start }),
+    });
     runs.push(r);
     at.push(n);
   }
@@ -171,7 +195,16 @@ function asNotion(blocks: readonly Block[]): { blocks: NotionBlock[]; runs: Run[
 /** In the page: the blocks (type, runs, checked, number), the caret (by block and offset in its plain text) and blocks selected whole. */
 function readPage(find: string) {
   const root = (0, eval)(find);
-  const flat: { depth: number; type: string; runs: Run[]; plain: string; checked: boolean; start?: number; language?: string; id: string }[] = [];
+  const flat: {
+    depth: number;
+    type: string;
+    runs: Run[];
+    plain: string;
+    checked: boolean;
+    start?: number;
+    language?: string;
+    id: string;
+  }[] = [];
   const runsOf = (title: any[][]): Run[] =>
     (title ?? []).map(([text, marks]: any) => {
       const r: Run = { text: String(text ?? '') };
@@ -199,13 +232,24 @@ function readPage(find: string) {
         }
       }
       const format = c.getFormat?.() ?? {};
-      flat.push({ depth, type: c.getType(), runs, plain: runs.map((r) => r.text).join(''), checked: p.checked?.[0]?.[0] === 'Yes', ...(format.list_start_index != null && { start: Number(format.list_start_index) }), ...(p.language && { language: String(p.language[0][0]) }), id: c._pointer.id });
+      flat.push({
+        depth,
+        type: c.getType(),
+        runs,
+        plain: runs.map((r) => r.text).join(''),
+        checked: p.checked?.[0]?.[0] === 'Yes',
+        ...(format.list_start_index != null && { start: Number(format.list_start_index) }),
+        ...(p.language && { language: String(p.language[0][0]) }),
+        id: c._pointer.id,
+      });
       walk(c, depth + 1);
     });
   walk(root, 0);
   let sel: { block: number; anchor: number; head: number } | null = null;
   const ds = getSelection()!;
-  const leaf = (ds.anchorNode instanceof Element ? ds.anchorNode : ds.anchorNode?.parentElement)?.closest('[data-content-editable-leaf]') as HTMLElement | null;
+  const leaf = (ds.anchorNode instanceof Element ? ds.anchorNode : ds.anchorNode?.parentElement)?.closest(
+    '[data-content-editable-leaf]',
+  ) as HTMLElement | null;
   const bid = leaf?.closest('[data-block-id]')?.getAttribute('data-block-id');
   const block = flat.findIndex((f) => f.id === bid);
   if (leaf && block >= 0) {
@@ -244,7 +288,19 @@ export const driver: Driver = {
     // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
     headings: 'block',
     // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
-    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
+    decorations: [
+      'bullet',
+      'number',
+      'checkbox',
+      'heading',
+      'setext',
+      'quote',
+      'callout',
+      'fence',
+      'math',
+      'rule',
+      'footnote',
+    ],
     // its blocks a flat sequence beside a text, each item a block of its own: a list after a text is no
     // block's (Backspace50b: the item after a text unwrapped by Backspace stays where it was)
     listParent: 'container',
@@ -284,7 +340,12 @@ export const driver: Driver = {
     redo: 'Control+Shift+z',
     // (Ctrl+Home goes to the page's title, which is no block: no `cursorDocStart`)
     cursorDocEnd: 'Control+End',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // after deleting a block selected whole no block is edited
   noCaretAfter: ['deleteSubtree'],
@@ -293,7 +354,17 @@ export const driver: Driver = {
   selectsBlocks: true,
   // Notion's tables, equations, dividers and callouts are blocks with no text to put a caret in (or
   // none of Markdown's), which the driver doesn't make: skipped, with Markdown's other atoms
-  refuses: ['markup-fence', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'callout'],
+  refuses: [
+    'markup-fence',
+    'html',
+    'table',
+    'math',
+    'thematic break',
+    'link reference definition',
+    'comment',
+    'footnote',
+    'callout',
+  ],
   // three backticks typed, its code block (in JavaScript); an equation typed whole (`$$x$$`), its
   // inline equation: the characters gone, the caret with them
   capturesTyped: /```|\$\$.+\$\$/,
@@ -308,9 +379,21 @@ export const driver: Driver = {
     if (typeof n === 'string') return n;
     if (!o.sel) return undefined;
     const at = n.at[o.sel.block] as Exclude<ReturnType<typeof toNotion>, string>;
-    if (o.sel.anchor < at.prefix || o.sel.head < at.prefix) return at.type === 'to_do' ? "caret in a task's checkbox" : at.type === 'quote' ? "caret in a quote's >" : at.type === 'code' ? "caret on a code block's fence" : "caret in a block's marker";
-    if (at.type === 'code' && Math.max(o.sel.anchor, o.sel.head) > at.prefix + at.body.length) return "caret on a code block's fence";
-    if (appOffset(o.sel.anchor, at, n.runs[o.sel.block]!) === null || appOffset(o.sel.head, at, n.runs[o.sel.block]!) === null) return 'caret in markup, which is formatting in Notion';
+    if (o.sel.anchor < at.prefix || o.sel.head < at.prefix)
+      return at.type === 'to_do'
+        ? "caret in a task's checkbox"
+        : at.type === 'quote'
+          ? "caret in a quote's >"
+          : at.type === 'code'
+            ? "caret on a code block's fence"
+            : "caret in a block's marker";
+    if (at.type === 'code' && Math.max(o.sel.anchor, o.sel.head) > at.prefix + at.body.length)
+      return "caret on a code block's fence";
+    if (
+      appOffset(o.sel.anchor, at, n.runs[o.sel.block]!) === null ||
+      appOffset(o.sel.head, at, n.runs[o.sel.block]!) === null
+    )
+      return 'caret in markup, which is formatting in Notion';
     return undefined;
   },
 
@@ -318,26 +401,45 @@ export const driver: Driver = {
     // an edit Notion hasn't saved (the proxy answers its saves, and it still holds them) makes leaving the
     // page ask "Leave site?" (`beforeunload`), which Playwright dismisses: the next load never came back
     page.on('dialog', (d) => void d.accept().catch(() => {}));
-    await page.context().addCookies(COOKIES.map(([name, value]) => ({ name, value, domain: 'jordanscales.notion.site', path: '/' })));
+    await page
+      .context()
+      .addCookies(COOKIES.map(([name, value]) => ({ name, value, domain: 'jordanscales.notion.site', path: '/' })));
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => document.querySelector('[data-content-editable-leaf][contenteditable="true"]'), undefined, { timeout: 120000 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-content-editable-leaf][contenteditable="true"]'),
+      undefined,
+      { timeout: 120000 },
+    );
     await page.waitForFunction((find) => (0, eval)(find), FIND_PAGE, { timeout: 60000 });
     await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
     // ready once a key does what it should: Tab indents
     for (let t0 = Date.now(), ready = false; !ready; ) {
-      await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+      await this.load(page, {
+        blocks: [
+          { depth: 0, text: 'a' },
+          { depth: 0, text: 'b' },
+        ],
+        sel: { block: 1, anchor: 1, head: 1 },
+      });
       await page.keyboard.press('Tab');
       await page.waitForTimeout(300);
       ready = ((await this.read(page)) as Outline).blocks[1]?.depth === 1;
       if (!ready && Date.now() - t0 > 30000) throw new Error("Notion's keys didn't come up: Tab doesn't indent");
     }
     // the build of Notion's the page loads (`app-<hash>.js`), which ships continuously
-    return page.evaluate(() => performance.getEntriesByType('resource').map((e) => /\/_assets\/app-([0-9a-f]+)\.js/.exec(e.name)?.[1]).find(Boolean) ?? 'published page');
+    return page.evaluate(
+      () =>
+        performance
+          .getEntriesByType('resource')
+          .map((e) => /\/_assets\/app-([0-9a-f]+)\.js/.exec(e.name)?.[1])
+          .find(Boolean) ?? 'published page',
+    );
   },
 
   async load(page: Page, doc) {
     const o = doc as Outline;
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 }));
     const lifted = liftOwned(o.blocks);
     const n = asNotion(lifted);
     if (typeof n === 'string') throw new Error(`Notion can't hold the start: ${n}`);
@@ -349,14 +451,22 @@ export const driver: Driver = {
     await page.goto('about:blank');
     const target = `${this.url}?sxs=${json}`;
     // (a cookie holds some 4 KB: a longer document goes in the URL alone, the last test's cookie gone)
-    if (json.length < 3800) await page.context().addCookies([{ name: 'sxs', value: json, domain: 'jordanscales.notion.site', path: '/' }]);
+    if (json.length < 3800)
+      await page.context().addCookies([{ name: 'sxs', value: json, domain: 'jordanscales.notion.site', path: '/' }]);
     else await page.context().clearCookies({ name: 'sxs' });
-    await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 40000 }).catch(() => page.goto(target, { waitUntil: 'domcontentloaded', timeout: 80000 }));
+    await page
+      .goto(target, { waitUntil: 'domcontentloaded', timeout: 40000 })
+      .catch(() => page.goto(target, { waitUntil: 'domcontentloaded', timeout: 80000 }));
     await page.waitForFunction(
       ([find, n]) => {
         const root = (0, eval)(find as string);
         const flat = (s: any): number => s.getContentStores().reduce((t: number, c: any) => t + 1 + flat(c), 0);
-        return root && flat(root) === n && document.querySelectorAll('.notion-page-content [data-content-editable-leaf][contenteditable="true"]').length >= Math.min(n as number, 1);
+        return (
+          root &&
+          flat(root) === n &&
+          document.querySelectorAll('.notion-page-content [data-content-editable-leaf][contenteditable="true"]')
+            .length >= Math.min(n as number, 1)
+        );
       },
       [FIND_PAGE, n.blocks.length] as const,
       { timeout: 60000 },
@@ -370,18 +480,27 @@ export const driver: Driver = {
       await page.keyboard.press('Escape');
       await idle();
       const want = JSON.stringify(o.selected);
-      for (let k = 0; k < o.blocks.length && JSON.stringify(((await this.read(page)) as Outline).selected ?? []) !== want; k++) {
+      for (
+        let k = 0;
+        k < o.blocks.length && JSON.stringify(((await this.read(page)) as Outline).selected ?? []) !== want;
+        k++
+      ) {
         await page.keyboard.press('Shift+ArrowDown');
         await idle();
       }
       const got = ((await this.read(page)) as Outline).selected ?? [];
-      if (JSON.stringify(got) !== want) throw new Error(`Notion selects blocks ${got.join(', ')}, not ${o.selected.join(', ')}`);
+      if (JSON.stringify(got) !== want)
+        throw new Error(`Notion selects blocks ${got.join(', ')}, not ${o.selected.join(', ')}`);
       return;
     }
     if (!o.sel) return;
     const at = n.at[o.sel.block] as Exclude<ReturnType<typeof toNotion>, string>;
     const runs = n.runs[o.sel.block]!;
-    await this.place(page, { block: o.sel.block, anchor: appOffset(o.sel.anchor, at, runs)!, head: appOffset(o.sel.head, at, runs)! });
+    await this.place(page, {
+      block: o.sel.block,
+      anchor: appOffset(o.sel.anchor, at, runs)!,
+      head: appOffset(o.sel.head, at, runs)!,
+    });
     await idle();
   },
 
@@ -407,8 +526,13 @@ export const driver: Driver = {
         const walk = (s: any) => s.getContentStores().forEach((c: any) => (flat.push(c), walk(c)));
         walk((0, eval)(find));
         const id = flat[sel.block]?._pointer.id;
-        const leaf = document.querySelector(`[data-block-id="${id}"] [data-content-editable-leaf]`) as HTMLElement | null;
-        if (!leaf) throw new Error(`no leaf for block ${sel.block}: ${flat.length} blocks, ${document.querySelectorAll('[data-block-id]').length} in the DOM`);
+        const leaf = document.querySelector(
+          `[data-block-id="${id}"] [data-content-editable-leaf]`,
+        ) as HTMLElement | null;
+        if (!leaf)
+          throw new Error(
+            `no leaf for block ${sel.block}: ${flat.length} blocks, ${document.querySelectorAll('[data-block-id]').length} in the DOM`,
+          );
         leaf.focus();
         const at = (offset: number): [Node, number] => {
           const w = document.createTreeWalker(leaf, NodeFilter.SHOW_TEXT);
@@ -444,7 +568,8 @@ export const driver: Driver = {
       let suffix = '';
       let cut: number | undefined;
       if (b.type === 'numbered_list') {
-        numbers[i] = b.start ?? (prev !== undefined && raw.flat[prev]!.type === 'numbered_list' ? numbers[prev]! + 1 : 1);
+        numbers[i] =
+          b.start ?? (prev !== undefined && raw.flat[prev]!.type === 'numbered_list' ? numbers[prev]! + 1 : 1);
         prefix = `${numbers[i]}. `;
       }
       if (b.type === 'bulleted_list' || b.type === 'numbered_list' || b.type === 'text') {
@@ -465,12 +590,30 @@ export const driver: Driver = {
       const md = b.type === 'code' ? { text: b.plain, at: (p: number) => p } : runsAsMarkdown(b.runs);
       const c = cut !== undefined ? md.at(cut) : -1;
       const body = c >= 0 ? `${md.text.slice(0, c)}\\${md.text.slice(c)}` : md.text;
-      return { text: prefix + body + suffix, at: (p: number) => prefix.length + md.at(p) + (cut !== undefined && p > cut ? 1 : 0) };
+      return {
+        text: prefix + body + suffix,
+        at: (p: number) => prefix.length + md.at(p) + (cut !== undefined && p > cut ? 1 : 0),
+      };
     });
-    const blocks: Block[] = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text, ...(!ITEMS.has(b.type) && { free: true as const }) }));
-    const sel = raw.selected.length || !raw.sel ? null : { block: raw.sel.block, anchor: texts[raw.sel.block]!.at(raw.sel.anchor), head: texts[raw.sel.block]!.at(raw.sel.head) };
+    const blocks: Block[] = raw.flat.map((b, i) => ({
+      depth: b.depth,
+      text: texts[i]!.text,
+      ...(!ITEMS.has(b.type) && { free: true as const }),
+    }));
+    const sel =
+      raw.selected.length || !raw.sel
+        ? null
+        : {
+            block: raw.sel.block,
+            anchor: texts[raw.sel.block]!.at(raw.sel.anchor),
+            head: texts[raw.sel.block]!.at(raw.sel.head),
+          };
     // (any block may hold children, a text too: what a free block holds read as its Markdown reads,
     // beside it, then owned as the app's `listParent` says)
-    return { blocks: asMarkdownReads(blocks, driver.behaves?.listParent), sel, ...(raw.selected.length && { selected: raw.selected }) } as Outline;
+    return {
+      blocks: asMarkdownReads(blocks, driver.behaves?.listParent),
+      sel,
+      ...(raw.selected.length && { selected: raw.selected }),
+    } as Outline;
   },
 } as Driver & { place(page: Page, sel: { block: number; anchor: number; head: number }): Promise<void> };

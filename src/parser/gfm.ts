@@ -6,12 +6,28 @@
 // item's checkbox is recognized in any list item's first line (cmark-gfm only at a line's start,
 // so not in quotes or after another marker on the line), with `X` as well as `x`.
 
-import { escapeHtml, isAsciiAlnum, isAsciiAlpha, isSpaceOrTab, isUnicodeWhitespace, normalizeLabel, normalizeUri } from './chars.ts';
+import {
+  escapeHtml,
+  isAsciiAlnum,
+  isAsciiAlpha,
+  isSpaceOrTab,
+  isUnicodeWhitespace,
+  normalizeLabel,
+  normalizeUri,
+} from './chars.ts';
 import { ITEM, PARAGRAPH, extractRefdefs, type ParagraphFrame } from './blocks.ts';
 import { defineFlavor, type MdExtension, type MdFlavor, type MdMutableBlock } from './flavor.ts';
 import { coreBlocks, inTightList, type MdHtmlRenderer } from './html.ts';
 import { MdInlineTextBuilder } from './inline-text.ts';
-import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule, type MdTextMatch, type MdTextRule } from './inlines.ts';
+import {
+  Node,
+  type MdBracketRule,
+  type MdDelimiterRule,
+  type MdInlineParser,
+  type MdInlineRule,
+  type MdTextMatch,
+  type MdTextRule,
+} from './inlines.ts';
 import type { MdBlockSpec, MdFrame, MdLeafRole, MdMachine } from './machine.ts';
 import type { MdTree } from './syntax.ts';
 import type { MdBlock, MdBlockAt, MdTableAlign } from './types.ts';
@@ -55,7 +71,8 @@ function cellText(s: string, i: number, end: number): number {
   return j - i;
 }
 
-const isTableEscapable = (c: number): boolean => c !== 32 && ((c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126));
+const isTableEscapable = (c: number): boolean =>
+  c !== 32 && ((c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126));
 
 /**
  * The cells of a table row, `s[from, to)` (cmark-gfm's `row_from_string` on one line), or null: a row is
@@ -120,7 +137,8 @@ function makeTableSpec(pipedRows: boolean): MdBlockSpec<TableFrame> {
       if (m.role) return;
       const cells = rowCells(line, at, line.length) ?? [];
       const kept = cells.slice(0, table.columns).map((c) => ({ start: m.real(c.from), end: m.real(c.to) }));
-      if (kept.length < table.columns) m.replace(index, { ...table, filled: table.filled + table.columns - kept.length } as TableFrame);
+      if (kept.length < table.columns)
+        m.replace(index, { ...table, filled: table.filled + table.columns - kept.length } as TableFrame);
       m.setLeaf({ type: 'table', first: false, part: { row: 'body', cells: kept } });
     },
   };
@@ -144,7 +162,11 @@ function makeTableStart(spec: MdBlockSpec<TableFrame>, pipedRows: boolean) {
       let lead = 0;
       while (lead < p.last.length && isSpaceOrTab(p.last.charCodeAt(lead))) lead++;
       const header = rowCells(p.last, lead, p.last.length);
-      if (!header || header.length !== delimiters.length || (pipedRows && p.last.indexOf('|') < 0 && rest.indexOf('|') < 0)) {
+      if (
+        !header ||
+        header.length !== delimiters.length ||
+        (pipedRows && p.last.indexOf('|') < 0 && rest.indexOf('|') < 0)
+      ) {
         m.replace(m.stack.length - 1, { ...p, tableVisited: true } as MdFrame);
         return 0;
       }
@@ -168,8 +190,17 @@ function makeTableStart(spec: MdBlockSpec<TableFrame>, pipedRows: boolean) {
         part: { row: 'header', cells: header.map((c) => ({ start: c.from + base, end: c.to + base })) },
       });
       m.popTop();
-      m.addChild({ spec, columns: header.length, leadingPipe: p.last.charCodeAt(lead) === 124, filled: 0 } as TableFrame);
-      m.setLeaf({ type: 'table', first: false, part: { row: 'delimiter', cells: delimiters.map((c) => ({ start: m.real(c.from), end: m.real(c.to) })) } });
+      m.addChild({
+        spec,
+        columns: header.length,
+        leadingPipe: p.last.charCodeAt(lead) === 124,
+        filled: 0,
+      } as TableFrame);
+      m.setLeaf({
+        type: 'table',
+        first: false,
+        part: { row: 'delimiter', cells: delimiters.map((c) => ({ start: m.real(c.from), end: m.real(c.to) })) },
+      });
       return 2;
     },
   };
@@ -178,11 +209,27 @@ function makeTableStart(spec: MdBlockSpec<TableFrame>, pipedRows: boolean) {
 const tableBuilder = {
   line(block: MdMutableBlock, role: MdLeafRole, line: number): void {
     const part = role.part as { row: string; cells: { start: number; end: number }[] };
-    const row: MdMutableBlock = { type: 'table_row', startLine: line, endLine: line, children: [], parent: block, row: part.row };
+    const row: MdMutableBlock = {
+      type: 'table_row',
+      startLine: line,
+      endLine: line,
+      children: [],
+      parent: block,
+      row: part.row,
+    };
     if (Object.isFrozen(block.children)) block.children = [row];
     else block.children.push(row);
     part.cells.forEach((c, column) => {
-      row.children.push({ type: 'table_cell', startLine: line, endLine: line, children: [], parent: row, start: c.start, end: c.end, column });
+      row.children.push({
+        type: 'table_cell',
+        startLine: line,
+        endLine: line,
+        children: [],
+        parent: row,
+        start: c.start,
+        end: c.end,
+        column,
+      });
     });
   },
 };
@@ -260,7 +307,8 @@ const tableRenderers = {
   },
 };
 
-const cellTag = (header: boolean, align: MdTableAlign): string => `<${header ? 'th' : 'td'}${align ? ` align="${align}"` : ''}>`;
+const cellTag = (header: boolean, align: MdTableAlign): string =>
+  `<${header ? 'th' : 'td'}${align ? ` align="${align}"` : ''}>`;
 
 /**
  * Whether a line from `at` is a row of a table whose header row starts with a pipe, or doesn't, as
@@ -316,10 +364,17 @@ function makeTaskStart(anyStatus: boolean, cmark: boolean) {
       const at = m.nextNonspace;
       const box = line.charCodeAt(at + 1);
       if (line.charCodeAt(at) !== 91 || line.charCodeAt(at + 2) !== 93) return 0;
-      if (anyStatus ? box === 93 || box !== box || box === 10 || box === 13 : !(box === 32 || box === 9 || box === 120 || box === 88)) return 0;
+      if (
+        anyStatus
+          ? box === 93 || box !== box || box === 10 || box === 13
+          : !(box === 32 || box === 9 || box === 120 || box === 88)
+      )
+        return 0;
       if (!isSpaceOrTab(line.charCodeAt(at + 3))) return 0;
       const blank = box === 32 || box === 9;
-      m.annotate(index, { task: { checked: !blank, status: blank ? ' ' : line[at + 1], start: m.real(at), end: m.real(at + 3) } });
+      m.annotate(index, {
+        task: { checked: !blank, status: blank ? ' ' : line[at + 1], start: m.real(at), end: m.real(at + 3) },
+      });
       m.advanceNextNonspace();
       m.advanceOffset(3, false);
       m.findNextNonspace();
@@ -336,7 +391,9 @@ const reCmarkTask = /^[ \t\v\f]*(?:[-+*]|[0-9]+.)[ \t\v\f]+\[[ x]\][ \t\v\f]+/;
  * Task list items. `anyStatus`: any one UTF-16 unit in the brackets, as Obsidian reads a status. `cmark`: only where cmark-gfm finds
  * them (the line's first marker, `[ ]` or `[x]`), for comparing with it.
  */
-export function tasklistExtension(options: { readonly anyStatus?: boolean; readonly cmark?: boolean } = {}): MdExtension {
+export function tasklistExtension(
+  options: { readonly anyStatus?: boolean; readonly cmark?: boolean } = {},
+): MdExtension {
   return {
     name: 'tasklist',
     blockStarts: [makeTaskStart(options.anyStatus ?? false, options.cmark ?? false)],
@@ -393,7 +450,8 @@ function isHostChar(s: string, i: number): boolean {
   return !isUnicodeWhitespace(cp) && !(cp < 128 ? isAsciiPunct(cp) : isUnicodePunctuationOnly(cp));
 }
 
-const isAsciiPunct = (c: number): boolean => (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126);
+const isAsciiPunct = (c: number): boolean =>
+  (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126);
 const reP = /\p{P}/u;
 const isUnicodePunctuationOnly = (cp: number): boolean => reP.test(String.fromCodePoint(cp));
 
@@ -444,7 +502,19 @@ function autolinkDelim(s: string, from: number, length: number): number {
       if (closing <= opening) return end - from;
       closing--;
       end--;
-    } else if (c === 63 || c === 33 || c === 46 || c === 44 || c === 58 || c === 42 || c === 95 || c === 126 || c === 39 || c === 34) end--;
+    } else if (
+      c === 63 ||
+      c === 33 ||
+      c === 46 ||
+      c === 44 ||
+      c === 58 ||
+      c === 42 ||
+      c === 95 ||
+      c === 126 ||
+      c === 39 ||
+      c === 34
+    )
+      end--;
     else if (c === 59) {
       // an entity-like `&name;` at the end goes, else just the `;`
       let k = end - 2;
@@ -478,7 +548,8 @@ function closedAfter(s: string, from: number): boolean {
 }
 
 /** Whether a URL at `at` can't be linked for a bracket open before it (`openBrackets`). */
-const inBracket = (p: MdInlineParser, at: number, obsidian: boolean): boolean => !!p.brackets && (!obsidian || closedAfter(p.text, at));
+const inBracket = (p: MdInlineParser, at: number, obsidian: boolean): boolean =>
+  !!p.brackets && (!obsidian || closedAfter(p.text, at));
 
 const wwwRule = (obsidian: boolean): MdInlineRule => ({
   name: 'wwwAutolink',
@@ -585,7 +656,8 @@ const emailRule: MdTextRule = {
             again = true;
             break;
           }
-          if (c === 46 && length < remaining - offset - maxRewind - 1 && isAsciiAlnum(s.charCodeAt(at + length + 1))) np++;
+          if (c === 46 && length < remaining - offset - maxRewind - 1 && isAsciiAlnum(s.charCodeAt(at + length + 1)))
+            np++;
           else if (c === 47 && xmpp) continue;
           else if (c !== 45 && c !== 95) break;
         }
@@ -605,7 +677,12 @@ const emailRule: MdTextRule = {
       const linkFrom = at - rewind;
       const linkTo = at + length;
       const raw = s.slice(linkFrom, linkTo);
-      found.push({ from: linkFrom, to: linkTo, type: 'autolink', attrs: { value: raw, destination: normalizeUri((autoMailto ? 'mailto:' : '') + raw), literal: true } });
+      found.push({
+        from: linkFrom,
+        to: linkTo,
+        type: 'autolink',
+        attrs: { value: raw, destination: normalizeUri((autoMailto ? 'mailto:' : '') + raw), literal: true },
+      });
       remaining -= offset + maxRewind + length;
       start += offset + maxRewind + length;
       offset = 0;
@@ -637,7 +714,9 @@ export const autolink: MdExtension = autolinkExtension();
 
 export const tagfilter: MdExtension = {
   name: 'tagfilter',
-  render: { filteredTags: ['title', 'textarea', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'script', 'plaintext'] },
+  render: {
+    filteredTags: ['title', 'textarea', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'script', 'plaintext'],
+  },
 };
 
 // -------------------------------------------------------------------------------- footnotes
@@ -697,7 +776,9 @@ const footnoteBracket: MdBracketRule = {
       n = next;
     }
     const label = normalizeLabel(`[${raw}]`);
-    const node = p.context.footnotes.has(label) ? new Node('footnote_ref', opener.node.from, p.pos, { label, value: raw }) : new Node('text', opener.node.from, p.pos);
+    const node = p.context.footnotes.has(label)
+      ? new Node('footnote_ref', opener.node.from, p.pos, { label, value: raw })
+      : new Node('text', opener.node.from, p.pos);
     opener.node.insertAfter(node);
     opener.node.unlink();
     p.removeBracket();
@@ -725,14 +806,21 @@ function footnoteState(r: MdHtmlRenderer): FootnoteState {
 const defLabel = (def: MdBlock): string => def.attrs.label!.slice(2, -1);
 const escapeHref = (s: string): string => escapeHtml(normalizeUri(s));
 
-function writeBackref(r: MdHtmlRenderer, def: { block: MdBlockAt; ix: number; count: number; written: boolean }): boolean {
+function writeBackref(
+  r: MdHtmlRenderer,
+  def: { block: MdBlockAt; ix: number; count: number; written: boolean },
+): boolean {
   if (def.written) return false;
   def.written = true;
   const label = escapeHref(defLabel(def.block.block));
   const m = String(def.ix);
-  r.lit(`<a href="#fnref-${label}" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="${m}" aria-label="Back to reference ${m}">↩</a>`);
+  r.lit(
+    `<a href="#fnref-${label}" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="${m}" aria-label="Back to reference ${m}">↩</a>`,
+  );
   for (let i = 2; i <= def.count; i++) {
-    r.lit(` <a href="#fnref-${label}-${i}" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="${m}-${i}" aria-label="Back to reference ${m}-${i}">↩<sup class="footnote-ref">${i}</sup></a>`);
+    r.lit(
+      ` <a href="#fnref-${label}-${i}" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="${m}-${i}" aria-label="Back to reference ${m}-${i}">↩<sup class="footnote-ref">${i}</sup></a>`,
+    );
   }
   return true;
 }
@@ -759,7 +847,14 @@ export const footnotes: MdExtension = {
   brackets: [footnoteBracket],
   render: {
     start(r) {
-      const state: FootnoteState = { defs: new Map(), refs: new Map(), cursor: new Map(), next: 0, section: false, writing: null };
+      const state: FootnoteState = {
+        defs: new Map(),
+        refs: new Map(),
+        cursor: new Map(),
+        next: 0,
+        section: false,
+        writing: null,
+      };
       r.state.set('footnotes', state);
       const tree = r.tree;
       // the first definition of a label to end wins (cmark-gfm: a definition nested in another wins)
@@ -837,7 +932,10 @@ export const footnotes: MdExtension = {
         const refIx = state.refs.get(leaf)?.[k] ?? 1;
         const label = escapeHref(defLabel(def.block.block));
         // (in an image's alt text, nothing, as micromark's GFM writes it)
-        if (!r.disableTags) r.lit(`<sup class="footnote-ref"><a href="#fn-${label}" id="fnref-${label}${refIx > 1 ? '-' + refIx : ''}" data-footnote-ref>${def.ix}</a></sup>`);
+        if (!r.disableTags)
+          r.lit(
+            `<sup class="footnote-ref"><a href="#fn-${label}" id="fnref-${label}${refIx > 1 ? '-' + refIx : ''}" data-footnote-ref>${def.ix}</a></sup>`,
+          );
       },
     },
   },
@@ -846,6 +944,14 @@ export const footnotes: MdExtension = {
 // ---------------------------------------------------------------------------------- flavors
 
 /** All of GFM's extensions, as GitHub renders comments and files. */
-export const gfmExtensions: readonly MdExtension[] = [gfmCore, table, tasklist, strikethrough, autolink, tagfilter, footnotes];
+export const gfmExtensions: readonly MdExtension[] = [
+  gfmCore,
+  table,
+  tasklist,
+  strikethrough,
+  autolink,
+  tagfilter,
+  footnotes,
+];
 
 export const gfm: MdFlavor = defineFlavor('gfm', gfmExtensions);

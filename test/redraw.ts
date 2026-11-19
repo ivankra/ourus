@@ -14,16 +14,36 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { OurusConfig } from '../src/config.ts';
-import { drawDoc, drawLabels, drawsCaret, readDrawing, readLabels, withoutCaret, isAction, playActions, specTestFlavors, NodeLabels, normalizeDrawing, describeOutcome, specTestStart, readSpecFile, specSlug, specFiles, SPEC_DIR, type SpecTest } from './lib/index.ts';
+import {
+  drawDoc,
+  drawLabels,
+  drawsCaret,
+  readDrawing,
+  readLabels,
+  withoutCaret,
+  isAction,
+  playActions,
+  specTestFlavors,
+  NodeLabels,
+  normalizeDrawing,
+  describeOutcome,
+  specTestStart,
+  readSpecFile,
+  specSlug,
+  specFiles,
+  SPEC_DIR,
+  type SpecTest,
+} from './lib/index.ts';
 import { OurusFailed, OurusRejected } from '../src/commands/index.ts';
 
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const selectors = args.filter((a) => !a.startsWith('--'));
-for (const a of args) if (a.startsWith('--') && a !== '--apply') {
-  console.error(`unknown option ${a}\nusage: node test/redraw.ts [file.md | case | file.md#anchor]... [--apply]`);
-  process.exit(2);
-}
+for (const a of args)
+  if (a.startsWith('--') && a !== '--apply') {
+    console.error(`unknown option ${a}\nusage: node test/redraw.ts [file.md | case | file.md#anchor]... [--apply]`);
+    process.exit(2);
+  }
 
 /** Whether `t` is one a selector picks: its file, its ID, or `file.md#anchor`. */
 const picks = (selector: string, t: SpecTest): boolean => {
@@ -36,7 +56,11 @@ const picks = (selector: string, t: SpecTest): boolean => {
 
 /** Spaces ending a line drawn `␠`, so a difference in them shows. */
 const visible = (drawn: string): string => drawn.replace(/ +$/gm, (spaces) => '␠'.repeat(spaces.length));
-const indented = (drawn: string): string => visible(drawn.replace(/\n$/, '')).split('\n').map((line) => `      ${line}`).join('\n');
+const indented = (drawn: string): string =>
+  visible(drawn.replace(/\n$/, ''))
+    .split('\n')
+    .map((line) => `      ${line}`)
+    .join('\n');
 
 interface Redrawn {
   readonly t: SpecTest;
@@ -60,12 +84,17 @@ function played(t: SpecTest, flavor: OurusConfig['flavor']): { buffer: string; r
     const before = state.view.doc.nextId;
     for (const action of step.actions) {
       state = playActions(state, [action]);
-      if (state.last instanceof OurusFailed) return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
+      if (state.last instanceof OurusFailed)
+        return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
     }
-    if (state.view.doc.text !== '' && !/[\r\n]$/.test(state.view.doc.text)) return `step ${k + 1}: no final line break, which a buffer can't draw`;
+    if (state.view.doc.text !== '' && !/[\r\n]$/.test(state.view.doc.text))
+      return `step ${k + 1}: no final line break, which a buffer can't draw`;
     const own = readLabels(step.expect.buffer ?? '').labels;
     labels.check(state.view.doc, own, before);
-    const drawn = drawLabels(drawDoc(state.view, state.view.selection), labels.drawn(state.view.doc, new Set([...own.values()].flat())));
+    const drawn = drawLabels(
+      drawDoc(state.view, state.view.selection),
+      labels.drawn(state.view.doc, new Set([...own.values()].flat())),
+    );
     out.push({ buffer: normalizeDrawing(drawn), result: describeOutcome(state) });
   }
   return out;
@@ -86,7 +115,11 @@ for (const file of files) {
     const differs = (k: number): boolean => {
       const step = t.steps[k]!;
       const got = (runs[0]!.steps as { buffer: string; result: string }[])[k]!;
-      return (step.expect.buffer !== undefined && normalizeDrawing(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) || (step.expect.result !== undefined && step.expect.result !== got.result);
+      return (
+        (step.expect.buffer !== undefined &&
+          normalizeDrawing(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) ||
+        (step.expect.result !== undefined && step.expect.result !== got.result)
+      );
     };
     if (broken) {
       unredrawable.push(`${t.file}:${t.line} ${t.name} (${broken.flavor}): ${broken.steps as string}`);
@@ -94,15 +127,28 @@ for (const file of files) {
     }
     if (!t.steps.some((_, k) => differs(k))) continue;
     const [first, ...rest] = runs as { flavor: string; steps: { buffer: string; result: string }[] }[];
-    const split = rest.find((r) => r.steps.some((s, k) => s.buffer !== first!.steps[k]!.buffer || s.result !== first!.steps[k]!.result));
+    const split = rest.find((r) =>
+      r.steps.some((s, k) => s.buffer !== first!.steps[k]!.buffer || s.result !== first!.steps[k]!.result),
+    );
     if (split) {
       unredrawable.push(`${t.file}:${t.line} ${t.name}: ${first!.flavor} and ${split.flavor} come out differently`);
       continue;
     }
     t.steps.forEach((step, k) => {
       const got = first!.steps[k]!;
-      if (step.expect.result !== undefined && step.expect.result !== got.result) redrawn.push({ t, step: k, kind: 'result', drawn: step.expect.result, now: got.result });
-      if (step.expect.buffer !== undefined && normalizeDrawing(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) redrawn.push({ t, step: k, kind: 'buffer', drawn: step.expect.buffer, now: as(step.expect.buffer, got.buffer) });
+      if (step.expect.result !== undefined && step.expect.result !== got.result)
+        redrawn.push({ t, step: k, kind: 'result', drawn: step.expect.result, now: got.result });
+      if (
+        step.expect.buffer !== undefined &&
+        normalizeDrawing(step.expect.buffer) !== as(step.expect.buffer, got.buffer)
+      )
+        redrawn.push({
+          t,
+          step: k,
+          kind: 'buffer',
+          drawn: step.expect.buffer,
+          now: as(step.expect.buffer, got.buffer),
+        });
     });
   }
 }
@@ -114,14 +160,18 @@ for (const r of redrawn) {
 }
 for (const line of unredrawable) console.log(`left as drawn: ${line}`);
 const cases = new Set(redrawn.map((r) => r.t)).size;
-console.log(`\n${checked} cases checked: ${cases} drawn otherwise than ourus does now (${redrawn.length} blocks)${unredrawable.length ? `, ${unredrawable.length} that can't be redrawn` : ''}`);
+console.log(
+  `\n${checked} cases checked: ${cases} drawn otherwise than ourus does now (${redrawn.length} blocks)${unredrawable.length ? `, ${unredrawable.length} that can't be redrawn` : ''}`,
+);
 
 if (apply && redrawn.length) {
   for (const file of new Set(redrawn.map((r) => r.t.file))) {
     const path = join(SPEC_DIR, file);
     const lines = readFileSync(path, 'utf8').split('\n');
     // bottom up: a block rewritten changes the lines after it, never those before
-    const edits = redrawn.filter((r) => r.t.file === file).sort((a, b) => b.t.steps[b.step]!.line - a.t.steps[a.step]!.line || (a.kind === 'buffer' ? -1 : 1));
+    const edits = redrawn
+      .filter((r) => r.t.file === file)
+      .sort((a, b) => b.t.steps[b.step]!.line - a.t.steps[a.step]!.line || (a.kind === 'buffer' ? -1 : 1));
     for (const r of edits) {
       // (a buffer's block is a `markdown` one)
       const info = r.kind === 'result' ? 'yaml' : 'markdown';
@@ -146,7 +196,11 @@ if (apply && redrawn.length) {
 }
 
 /** The `kind` block after the quote on line `quote` (1-based), before the next step or heading: its fence and its lines' indexes. */
-function blockAfter(lines: readonly string[], quote: number, kind: string): { open: number; close: number; fence: string } | null {
+function blockAfter(
+  lines: readonly string[],
+  quote: number,
+  kind: string,
+): { open: number; close: number; fence: string } | null {
   for (let i = quote; i < lines.length; i++) {
     const line = lines[i]!;
     if (/^(> |#)/.test(line)) return null;
@@ -154,7 +208,11 @@ function blockAfter(lines: readonly string[], quote: number, kind: string): { op
     if (!open) continue;
     const fence = open[1]!;
     let close = i + 1;
-    while (close < lines.length && !(lines[close]!.startsWith(fence[0]!.repeat(fence.length)) && /^(`+|~+)\s*$/.test(lines[close]!))) close++;
+    while (
+      close < lines.length &&
+      !(lines[close]!.startsWith(fence[0]!.repeat(fence.length)) && /^(`+|~+)\s*$/.test(lines[close]!))
+    )
+      close++;
     if (open[2] === kind) return { open: i, close, fence };
     i = close;
   }

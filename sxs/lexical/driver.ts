@@ -52,8 +52,15 @@ interface LxBlock {
 function toLexical(text: string, free: boolean): LxBlock {
   const heading = /^(#{1,6}) /.exec(text);
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
-  if (free && heading) return { kind: 'heading', tag: `h${heading[1]!.length}`, text: text.slice(heading[0].length), prefix: heading[0].length };
-  if (free && fence) return { kind: 'code', text: fence[2]!, language: fence[1] || undefined, prefix: 4 + fence[1]!.length };
+  if (free && heading)
+    return {
+      kind: 'heading',
+      tag: `h${heading[1]!.length}`,
+      text: text.slice(heading[0].length),
+      prefix: heading[0].length,
+    };
+  if (free && fence)
+    return { kind: 'code', text: fence[2]!, language: fence[1] || undefined, prefix: 4 + fence[1]!.length };
   if (free && text.startsWith('> ')) return { kind: 'quote', text: text.slice(2), prefix: 2 };
   const task = free ? null : /^\[([ xX])\] /.exec(text);
   if (task) return { kind: 'check', checked: task[1] !== ' ', text: text.slice(4), prefix: 4 };
@@ -63,14 +70,16 @@ function toLexical(text: string, free: boolean): LxBlock {
   const base = { kind, prefix, ...(numbered && { number: Number(numbered[1]) }) } as const;
   // a number that is text (after a numbered item's own number too): the escape's backslash off
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text.slice(prefix));
-  if (literal) return { ...base, text: literal[1] + text.slice(prefix + literal[0].length), cut: prefix + literal[1]!.length };
+  if (literal)
+    return { ...base, text: literal[1] + text.slice(prefix + literal[0].length), cut: prefix + literal[1]!.length };
   // and a `#` that is text (a heading is a block of its own kind, a paragraph's text plain: Enter9)
   if (/^\\#/.test(text.slice(prefix))) return { ...base, text: text.slice(prefix + 1), cut: prefix };
   return { ...base, text: text.slice(prefix) };
 }
 
 /** A canonical offset in a block's text as one in Lexical's, the prefix and an escape (`cut`) taken off. */
-const appOffset = (offset: number, at: { prefix: number; cut?: number }): number => Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
+const appOffset = (offset: number, at: { prefix: number; cut?: number }): number =>
+  Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
 
 /** Starts Lexical can't hold. */
 function holds(o: Outline): string | undefined {
@@ -93,7 +102,8 @@ function holds(o: Outline): string | undefined {
     const at = toLexical(b.text, false);
     const prev = last[b.depth];
     // (at the top level, items of another kind are a list of their own, after the first)
-    if (prev && prev.kind !== at.kind && b.depth > 0) return 'nested list of items of more than one kind (a list is bullets, numbers or to-dos)';
+    if (prev && prev.kind !== at.kind && b.depth > 0)
+      return 'nested list of items of more than one kind (a list is bullets, numbers or to-dos)';
     if (prev && prev.kind !== at.kind) {
       last[b.depth] = { kind: at.kind, n: at.number };
       continue;
@@ -106,7 +116,16 @@ function holds(o: Outline): string | undefined {
   const at = toLexical(b.text, !!b.free);
   const from = Math.min(o.sel.anchor, o.sel.head);
   const to = Math.max(o.sel.anchor, o.sel.head);
-  if (from < at.prefix) return at.kind === 'check' ? "caret in a task's checkbox" : at.kind === 'number' ? "caret in an item's number" : at.kind === 'quote' ? "caret in a quote's >" : at.kind === 'code' ? "caret on a code block's fence" : "caret in a heading's #s";
+  if (from < at.prefix)
+    return at.kind === 'check'
+      ? "caret in a task's checkbox"
+      : at.kind === 'number'
+        ? "caret in an item's number"
+        : at.kind === 'quote'
+          ? "caret in a quote's >"
+          : at.kind === 'code'
+            ? "caret on a code block's fence"
+            : "caret in a heading's #s";
   if (at.kind === 'code' && to > at.prefix + at.text.length) return "caret on a code block's fence";
   return undefined;
 }
@@ -118,13 +137,30 @@ function inline(text: string, code: boolean): LxNode[] {
     if (i) out.push({ type: 'linebreak', version: 1 });
     for (const [j, part] of line.split('\t').entries()) {
       if (j) out.push({ type: 'tab', detail: 2, format: 0, mode: 'normal', style: '', text: '\t', version: 1 });
-      if (part) out.push({ type: code ? 'code-highlight' : 'text', detail: 0, format: 0, mode: 'normal', style: '', text: part, version: 1 });
+      if (part)
+        out.push({
+          type: code ? 'code-highlight' : 'text',
+          detail: 0,
+          format: 0,
+          mode: 'normal',
+          style: '',
+          text: part,
+          version: 1,
+        });
     }
   }
   return out;
 }
 
-const element = (type: string, children: LxNode[], more: Record<string, unknown> = {}): LxNode => ({ type, children, direction: null, format: '', indent: 0, version: 1, ...more });
+const element = (type: string, children: LxNode[], more: Record<string, unknown> = {}): LxNode => ({
+  type,
+  children,
+  direction: null,
+  format: '',
+  indent: 0,
+  version: 1,
+  ...more,
+});
 
 /** The outline's blocks as Lexical's serialized root's children: free blocks, and lists, nested as Lexical nests them. */
 function serialize(blocks: readonly Block[]): LxNode[] {
@@ -150,11 +186,17 @@ function serialize(blocks: readonly Block[]): LxNode[] {
       list = element('list', [], { listType, start: at.number ?? 1, tag: listType === 'number' ? 'ol' : 'ul' });
       if (b.depth === 0) top.push(list);
       // a nested list is held by an item of its own, after the item it is under
-      else lists[b.depth - 1]!.children!.push(element('listitem', [list], { value: lists[b.depth - 1]!.children!.length + 1 }));
+      else
+        lists[b.depth - 1]!.children!.push(
+          element('listitem', [list], { value: lists[b.depth - 1]!.children!.length + 1 }),
+        );
       lists[b.depth] = list;
     }
-    const value = (list.start as number) + list.children!.filter((c) => !c.children!.some((x) => x.type === 'list')).length;
-    list.children!.push(element('listitem', inline(at.text, false), { value, ...(at.kind === 'check' && { checked: at.checked }) }));
+    const value =
+      (list.start as number) + list.children!.filter((c) => !c.children!.some((x) => x.type === 'list')).length;
+    list.children!.push(
+      element('listitem', inline(at.text, false), { value, ...(at.kind === 'check' && { checked: at.checked }) }),
+    );
   }
   return top;
 }
@@ -205,18 +247,38 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
       }
       const t = textOf(k);
       const f = n.__format ?? 0;
-      runs.push({ text: t, ...(f & 1 && { bold: true }), ...(f & 2 && { italic: true }), ...(f & 4 && { strike: true }), ...(f & 16 && { code: true }), ...(href !== undefined && { href }) });
+      runs.push({
+        text: t,
+        ...(f & 1 && { bold: true }),
+        ...(f & 2 && { italic: true }),
+        ...(f & 4 && { strike: true }),
+        ...(f & 16 && { code: true }),
+        ...(href !== undefined && { href }),
+      });
       at += t.length;
     }
     return { runs, end: at };
   };
-  const push = (key: string, depth: number, prefix: string, suffix: string, free: boolean, code: boolean, inlineKeys: string[]) => {
+  const push = (
+    key: string,
+    depth: number,
+    prefix: string,
+    suffix: string,
+    free: boolean,
+    code: boolean,
+    inlineKeys: string[],
+  ) => {
     const block = flat.length;
     starts.set(key, { block, start: 0 });
     const { runs } = runsOf(inlineKeys, block, 0);
     const plain = runs.map((r) => r.text).join('');
     // (and a `#` that is text, which the canonical text would read as a heading's: `\# x`)
-    const cut = !code && !prefix.startsWith('[') && /^\d{1,9}[.)]/.test(plain) ? /^\d+/.exec(plain)![0].length : !code && (!prefix || /^\d{1,9}\. $/.test(prefix)) && /^#{1,6}(?=[ \t]|$)/.test(plain) ? 0 : undefined;
+    const cut =
+      !code && !prefix.startsWith('[') && /^\d{1,9}[.)]/.test(plain)
+        ? /^\d+/.exec(plain)![0].length
+        : !code && (!prefix || /^\d{1,9}\. $/.test(prefix)) && /^#{1,6}(?=[ \t]|$)/.test(plain)
+          ? 0
+          : undefined;
     flat.push({ key, depth, prefix, suffix, runs: code ? null : runs, plain, ...(cut !== undefined && { cut }), free });
   };
   const walkList = (key: string, depth: number) => {
@@ -229,7 +291,14 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
       // first in its list (an item indented with none above it) it is an empty item, as its HTML reads
       if (inl.length || !nested.length || k === 0) {
         const item = map.get(li);
-        const prefix = list.__listType === 'number' ? `${item.__value}. ` : list.__listType === 'check' ? (item.__checked ? '[x] ' : '[ ] ') : '';
+        const prefix =
+          list.__listType === 'number'
+            ? `${item.__value}. `
+            : list.__listType === 'check'
+              ? item.__checked
+                ? '[x] '
+                : '[ ] '
+              : '';
         push(li, depth, prefix, '', false, false, inl);
       }
       for (const n of nested) walkList(n, depth + 1);
@@ -238,13 +307,22 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
   for (const key of kids('root')) {
     const n = map.get(key);
     if (n.__type === 'list') walkList(key, 0);
-    else if (n.__type === 'heading') push(key, 0, `${'#'.repeat(Number(String(n.__tag).slice(1)))} `, '', true, false, kids(key));
+    else if (n.__type === 'heading')
+      push(key, 0, `${'#'.repeat(Number(String(n.__tag).slice(1)))} `, '', true, false, kids(key));
     else if (n.__type === 'quote') push(key, 0, '> ', '', true, false, kids(key));
     else if (n.__type === 'code') {
       const t = textOf(key);
       // its fence longer than a run of backticks starting one of its lines, as Markdown needs
       const ticks = '`'.repeat(Math.max(3, ...[...t.matchAll(/^ {0,3}(`+)/gm)].map((x) => x[1]!.length + 1)));
-      push(key, 0, `${ticks}${n.__language && n.__language !== 'plain' ? n.__language : ''}\n`, `\n${ticks}`, true, true, kids(key));
+      push(
+        key,
+        0,
+        `${ticks}${n.__language && n.__language !== 'plain' ? n.__language : ''}\n`,
+        `\n${ticks}`,
+        true,
+        true,
+        kids(key),
+      );
     } else if (n.__type === 'paragraph') push(key, 0, '', '', true, false, kids(key));
     else push(key, 0, `<${n.__type}> `, '', true, false, []);
   }
@@ -268,11 +346,19 @@ function readPage(): { blocks: PageBlock[]; sel: { block: number; anchor: number
 }
 
 /** In the page: the outline loaded, the history cleared, the caret placed (block, offsets past its prefix). */
-async function loadPage({ children, at }: { children: LxNode[]; at: { block: number; anchor: number; head: number } | null }): Promise<string> {
+async function loadPage({
+  children,
+  at,
+}: {
+  children: LxNode[];
+  at: { block: number; anchor: number; head: number } | null;
+}): Promise<string> {
   const root = document.querySelector('[data-lexical-editor="true"]') as any;
   const ed = root.__lexicalEditor;
   root.blur();
-  ed.setEditorState(ed.parseEditorState({ root: { children, direction: null, format: '', indent: 0, type: 'root', version: 1 } }));
+  ed.setEditorState(
+    ed.parseEditorState({ root: { children, direction: null, format: '', indent: 0, type: 'root', version: 1 } }),
+  );
   const clear = [...ed._commands.keys()].find((c: any) => c.type === 'CLEAR_HISTORY_COMMAND');
   if (!clear) return 'no CLEAR_HISTORY_COMMAND';
   ed.dispatchCommand(clear, undefined);
@@ -294,13 +380,18 @@ async function loadPage({ children, at }: { children: LxNode[]; at: { block: num
       nested.forEach(walkList);
     });
   };
-  for (const key of kids('root')) (map.get(key).__type === 'list' ? walkList(key) : blocks.push(key));
+  for (const key of kids('root')) map.get(key).__type === 'list' ? walkList(key) : blocks.push(key);
   const el = ed.getElementByKey(blocks[at.block]) as HTMLElement | null;
   if (!el) return `no block ${at.block}`;
   // an offset in the block's text as a DOM point: its text nodes, a <br> one character (a line break),
   // a nested list's items not the block's
   const where = (offset: number): [Node, number] => {
-    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, { acceptNode: (n) => ((n as Element).tagName === 'UL' || (n as Element).tagName === 'OL' ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (n) =>
+        (n as Element).tagName === 'UL' || (n as Element).tagName === 'OL'
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    });
     let left = offset;
     let last: Node | null = null;
     for (let n = w.nextNode(); n; n = w.nextNode()) {
@@ -344,7 +435,19 @@ export const driver: Driver = {
     // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
     headings: 'block',
     // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
-    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
+    decorations: [
+      'bullet',
+      'number',
+      'checkbox',
+      'heading',
+      'setext',
+      'quote',
+      'callout',
+      'fence',
+      'math',
+      'rule',
+      'footnote',
+    ],
     // a copy or cut at a caret copies nothing (measured: Cut4, Regression180)
     copyAtCaret: 'host',
     // its top level a sequence of blocks and lists: a list after a paragraph is no block's
@@ -393,26 +496,56 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+V',
     undo: 'Control+z',
     redo: 'Control+Shift+Z',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // a code block is a block of its own, its fences no text. Tables, equations and rules are nodes of
   // their own, which the driver doesn't make: skipped, with Markdown's other atoms
-  refuses: ['markup-fence', 'table', 'math', 'thematic break', 'html', 'link reference definition', 'comment', 'footnote'],
+  refuses: [
+    'markup-fence',
+    'table',
+    'math',
+    'thematic break',
+    'html',
+    'link reference definition',
+    'comment',
+    'footnote',
+  ],
   ordered: true,
   holds: (doc) => holds(doc as Outline),
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => (document.querySelector('[data-lexical-editor="true"]') as any)?.__lexicalEditor, null, { timeout: 120000 });
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000 }));
+    await page.waitForFunction(
+      () => (document.querySelector('[data-lexical-editor="true"]') as any)?.__lexicalEditor,
+      null,
+      { timeout: 120000 },
+    );
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000 }));
     await idle();
     // ready once a key does what it should: Ctrl+] nests an item
-    await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+    await this.load(page, {
+      blocks: [
+        { depth: 0, text: 'a' },
+        { depth: 0, text: 'b' },
+      ],
+      sel: { block: 1, anchor: 1, head: 1 },
+    });
     await idle();
     await page.keyboard.press('Control+BracketRight');
     await idle();
-    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1) throw new Error("Lexical's keys didn't come up: Ctrl+] doesn't nest an item");
-    return page.evaluate(() => String((document.querySelector('[data-lexical-editor="true"]') as any).__lexicalEditor.constructor.version).replace(/\.esm$/, ''));
+    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1)
+      throw new Error("Lexical's keys didn't come up: Ctrl+] doesn't nest an item");
+    return page.evaluate(() =>
+      String(
+        (document.querySelector('[data-lexical-editor="true"]') as any).__lexicalEditor.constructor.version,
+      ).replace(/\.esm$/, ''),
+    );
   },
 
   async load(page: Page, doc) {
@@ -421,7 +554,10 @@ export const driver: Driver = {
     const at = o.sel && toLexical(blocks[o.sel.block]!.text, !!blocks[o.sel.block]!.free);
     const placed = await page.evaluate(loadPage, {
       children: serialize(blocks),
-      at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : null,
+      at:
+        o.sel && at
+          ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) }
+          : null,
     });
     if (placed !== 'placed' && placed !== 'no caret') throw new Error(`the caret has no place: ${placed}`);
   },
@@ -432,12 +568,23 @@ export const driver: Driver = {
       const md = b.runs ? runsAsMarkdown(b.runs) : { text: b.plain, at: (p: number) => p };
       const cut = b.cut !== undefined ? md.at(b.cut) : -1;
       const body = cut >= 0 ? `${md.text.slice(0, cut)}\\${md.text.slice(cut)}` : md.text;
-      return { text: b.prefix + body + b.suffix, at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0) };
+      return {
+        text: b.prefix + body + b.suffix,
+        at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0),
+      };
     });
-    const sel = r.sel && { block: r.sel.block, anchor: texts[r.sel.block]!.at(r.sel.anchor), head: texts[r.sel.block]!.at(r.sel.head) };
+    const sel = r.sel && {
+      block: r.sel.block,
+      anchor: texts[r.sel.block]!.at(r.sel.anchor),
+      head: texts[r.sel.block]!.at(r.sel.head),
+    };
     // (a heading's section, beside it in Lexical, owned as ourus's outline has it; a list after a
     // paragraph owned as `listParent` says)
-    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) }));
+    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({
+      depth,
+      text: texts[i]!.text,
+      ...(free && { free: true as const }),
+    }));
     return { blocks: asMarkdownReads(blocks, driver.behaves?.listParent), sel };
   },
 };

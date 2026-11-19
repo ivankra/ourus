@@ -66,14 +66,22 @@ export class OurusView {
    * a zoom on no node are dropped: the state comes from outside, a saved view or an editor's folds.
    */
   static of(doc: OurusDoc, state: OurusViewState = {}): OurusView {
-    return new OurusView(doc, viewIn(doc, { folded: new Set(state.folded ?? []), zoom: state.zoom ?? null }), asSelection(state.selection ?? 0));
+    return new OurusView(
+      doc,
+      viewIn(doc, { folded: new Set(state.folded ?? []), zoom: state.zoom ?? null }),
+      asSelection(state.selection ?? 0),
+    );
   }
 
   /** This view's document with `state` and `selection`: this view where they are the same. */
   #with(doc: OurusDoc, state: ViewState, selection: OurusSelection = this.selection): OurusView {
     if (doc === this.doc && sameState(state, this) && sameSelection(selection, this.selection)) return this;
     // (a carry that kept every fold keeps this view's set)
-    return new OurusView(doc, sameFolds(state.folded, this.folded) ? { folded: this.folded, zoom: state.zoom } : state, selection);
+    return new OurusView(
+      doc,
+      sameFolds(state.folded, this.folded) ? { folded: this.folded, zoom: state.zoom } : state,
+      selection,
+    );
   }
 
   /** Another selection (a number: a caret there), the document and the folds and zoom the same. */
@@ -155,7 +163,10 @@ export class OurusView {
     if (next === this.doc) return this;
     if (!next.isSameLineage(this.doc)) throw new Error('withDoc: a snapshot of another lineage');
     const normal = normalizeChanges(changes);
-    const selection = { anchor: Math.min(mapPos(normal, this.selection.anchor), next.text.length), head: Math.min(mapPos(normal, this.selection.head), next.text.length) };
+    const selection = {
+      anchor: Math.min(mapPos(normal, this.selection.anchor), next.text.length),
+      head: Math.min(mapPos(normal, this.selection.head), next.text.length),
+    };
     return this.#with(next, viewIn(next, carryView(this.doc, this, next, normal)), selection);
   }
 
@@ -163,7 +174,10 @@ export class OurusView {
   withConfig(config: Partial<OurusConfig>): OurusView {
     const next = this.doc.withConfig(config);
     if (next === this.doc) return this;
-    return this.#with(next, next.config.flavor !== this.doc.config.flavor ? viewByLine(this.doc, next, this) : viewIn(next, this));
+    return this.#with(
+      next,
+      next.config.flavor !== this.doc.config.flavor ? viewByLine(this.doc, next, this) : viewIn(next, this),
+    );
   }
 
   /** Where `next`, another snapshot of the lineage, leaves the zoom, or null (also where not zoomed); `removed`: the root went whole. */
@@ -243,7 +257,9 @@ interface SelectionRead {
 
 /** `selection` as a plain object, a number a caret there. */
 function asSelection(selection: OurusSelection | number): OurusSelection {
-  return typeof selection === 'number' ? { anchor: selection, head: selection } : { anchor: selection.anchor, head: selection.head };
+  return typeof selection === 'number'
+    ? { anchor: selection, head: selection }
+    : { anchor: selection.anchor, head: selection.head };
 }
 
 /** Whether two selections are the same. */

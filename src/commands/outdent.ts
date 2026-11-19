@@ -17,7 +17,8 @@ import type { AnchorSpec } from '../writer/index.ts';
  * line Shift-Tab is the host's. Null for other nodes, which ourus doesn't do yet (unsupported).
  */
 export function outdentCommand(ctx: CommandContext): OurusResult | null {
-  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return new OurusDeferred('host-default');
+  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head))
+    return new OurusDeferred('host-default');
   const nodes = oneRun(ctx, true);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
@@ -25,21 +26,32 @@ export function outdentCommand(ctx: CommandContext): OurusResult | null {
   const parent = first.parent!;
   // out of a quote, any node: it follows the quote
   if (parent.kind === 'quote') return leaveQuote(ctx, nodes);
-  if (first.kind === 'heading') return ctx.config.headings === 'section' ? changeHeadingLevels(ctx, nodes, -1) : new OurusRejected('heading-block', 'a heading that owns nothing stays where it is');
+  if (first.kind === 'heading')
+    return ctx.config.headings === 'section'
+      ? changeHeadingLevels(ctx, nodes, -1)
+      : new OurusRejected('heading-block', 'a heading that owns nothing stays where it is');
   // (a paragraph or a block of a section: it has no level to leave)
-  if (first.kind !== 'item') return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} has no level to leave`);
+  if (first.kind !== 'item')
+    return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} has no level to leave`);
   const later = parent.children.slice(last.index + 1);
   const direct = ctx.config.outdent === 'direct';
   if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') {
     // (at the top level, nothing to leave: as most apps, where `outdentTopLevel: refuse`)
-    if (ctx.config.outdentTopLevel === 'refuse') return new OurusRejected('at-top-level', 'a top-level item has no level to leave');
+    if (ctx.config.outdentTopLevel === 'refuse')
+      return new OurusRejected('at-top-level', 'a top-level item has no level to leave');
     return unwrapItems(ctx, nodes, parent, later);
   }
   if (parent.kind !== 'item') return null;
   const draft = ctx.draft().remove(nodes);
   // (every child of an item with no text of its own leaving it, `- - b`: the item stays, an empty item
   // on its marker's line, as an outliner's empty block does; every app measured keeps it, Outdent21)
-  if (!ctx.doc.textOf(parent) && first.index === 0 && (direct || !later.length) && parent.children.length === nodes.length + (direct ? later.length : 0)) draft.setText(parent, new OurusProse('paragraph', true, ''));
+  if (
+    !ctx.doc.textOf(parent) &&
+    first.index === 0 &&
+    (direct || !later.length) &&
+    parent.children.length === nodes.length + (direct ? later.length : 0)
+  )
+    draft.setText(parent, new OurusProse('paragraph', true, ''));
   if (direct && later.length) draft.remove(later).place('after', parent, nodes).append(last, 'last', later);
   else draft.place('after', parent, nodes);
   selectionInText(ctx, draft, true);
@@ -53,7 +65,12 @@ export function outdentCommand(ctx: CommandContext): OurusResult | null {
  * joining the last one's list, or (`logical`) staying in the paragraph's, which the new paragraphs
  * pass. An item whose text is a heading becomes that heading; one whose text is code, that block.
  */
-function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: OurusNode, later: readonly OurusNode[]): OurusResult | null {
+function unwrapItems(
+  ctx: CommandContext,
+  nodes: readonly OurusNode[],
+  parent: OurusNode,
+  later: readonly OurusNode[],
+): OurusResult | null {
   const doc = ctx.doc;
   const texts = nodes.map((node) => doc.textOf(node));
   if (texts.some((text) => !text)) return null;
@@ -61,16 +78,20 @@ function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: O
   // take in the rest of the list, nothing after it, and must stay in the section it is in
   const levels = texts.map((text) => (text instanceof OurusProse ? (text.heading?.level ?? null) : null));
   if (levels.some((level) => level !== null)) {
-    if (parent.kind === 'paragraph') return new OurusRejected('not-expressible', "a heading can't be in a paragraph's list");
-    if (later.some((node) => node.kind !== 'item')) return new OurusRejected('not-expressible', 'the heading would take in what follows the list');
+    if (parent.kind === 'paragraph')
+      return new OurusRejected('not-expressible', "a heading can't be in a paragraph's list");
+    if (later.some((node) => node.kind !== 'item'))
+      return new OurusRejected('not-expressible', 'the heading would take in what follows the list');
     const own = parent.kind === 'heading' ? (doc.textOf(parent) as OurusProse).heading!.level : 0;
-    if (levels.some((level) => level !== null && level <= own)) return new OurusRejected('not-expressible', 'the heading would end the section it is in');
+    if (levels.some((level) => level !== null && level <= own))
+      return new OurusRejected('not-expressible', 'the heading would end the section it is in');
   }
   const draft = ctx.draft();
   // (an item whose text is code becomes that block, its children after it)
   nodes.forEach((node, k) => {
     draft.convert(node, texts[k] instanceof OurusAtom ? 'atom' : levels[k] !== null ? 'heading' : 'paragraph');
-    if (texts[k] instanceof OurusAtom && node.children.length) draft.remove(node.children).place('after', node, node.children);
+    if (texts[k] instanceof OurusAtom && node.children.length)
+      draft.remove(node.children).place('after', node, node.children);
   });
   if (parent.kind === 'paragraph') {
     const moved = ctx.config.outdent === 'direct' ? [...nodes, ...later] : [...nodes];
@@ -97,14 +118,24 @@ function leaveQuote(ctx: CommandContext, nodes: readonly OurusNode[]): OurusResu
   // one line, its first, is the item's text then (Quote77)
   const item = quote.parent?.kind === 'item' && quote.index === 0 && !doc.textOf(quote.parent) ? quote.parent : null;
   const text = doc.textOf(first);
-  if (item && nodes.length === 1 && first.index === 0 && first.kind === 'paragraph' && !first.children.length && text instanceof OurusProse && !text.body.includes('\n') && !titled) {
+  if (
+    item &&
+    nodes.length === 1 &&
+    first.index === 0 &&
+    first.kind === 'paragraph' &&
+    !first.children.length &&
+    text instanceof OurusProse &&
+    !text.body.includes('\n') &&
+    !titled
+  ) {
     draft.setText(item, text.asItem(true));
     if (quote.children.length === 1) draft.remove([quote]);
     // (a selection in the paragraph, its blank lines too, a caret where it was in its text; anywhere
     // else, where it is)
     // (past the final line ending, the last node's: Shift-Tab's caret there)
     const end = ctx.selection.head === doc.text.length ? doc.rootNode.lastDescendant : null;
-    const inFirst = (at: typeof ctx.from): boolean => ('node' in at ? at.node : at.zone === 'gap' ? at.owner : end) === first;
+    const inFirst = (at: typeof ctx.from): boolean =>
+      ('node' in at ? at.node : at.zone === 'gap' ? at.owner : end) === first;
     // (each end of a selection mapped so, its direction kept)
     const endAt = (pos: number): AnchorSpec => {
       const at = ctx.view.locate(pos);
@@ -121,7 +152,10 @@ function leaveQuote(ctx: CommandContext, nodes: readonly OurusNode[]): OurusResu
   else {
     // in its middle (`direct`): the quote splits around them, the rest a quote of its own after them (Quote72)
     const rest = draft.create('quote', null);
-    draft.remove(after).place('after', quote, [...nodes, rest]).append(rest, 'first', after);
+    draft
+      .remove(after)
+      .place('after', quote, [...nodes, rest])
+      .append(rest, 'first', after);
   }
   selectionInText(ctx, draft, true);
   return ctx.apply(draft);

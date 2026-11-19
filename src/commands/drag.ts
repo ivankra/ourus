@@ -19,7 +19,10 @@ import { OurusSuccess, OurusRejected } from './types.ts';
  * carrying a clipboard: every seam of the document as it is, the clipboard's first node deciding what
  * a place can hold, each place's drop a `pasteAt`. The document unchanged.
  */
-export function dragCommand(ctx: CommandContext, options: { readonly pressed?: number; readonly clipboard?: OurusClipboard }): OurusResult | null {
+export function dragCommand(
+  ctx: CommandContext,
+  options: { readonly pressed?: number; readonly clipboard?: OurusClipboard },
+): OurusResult | null {
   // the view's, the snapshot's: the folds in effect within the zoom, and the node zoomed into
   const zoom = ctx.view.zoom === null ? null : ctx.doc.node(ctx.view.zoom)!;
   const folded = ctx.view.zoomFolded;
@@ -29,15 +32,38 @@ export function dragCommand(ctx: CommandContext, options: { readonly pressed?: n
     const pasted = read ? clipboardFragment(read.markdown, ctx.config, read.ours)?.doc : undefined;
     const first = pasted?.rootNode.children[0];
     if (!pasted || !first) return new OurusRejected('not-expressible', 'nothing to paste');
-    const converts = (parent: OurusNode, after: OurusNode | null): boolean => pastedBecomesAt(ctx.doc, first.kind, parent, after) !== null;
+    const converts = (parent: OurusNode, after: OurusNode | null): boolean =>
+      pastedBecomesAt(ctx.doc, first.kind, parent, after) !== null;
     const refused = (parent: OurusNode, after: OurusNode | null): boolean => !!pasteRefused(ctx, pasted, parent, after);
-    const seams = seamsOf(ctx.doc, [], first.kind, folded, zoom ?? null, (at) => ({ type: 'pasteAt', at, clipboard }), converts, refused);
+    const seams = seamsOf(
+      ctx.doc,
+      [],
+      first.kind,
+      folded,
+      zoom ?? null,
+      (at) => ({ type: 'pasteAt', at, clipboard }),
+      converts,
+      refused,
+    );
     return new OurusSuccess({ view: ctx.view, changes: [], dropMap: { nodes: [], lines: [], seams } });
   }
   const run = dragRun(ctx, options.pressed);
   if (!Array.isArray(run)) return run;
   const nodes = run.map((n) => n.id);
-  const dropMap: DropMap = { nodes, lines: run.map((n) => [n.startLine, n.endLine + 1] as const), seams: seamsOf(ctx.doc, run, run[0]!.kind, folded, zoom ?? null, (to) => ({ type: 'moveSubtree', nodes, to }), undefined, (parent, after) => !!moveRefused(ctx, run, parent, after)) };
+  const dropMap: DropMap = {
+    nodes,
+    lines: run.map((n) => [n.startLine, n.endLine + 1] as const),
+    seams: seamsOf(
+      ctx.doc,
+      run,
+      run[0]!.kind,
+      folded,
+      zoom ?? null,
+      (to) => ({ type: 'moveSubtree', nodes, to }),
+      undefined,
+      (parent, after) => !!moveRefused(ctx, run, parent, after),
+    ),
+  };
   const copied = copyOrCutCommand(new CommandContext(ctx.view, nodes), 'copy');
   const clipboard = copied instanceof OurusSuccess ? copied.clipboard : undefined;
   return new OurusSuccess({ view: ctx.view, changes: [], ...(clipboard && { clipboard }), dropMap });
@@ -94,7 +120,9 @@ function seamsOf(
 ): DropSeam[] {
   const all = inOrder(doc);
   const out = runIds(all, run);
-  const changes = converts ?? ((parent: OurusNode, after: OurusNode | null): boolean => becomesAt(doc, kind, parent, after, out) !== null);
+  const changes =
+    converts ??
+    ((parent: OurusNode, after: OurusNode | null): boolean => becomesAt(doc, kind, parent, after, out) !== null);
   const hidden = hider(folded);
   const shown = all.filter((n) => !out.has(n.id) && !hidden(n));
   const first = run[0];
@@ -105,18 +133,36 @@ function seamsOf(
   // none. The places are found from the blank lines' start as they read, either kind.)
   const blanks = (line: number, gap = false): number => {
     let k = 0;
-    while (line - k - 1 >= 0 && (doc.isEmptyLine(line - k - 1) || doc.isBlankLine(line - k - 1)) && !(gap && doc.nodeAtLine(line - k - 1))) k++;
+    while (
+      line - k - 1 >= 0 &&
+      (doc.isEmptyLine(line - k - 1) || doc.isBlankLine(line - k - 1)) &&
+      !(gap && doc.nodeAtLine(line - k - 1))
+    )
+      k++;
     return k;
   };
   const ownPlace: InsertionPoint | null = first ? { parent: idOf(first.parent!), after: first.prev?.id ?? null } : null;
-  const own: DropPoint | null = first && ownPlace ? { ...ownPlace, depth: first.depth - 1, listDepth: listDepthOf(first.parent!), current: true, converts: false, drop: dropOf(ownPlace) } : null;
+  const own: DropPoint | null =
+    first && ownPlace
+      ? {
+          ...ownPlace,
+          depth: first.depth - 1,
+          listDepth: listDepthOf(first.parent!),
+          current: true,
+          converts: false,
+          drop: dropOf(ownPlace),
+        }
+      : null;
   // the seams, each with whether it is the run's top or its bottom
   const raw: { beforeLine: number; above: OurusNode | null; below: OurusNode | null; at: 'top' | 'dead' | null }[] = [];
   let ownOn: number | null = null;
   for (let k = 0, above: OurusNode | null = null; k <= shown.length; k++) {
     const below = shown[k] ?? null;
     const beforeLine = below ? below.startLine : doc.lineCount;
-    const runBetween = !!first && (above ? position.get(above.id)! : -1) < position.get(first.id)! && (below ? position.get(below.id)! : all.length) > position.get(first.id)!;
+    const runBetween =
+      !!first &&
+      (above ? position.get(above.id)! : -1) < position.get(first.id)! &&
+      (below ? position.get(below.id)! : all.length) > position.get(first.id)!;
     if (runBetween) {
       // the run's top, where it has a line of its own; else the seam before the node it starts in, already read
       if (top > (above?.startLine ?? -1)) raw.push({ beforeLine: top, above, below: first!, at: 'top' });
@@ -143,7 +189,14 @@ function seamsOf(
       const after = place.after === null ? null : doc.node(place.after)!;
       const current = !!ownPlace && place.parent === ownPlace.parent && place.after === ownPlace.after;
       if (!inZoom(parent) || unholdable(doc, kind, parent, after) || (!current && refused?.(parent, after))) continue;
-      points.push({ ...place, depth, listDepth: listDepthOf(parent), current, converts: !current && changes(parent, after), drop: dropOf(place) });
+      points.push({
+        ...place,
+        depth,
+        listDepth: listDepthOf(parent),
+        current,
+        converts: !current && changes(parent, after),
+        drop: dropOf(place),
+      });
     }
     if (own && (s.at === 'top' || k === ownOn) && !points.some((t) => t.current)) points.push(own);
     points.sort((a, b) => a.depth - b.depth || +b.current - +a.current);
@@ -163,7 +216,12 @@ function listDepthOf(parent: OurusNode): number {
  * column (`columnX`, the host's pixels); where columns tie, the run's own place, then one that
  * doesn't convert the run, then the deeper. Null where it accepts none.
  */
-export function nearestDropPoint(seam: DropSeam, x: number, columnX: (point: DropPoint) => number, accepts: (point: DropPoint) => boolean): DropPoint | null {
+export function nearestDropPoint(
+  seam: DropSeam,
+  x: number,
+  columnX: (point: DropPoint) => number,
+  accepts: (point: DropPoint) => boolean,
+): DropPoint | null {
   const order = [...seam.points].sort((a, b) => {
     const [da, db] = [Math.abs(columnX(a) - x), Math.abs(columnX(b) - x)];
     return da - db || +b.current - +a.current || +a.converts - +b.converts || b.depth - a.depth;
@@ -179,17 +237,32 @@ export function nearestDropPoint(seam: DropSeam, x: number, columnX: (point: Dro
  * run, a place at its depth is its own; a deeper one is inside it (`into-itself`, for the drop to
  * refuse).
  */
-export function placeAtSeam(view: OurusView, run: readonly OurusNode[] | null, line: number, depth: number): InsertionPoint | string {
+export function placeAtSeam(
+  view: OurusView,
+  run: readonly OurusNode[] | null,
+  line: number,
+  depth: number,
+): InsertionPoint | string {
   const doc = view.doc;
   const folded = view.zoomFolded;
   const all = inOrder(doc);
   const hidden = hider(folded);
   for (const n of all) {
-    if (n.startLine < line && line <= n.ownLastLine) return `line ${line + 1} is inside a ${n.kind}'s lines: no seam is there`;
-    if (folded.has(n.id) && n.ownLastLine < line && line <= n.endLine) return `line ${line + 1} is inside a folded ${n.kind}'s hidden lines`;
+    if (n.startLine < line && line <= n.ownLastLine)
+      return `line ${line + 1} is inside a ${n.kind}'s lines: no seam is there`;
+    if (folded.has(n.id) && n.ownLastLine < line && line <= n.endLine)
+      return `line ${line + 1} is inside a folded ${n.kind}'s hidden lines`;
   }
-  if (line > 0 && (doc.isEmptyLine(line - 1) || doc.isBlankLine(line - 1))) return `a drop line goes right after the node above's last line, before its blank lines (line ${line})`;
-  const at = (out: ReadonlySet<number>): InsertionPoint | string => seamPlace(doc.rootNode, all.filter((n) => !out.has(n.id) && !hidden(n)), out, line, depth);
+  if (line > 0 && (doc.isEmptyLine(line - 1) || doc.isBlankLine(line - 1)))
+    return `a drop line goes right after the node above's last line, before its blank lines (line ${line})`;
+  const at = (out: ReadonlySet<number>): InsertionPoint | string =>
+    seamPlace(
+      doc.rootNode,
+      all.filter((n) => !out.has(n.id) && !hidden(n)),
+      out,
+      line,
+      depth,
+    );
   if (!run?.length) return at(new Set());
   const first = run[0]!;
   const top = first.startLine;
@@ -211,13 +284,20 @@ export function placeAtSeam(view: OurusView, run: readonly OurusNode[] | null, l
  * A seam's place, in steps: the node above the gap and the node below it among `shown` (the nodes in
  * document order outside `out` and not hidden), and the parent at `depth` between them.
  */
-function seamPlace(root: OurusNode, shown: readonly OurusNode[], out: ReadonlySet<number>, line: number, depth: number): InsertionPoint | string {
+function seamPlace(
+  root: OurusNode,
+  shown: readonly OurusNode[],
+  out: ReadonlySet<number>,
+  line: number,
+  depth: number,
+): InsertionPoint | string {
   const k = firstFrom(shown, line);
   const above = shown[k - 1] ?? null;
   const below = shown[k] ?? null;
   const deepest = above ? above.depth : 0;
   if (depth > deepest) return `no parent is at depth ${depth} there: the node above is at depth ${deepest - 1}`;
-  if (below && depth < below.depth - 1) return `depth ${depth} is shallower than the node below (${below.depth - 1}): that place is after its parent's subtree, not at this gap`;
+  if (below && depth < below.depth - 1)
+    return `depth ${depth} is shallower than the node below (${below.depth - 1}): that place is after its parent's subtree, not at this gap`;
   let parent = above ?? root;
   while (parent.depth > depth) parent = parent.parent!;
   // (the last child before the line, outside `out`: the run's own are contiguous, stepped past)

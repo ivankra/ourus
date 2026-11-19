@@ -63,7 +63,9 @@ const HEADING_NEXT: MdLeafRole = Object.freeze({ type: 'heading', first: false }
 const REFDEF_NEXT: MdLeafRole = Object.freeze({ type: 'refdef', first: false });
 const THEMATIC_BREAK: MdLeafRole = Object.freeze({ type: 'thematic_break', first: true });
 const ICODE_FIRST: MdLeafRole = Object.freeze({ type: 'code_block', first: true, fenced: false });
-const atxRoles = [1, 2, 3, 4, 5, 6].map((level) => Object.freeze({ type: 'heading', first: true, level, setext: false }));
+const atxRoles = [1, 2, 3, 4, 5, 6].map((level) =>
+  Object.freeze({ type: 'heading', first: true, level, setext: false }),
+);
 
 // ----------------------------------------------------------------------------------- regexps
 
@@ -98,7 +100,17 @@ export const MAX_ITEM_NUMBER = 999999999;
 
 /** Characters a CommonMark block start can begin with. */
 export const isCommonMarkStartChar = (c: number): boolean =>
-  c === 35 || c === 96 || c === 126 || c === 42 || c === 43 || c === 95 || c === 61 || c === 60 || c === 62 || c === 45 || (c >= 48 && c <= 57);
+  c === 35 ||
+  c === 96 ||
+  c === 126 ||
+  c === 42 ||
+  c === 43 ||
+  c === 95 ||
+  c === 61 ||
+  c === 60 ||
+  c === 62 ||
+  c === 45 ||
+  (c >= 48 && c <= 57);
 
 // ------------------------------------------------------------------------------------- specs
 
@@ -189,7 +201,11 @@ export const newParagraph = (): ParagraphFrame => ({ spec: PARAGRAPH, lines: 0, 
  * Splits link reference definitions off the start of paragraph `p`, whose last line is `lastLine`:
  * their lines become refdef lines. Returns what is left of the paragraph (null if nothing).
  */
-export function extractRefdefs(m: MdMachine, p: ParagraphFrame, lastLine: number): { content: string; lines: number } | null {
+export function extractRefdefs(
+  m: MdMachine,
+  p: ParagraphFrame,
+  lastLine: number,
+): { content: string; lines: number } | null {
   let content = p.content;
   let lines = p.lines;
   if (content.charCodeAt(0) !== 91 /* [ */ || p.afterTask) return lines > 0 ? { content, lines } : null;
@@ -201,7 +217,8 @@ export function extractRefdefs(m: MdMachine, p: ParagraphFrame, lastLine: number
     if (!ref) break;
     let count = 0;
     for (let i = pos; i < ref.end; i++) if (content.charCodeAt(i) === 10) count++;
-    for (let l = first; l < first + count; l++) m.rewriteRole(l, l === first ? { type: 'refdef', first: true, label: ref.reference.label } : REFDEF_NEXT);
+    for (let l = first; l < first + count; l++)
+      m.rewriteRole(l, l === first ? { type: 'refdef', first: true, label: ref.reference.label } : REFDEF_NEXT);
     pos = ref.end;
     first += count;
     lines -= count;
@@ -322,7 +339,15 @@ export const fencedCodeStart: MdBlockStart = {
     m.addChild({ spec: FENCE, char, length, offset } as FenceFrame);
     m.advanceNextNonspace();
     m.advanceOffset(length, false);
-    m.setLeaf({ type: 'code_block', first: true, fenced: true, fenceChar: char, fenceLength: length, fenceOffset: offset, info: trimMd(m.line.slice(m.offset, m.realLength)) });
+    m.setLeaf({
+      type: 'code_block',
+      first: true,
+      fenced: true,
+      fenceChar: char,
+      fenceLength: length,
+      fenceOffset: offset,
+      info: trimMd(m.line.slice(m.offset, m.realLength)),
+    });
     return 2;
   },
 };
@@ -335,7 +360,8 @@ export const htmlBlockStart: MdBlockStart = {
     for (let type = 1; type <= 7; type++) {
       if (!reHtmlBlockOpen[type]!.test(s)) continue;
       // the seventh kind can't interrupt a paragraph
-      if (type === 7 && (container.spec === PARAGRAPH || (!m.allClosed && !m.blank && m.tip.spec === PARAGRAPH))) continue;
+      if (type === 7 && (container.spec === PARAGRAPH || (!m.allClosed && !m.blank && m.tip.spec === PARAGRAPH)))
+        continue;
       m.closeUnmatchedBlocks();
       // the indentation is part of the block: the offset is not advanced
       m.addChild({ spec: HTML_BLOCK, htmlType: type } as HtmlFrame);
@@ -377,7 +403,8 @@ export const thematicBreakStart: MdBlockStart = {
   name: 'thematicBreak',
   start(m) {
     const c = m.peek(m.nextNonspace);
-    if (m.indented || (c !== 42 && c !== 95 && c !== 45) || !reThematicBreak.test(m.line.slice(m.nextNonspace))) return 0;
+    if (m.indented || (c !== 42 && c !== 95 && c !== 45) || !reThematicBreak.test(m.line.slice(m.nextNonspace)))
+      return 0;
     m.closeUnmatchedBlocks();
     m.addSingleLine(THEMATIC_BREAK);
     m.advanceOffset(m.line.length - m.offset, false);
@@ -396,22 +423,38 @@ export const listItemStart: MdBlockStart = {
     m.closeUnmatchedBlocks();
     const tip = m.tip as ListFrame;
     const list = marker.list;
-    if (tip.spec !== LIST || tip.ordered !== (list.type === 'ordered') || tip.bullet !== list.bulletChar || tip.delimiter !== list.delimiter) {
-      m.addChild({ spec: LIST, ordered: list.type === 'ordered', bullet: list.bulletChar, delimiter: list.delimiter } as ListFrame);
+    if (
+      tip.spec !== LIST ||
+      tip.ordered !== (list.type === 'ordered') ||
+      tip.bullet !== list.bulletChar ||
+      tip.delimiter !== list.delimiter
+    ) {
+      m.addChild({
+        spec: LIST,
+        ordered: list.type === 'ordered',
+        bullet: list.bulletChar,
+        delimiter: list.delimiter,
+      } as ListFrame);
     }
-    m.addChild({ spec: ITEM, markerOffset: list.markerOffset, padding: list.padding, hasChildren: false } as ItemFrame, {
-      list,
-      markerStart: m.real(marker.markerFrom),
-      markerEnd: m.real(marker.markerTo),
-      markerColumn: marker.markerColumn,
-      contentColumn: marker.markerColumn + list.padding,
-    });
+    m.addChild(
+      { spec: ITEM, markerOffset: list.markerOffset, padding: list.padding, hasChildren: false } as ItemFrame,
+      {
+        list,
+        markerStart: m.real(marker.markerFrom),
+        markerEnd: m.real(marker.markerTo),
+        markerColumn: marker.markerColumn,
+        contentColumn: marker.markerColumn + list.padding,
+      },
+    );
     m.piece(m.stack.length - 1, 'marker', from, fromColumn);
     return 1;
   },
 };
 
-function parseListMarker(m: MdMachine, container: MdFrame): { list: MdList; markerFrom: number; markerTo: number; markerColumn: number } | null {
+function parseListMarker(
+  m: MdMachine,
+  container: MdFrame,
+): { list: MdList; markerFrom: number; markerTo: number; markerColumn: number } | null {
   if (m.indent >= 4) return null;
   const ln = m.line;
   const at = m.nextNonspace;
@@ -486,4 +529,3 @@ export const commonMarkStarts: readonly MdBlockStart[] = [
   listItemStart,
   indentedCodeStart,
 ];
-

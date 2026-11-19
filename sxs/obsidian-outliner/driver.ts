@@ -16,7 +16,9 @@ const onText = keepsCaretOnText('Outliner', { checkbox: true });
 function zoomable(doc: TextDoc): string | undefined {
   if (!doc.view || doc.view.zoom === null) return undefined;
   const line = doc.text.split('\n')[doc.view.zoom] ?? '';
-  return /^\s*([-*+]|\d+\.)\s+/.test(line) ? undefined : 'a zoom into a line that is no list item, where Zoom has no range';
+  return /^\s*([-*+]|\d+\.)\s+/.test(line)
+    ? undefined
+    : 'a zoom into a line that is no list item, where Zoom has no range';
 }
 
 export const driver = obsidianDriver({

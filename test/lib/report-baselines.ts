@@ -28,7 +28,10 @@ export function writeFailedKind(failure: { readonly phase: string; readonly code
 }
 
 export function corpusHash(starts: readonly GeneratedStart[]): string {
-  return createHash('sha256').update(JSON.stringify(starts.map((start) => [start.text, start.config]))).digest('hex').slice(0, 16);
+  return createHash('sha256')
+    .update(JSON.stringify(starts.map((start) => [start.text, start.config])))
+    .digest('hex')
+    .slice(0, 16);
 }
 
 /** One more run in the group `key`, keeping `example` while it has fewer than `limit`. */
@@ -54,17 +57,32 @@ export function readBaseline(file: string): ReportBaseline | null {
  * unseen; or a corpus that is another, the spec's notes changed, which holds no count at all. Each a
  * line saying so, which fails the run until `update`=1 records the counts.
  */
-export function staleBaseline(baseline: ReportBaseline | null, corpus: string, groups: ReadonlyMap<string, { readonly runs: number }>, held: boolean, update: string): string[] {
+export function staleBaseline(
+  baseline: ReportBaseline | null,
+  corpus: string,
+  groups: ReadonlyMap<string, { readonly runs: number }>,
+  held: boolean,
+  update: string,
+): string[] {
   if (!baseline || !held) return [];
-  if (baseline.corpus !== corpus) return [`the corpus changed since the baseline, which holds no count now: ${update}=1 records them`];
+  if (baseline.corpus !== corpus)
+    return [`the corpus changed since the baseline, which holds no count now: ${update}=1 records them`];
   const fell = Object.entries(baseline.groups)
     .filter(([key, runs]) => (groups.get(key)?.runs ?? 0) < runs)
     .map(([key, runs]) => `${key} ${runs} → ${groups.get(key)?.runs ?? 0}`);
-  return fell.length ? [`fewer failures than the baseline, which would let them come back unseen: ${fell.join('; ')}; ${update}=1 records them`] : [];
+  return fell.length
+    ? [
+        `fewer failures than the baseline, which would let them come back unseen: ${fell.join('; ')}; ${update}=1 records them`,
+      ]
+    : [];
 }
 
 /** Records `groups`' counts on `corpus` as the baseline in `file`. */
-export function writeBaseline(file: string, corpus: string, groups: ReadonlyMap<string, { readonly runs: number }>): void {
+export function writeBaseline(
+  file: string,
+  corpus: string,
+  groups: ReadonlyMap<string, { readonly runs: number }>,
+): void {
   const counts = [...groups].map(([key, group]) => [key, group.runs] as const).sort();
   writeFileSync(file, `${JSON.stringify({ corpus, groups: Object.fromEntries(counts) }, null, 2)}\n`);
 }

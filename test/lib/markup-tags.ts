@@ -14,8 +14,18 @@ export const MARKUP_TAGS = ['markup-heading', 'markup-task', 'markup-fence'] as 
 export type MarkupTag = (typeof MARKUP_TAGS)[number];
 
 const FENCED = new Set(['fenced_code', 'math_block', 'comment_block']);
-const BACKWARD = new Set(['deleteContentBackward', 'deleteWordBackward', 'deleteSoftLineBackward', 'deleteHardLineBackward']);
-const FORWARD = new Set(['deleteContentForward', 'deleteWordForward', 'deleteSoftLineForward', 'deleteHardLineForward']);
+const BACKWARD = new Set([
+  'deleteContentBackward',
+  'deleteWordBackward',
+  'deleteSoftLineBackward',
+  'deleteHardLineBackward',
+]);
+const FORWARD = new Set([
+  'deleteContentForward',
+  'deleteWordForward',
+  'deleteSoftLineForward',
+  'deleteHardLineForward',
+]);
 const TO_LINE_START = new Set(['deleteSoftLineBackward', 'deleteHardLineBackward']);
 
 /** The tag of the markup `text` has: a heading's `#`s or underline, a task's checkbox, a fenced block's fences. */
@@ -23,7 +33,8 @@ function tagOf(text: OurusText | null | undefined): MarkupTag | null {
   if (text instanceof OurusAtom) return FENCED.has(text.type) && text.delimiters ? 'markup-fence' : null;
   if (!(text instanceof OurusProse)) return null;
   if (text.frame.some((p) => p.part === 'task')) return 'markup-task';
-  if (text.frame.some((p) => p.part === 'heading' || p.part === 'close' || p.part === 'underline')) return 'markup-heading';
+  if (text.frame.some((p) => p.part === 'heading' || p.part === 'close' || p.part === 'underline'))
+    return 'markup-heading';
   return null;
 }
 
@@ -39,9 +50,13 @@ export function onFenceLine(doc: OurusDoc, pos: number): boolean {
 }
 
 /** At `pos`: the tag of the text's markup, and whether `pos` is in that markup, at the text's start, or in an empty text. */
-function markupAt(view: OurusView, pos: number): { tag: MarkupTag | null; inMarkup: boolean; atStart: boolean; empty: boolean } {
+function markupAt(
+  view: OurusView,
+  pos: number,
+): { tag: MarkupTag | null; inMarkup: boolean; atStart: boolean; empty: boolean } {
   const at = view.locate(pos);
-  if (!('text' in at) || at.zone === 'blockIdLine' || !(at.text instanceof OurusProse)) return { tag: null, inMarkup: false, atStart: false, empty: false };
+  if (!('text' in at) || at.zone === 'blockIdLine' || !(at.text instanceof OurusProse))
+    return { tag: null, inMarkup: false, atStart: false, empty: false };
   const inMarkup = at.zone === 'frame' && ['task', 'heading', 'close', 'underline'].includes(at.part);
   return { tag: tagOf(at.text), inMarkup, atStart: at.offset === textStart(at.text), empty: at.text.empty };
 }
@@ -49,7 +64,8 @@ function markupAt(view: OurusView, pos: number): { tag: MarkupTag | null; inMark
 /** The fences of the fenced block the caret is in, as written; null outside one. */
 function fencesAtCaret(view: OurusView): string | null {
   const at = view.locate(view.selection.head);
-  if (!('text' in at) || !(at.text instanceof OurusAtom) || !FENCED.has(at.text.type) || !at.text.delimiters) return null;
+  if (!('text' in at) || !(at.text instanceof OurusAtom) || !FENCED.has(at.text.type) || !at.text.delimiters)
+    return null;
   const { open, close } = at.text.delimiters;
   return `${at.text.text.slice(open.from, open.to)}|${close ? at.text.text.slice(close.from, close.to) : ''}`;
 }
@@ -58,7 +74,11 @@ function fencesAtCaret(view: OurusView): string | null {
  * The text next to `pos`'s line, past blank lines, below (`1`) or above (`-1`): the tag of its markup,
  * whether that line is a fence's, and whether the text is empty; null at the document's edge.
  */
-function nextText(doc: OurusDoc, pos: number, dir: 1 | -1): { tag: MarkupTag | null; fence: boolean; empty: boolean } | null {
+function nextText(
+  doc: OurusDoc,
+  pos: number,
+  dir: 1 | -1,
+): { tag: MarkupTag | null; fence: boolean; empty: boolean } | null {
   let line = doc.lineAt(pos);
   for (;;) {
     if (dir === 1 ? line.to + 1 > doc.text.length : line.from === 0) return null;
@@ -89,7 +109,8 @@ function actionTags(view: OurusView, action: string, after: OurusView, tags: Set
       const node = doc.nodeAtLine(l);
       const text = node && doc.textOf(node);
       const tag = tagOf(text);
-      if (tag && node && text!.frame.some((p) => doc.posOf(node, p.from, 1) >= from && doc.posOf(node, p.from, 1) < to)) tags.add(tag);
+      if (tag && node && text!.frame.some((p) => doc.posOf(node, p.from, 1) >= from && doc.posOf(node, p.from, 1) < to))
+        tags.add(tag);
     }
   }
   if (collapsed) {

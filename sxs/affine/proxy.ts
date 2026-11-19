@@ -12,12 +12,15 @@ import type { ProxyRequest, ProxyResponse, ProxyRules } from '../proxy.ts';
 export const rules: ProxyRules = {
   hosts: ['app.affine.pro', 'prod.affineassets.com'],
   key(req: ProxyRequest) {
-    if (req.method === 'POST' && req.url.hostname === 'app.affine.pro' && req.url.pathname === '/graphql') return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
+    if (req.method === 'POST' && req.url.hostname === 'app.affine.pro' && req.url.pathname === '/graphql')
+      return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
     return undefined;
   },
   respond(req: ProxyRequest): ProxyResponse | undefined {
-    if (req.method === 'POST' && req.url.pathname.startsWith('/cdn-cgi/challenge-platform/')) return { status: 200, headers: [], body: Buffer.alloc(0) };
-    if (req.url.hostname === 'app.affine.pro' && req.url.pathname === '/api/telemetry/collect') return { status: 200, headers: [['content-type', 'application/json']], body: Buffer.from('{}') };
+    if (req.method === 'POST' && req.url.pathname.startsWith('/cdn-cgi/challenge-platform/'))
+      return { status: 200, headers: [], body: Buffer.alloc(0) };
+    if (req.url.hostname === 'app.affine.pro' && req.url.pathname === '/api/telemetry/collect')
+      return { status: 200, headers: [['content-type', 'application/json']], body: Buffer.from('{}') };
     return undefined;
   },
 };

@@ -4,7 +4,16 @@
 // verbatim block's code as it reads (kept, or edited, against the old context's reading), its block
 // ids, its placeholders, gaps, and the lists `done()` fixed.
 
-import { OurusProse, OurusAtom, blockIdsOf, verbatimLinesOf, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
+import {
+  OurusProse,
+  OurusAtom,
+  blockIdsOf,
+  verbatimLinesOf,
+  type OurusNode,
+  type OurusText,
+  type PersistentNode,
+  type OurusDoc,
+} from '../doc/index.ts';
 import type { ListPlace, NormalizedDraft } from './normalized.ts';
 
 /**
@@ -13,7 +22,20 @@ import type { ListPlace, NormalizedDraft } from './normalized.ts';
  */
 export interface ReadbackDifference {
   readonly path: string;
-  readonly code: 'kind' | 'id' | 'gap' | 'text-missing' | 'text-extra' | 'block-ids' | 'text-type' | 'text' | 'frame' | 'placeholders' | 'code' | 'list' | 'children';
+  readonly code:
+    | 'kind'
+    | 'id'
+    | 'gap'
+    | 'text-missing'
+    | 'text-extra'
+    | 'block-ids'
+    | 'text-type'
+    | 'text'
+    | 'frame'
+    | 'placeholders'
+    | 'code'
+    | 'list'
+    | 'children';
   readonly expected: string;
   readonly actual: string;
 }
@@ -22,13 +44,19 @@ export interface ReadbackDifference {
 export function describeDifference(d: ReadbackDifference): string {
   const { expected: e, actual: a } = d;
   const what =
-    d.code === 'kind' ? `a ${e}, read as a ${a}`
-    : d.code === 'gap' ? `${e} blank lines after its text, read as ${a}`
-    : d.code === 'children' ? `${e} children, read as ${a}`
-    : d.code === 'text-type' ? `a ${e} text, read as a ${a} one`
-    : d.code === 'text-missing' ? 'its text missing'
-    : d.code === 'text-extra' ? `a text ${a} it shouldn't have`
-    : `${d.code === 'block-ids' ? 'block ids' : d.code} ${e}, read as ${a}`;
+    d.code === 'kind'
+      ? `a ${e}, read as a ${a}`
+      : d.code === 'gap'
+        ? `${e} blank lines after its text, read as ${a}`
+        : d.code === 'children'
+          ? `${e} children, read as ${a}`
+          : d.code === 'text-type'
+            ? `a ${e} text, read as a ${a} one`
+            : d.code === 'text-missing'
+              ? 'its text missing'
+              : d.code === 'text-extra'
+                ? `a text ${a} it shouldn't have`
+                : `${d.code === 'block-ids' ? 'block ids' : d.code} ${e}, read as ${a}`;
   return `${d.path}: ${what}`;
 }
 
@@ -38,9 +66,21 @@ export function differenceFrom(doc: OurusDoc, draft: NormalizedDraft): ReadbackD
 }
 
 /** A difference at `path`. */
-const differs = (path: string, code: ReadbackDifference['code'], expected: unknown, actual: unknown): ReadbackDifference => ({ path, code, expected: String(expected), actual: String(actual) });
+const differs = (
+  path: string,
+  code: ReadbackDifference['code'],
+  expected: unknown,
+  actual: unknown,
+): ReadbackDifference => ({ path, code, expected: String(expected), actual: String(actual) });
 
-function node(doc: OurusDoc, draft: NormalizedDraft, expected: PersistentNode, origin: OurusNode | null, actual: OurusNode, at: string): ReadbackDifference | null {
+function node(
+  doc: OurusDoc,
+  draft: NormalizedDraft,
+  expected: PersistentNode,
+  origin: OurusNode | null,
+  actual: OurusNode,
+  at: string,
+): ReadbackDifference | null {
   if (expected === actual.persistentNode) return null;
   if (expected.kind !== actual.kind) return differs(at, 'kind', expected.kind, actual.kind);
   if (expected.id !== actual.id) return differs(at, 'id', expected.id, actual.id);
@@ -58,7 +98,8 @@ function node(doc: OurusDoc, draft: NormalizedDraft, expected: PersistentNode, o
     const was = verbatimLinesOf(draft.from, origin);
     if (was) {
       const now = verbatimLinesOf(doc, actual);
-      if (JSON.stringify(now) !== JSON.stringify(was)) return differs(at, 'code', JSON.stringify(was), JSON.stringify(now));
+      if (JSON.stringify(now) !== JSON.stringify(was))
+        return differs(at, 'code', JSON.stringify(was), JSON.stringify(now));
     }
   } else if (origin && had instanceof OurusAtom && want instanceof OurusAtom && verbatimLinesOf(draft.from, origin)) {
     // (code the draft edited: its text as the edit leaves it, read where the block was, at its old
@@ -68,12 +109,18 @@ function node(doc: OurusDoc, draft: NormalizedDraft, expected: PersistentNode, o
     const pieces = draft.from.mdTree.line(origin.startLine).prefix;
     const meant = draft.from.verbatimLinesAt(want, pieces.length ? pieces[pieces.length - 1]!.toColumn : 0);
     const now = verbatimLinesOf(doc, actual);
-    if (meant && now && JSON.stringify(now) !== JSON.stringify(meant)) return differs(at, 'code', JSON.stringify(meant), JSON.stringify(now));
+    if (meant && now && JSON.stringify(now) !== JSON.stringify(meant))
+      return differs(at, 'code', JSON.stringify(meant), JSON.stringify(now));
   }
   const list = draft.lists.get(expected.id);
   if (list && expected.kind === 'item') {
     const read = listPlace(doc, actual);
-    if (read.start !== list.start || read.type !== list.type || read.marker !== list.marker || (list.number !== null && read.number !== list.number)) {
+    if (
+      read.start !== list.start ||
+      read.type !== list.type ||
+      read.marker !== list.marker ||
+      (list.number !== null && read.number !== list.number)
+    ) {
       return differs(at, 'list', JSON.stringify(list), JSON.stringify(read));
     }
   }
@@ -91,13 +138,19 @@ function node(doc: OurusDoc, draft: NormalizedDraft, expected: PersistentNode, o
 
 /** Where two texts differ in what the check compares, or null (its path the node's, set by the caller). */
 function texts(want: OurusText | null, got: OurusText | null): ReadbackDifference | null {
-  if (!want || !got) return want === got ? null : want ? differs('', 'text-missing', '', '') : differs('', 'text-extra', '', JSON.stringify(got!.text));
+  if (!want || !got)
+    return want === got
+      ? null
+      : want
+        ? differs('', 'text-missing', '', '')
+        : differs('', 'text-extra', '', JSON.stringify(got!.text));
   // (a text a command made from nothing, read in the document's flavor as the text written is)
   if (want instanceof OurusProse && got instanceof OurusProse) want = want.withBlockIds(got.blockIds);
   const wb = JSON.stringify(blockIdsOf(want).map((b) => [b.name, b.carried]));
   const gb = JSON.stringify(blockIdsOf(got).map((b) => [b.name, b.carried]));
   if (wb !== gb) return differs('', 'block-ids', wb, gb);
-  if (want instanceof OurusProse !== got instanceof OurusProse || want.type !== got.type) return differs('', 'text-type', want.type, got.type);
+  if (want instanceof OurusProse !== got instanceof OurusProse || want.type !== got.type)
+    return differs('', 'text-type', want.type, got.type);
   if (want.body !== got.body) return differs('', 'text', JSON.stringify(want.body), JSON.stringify(got.body));
   if (want instanceof OurusProse && got instanceof OurusProse) {
     const w = JSON.stringify([want.task, want.heading?.level, want.callout]);
@@ -117,7 +170,9 @@ function texts(want: OurusText | null, got: OurusText | null): ReadbackDifferenc
 function placeholders(text: OurusText): string {
   const frame = text instanceof OurusProse ? text.frame : [];
   const offset = (at: number): number => at - frame.filter((p) => p.to <= at).reduce((n, p) => n + p.to - p.from, 0);
-  return text.marks.placeholders.map((pos) => `${text.marks.hasEmptyNodeAt(pos) ? 'empty-node' : 'held-space'}@${offset(pos)}`).join(',');
+  return text.marks.placeholders
+    .map((pos) => `${text.marks.hasEmptyNodeAt(pos) ? 'empty-node' : 'held-space'}@${offset(pos)}`)
+    .join(',');
 }
 
 /** Where item `item` of `doc` is in its list, as the parser reads it. */

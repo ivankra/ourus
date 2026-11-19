@@ -29,7 +29,8 @@ function cors(req: ProxyRequest): [string, string][] {
 export const rules: ProxyRules = {
   hosts: ['mubu.com', '.mubu.com'],
   key(req: ProxyRequest) {
-    if (req.method === 'POST' && req.url.hostname === 'api2.mubu.com') return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
+    if (req.method === 'POST' && req.url.hostname === 'api2.mubu.com')
+      return `${req.url.href} ${createHash('sha1').update(req.body).digest('hex')}`;
     // the A/B groups, asked for under the browser's device id (a profile's own): one answer for any
     if (req.url.pathname === '/v4/api/common/ab/config') return `${req.url.origin}${req.url.pathname}`;
     return undefined;
@@ -37,7 +38,12 @@ export const rules: ProxyRules = {
   respond(req: ProxyRequest): ProxyResponse | undefined {
     if (req.url.hostname !== 'api2.mubu.com') return undefined;
     if (req.method === 'OPTIONS') return { status: 204, headers: cors(req), body: Buffer.alloc(0) };
-    if (REPORTS.test(req.url.pathname)) return { status: 200, headers: [...cors(req), ['content-type', 'application/json']], body: Buffer.from('{"code":0,"msg":null,"data":null}') };
+    if (REPORTS.test(req.url.pathname))
+      return {
+        status: 200,
+        headers: [...cors(req), ['content-type', 'application/json']],
+        body: Buffer.from('{"code":0,"msg":null,"data":null}'),
+      };
     return undefined;
   },
 };

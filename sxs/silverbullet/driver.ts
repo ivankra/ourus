@@ -77,7 +77,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   holds(doc) {
     // CodeMirror keeps line breaks as LF
@@ -91,13 +96,24 @@ export const driver: Driver = {
   async open(page: Page) {
     const boot = async (): Promise<void> => {
       await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-      await page.waitForFunction(() => (window as any).client?.systemReady && (window as any).client?.editorView, null, { timeout: 120000 });
+      await page.waitForFunction(
+        () => (window as any).client?.systemReady && (window as any).client?.editorView,
+        null,
+        { timeout: 120000 },
+      );
     };
     // a profile that hasn't synced the space yet (a cold run) has its service worker pass every
     // request to the server until the first full sync, a write too (503 here: "Offline"); after it,
     // the worker serves the space from the browser's copy, and a write stays there
     const synced = (timeout: number): Promise<boolean> =>
-      page.waitForFunction(() => navigator.serviceWorker?.controller && (window as any).client?.fullSyncCompleted, null, { timeout }).then(() => true, () => false);
+      page
+        .waitForFunction(() => navigator.serviceWorker?.controller && (window as any).client?.fullSyncCompleted, null, {
+          timeout,
+        })
+        .then(
+          () => true,
+          () => false,
+        );
     await boot();
     if (!(await synced(20000))) {
       // the browser's copy holds the test pages of runs before, which each sync pushes to the server
@@ -111,10 +127,16 @@ export const driver: Driver = {
       await boot().catch(() => boot());
       if (!(await synced(120000))) throw new Error("SilverBullet's first full sync didn't complete, a cold one either");
     }
-    const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
+    const settled = await page.evaluate(() =>
+      (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }),
+    );
     if (settled.timedOut) throw new Error(`SilverBullet didn't settle after loading: ${settled.pending}`);
     // ready once an outline command (a plug, loaded on first use) indents an item
-    const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000, busy }), this.idle!.busy!);
+    const idle = () =>
+      page.evaluate(
+        (busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000, busy }),
+        this.idle!.busy!,
+      );
     let ready = false;
     for (let t0 = Date.now(); !ready && Date.now() - t0 < 30000; ) {
       await this.load(page, { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } });
@@ -162,8 +184,14 @@ export const driver: Driver = {
       const v = (window as any).client.editorView;
       const { anchor, head } = v.state.selection.main;
       // the folds by their rows: each placeholder CodeMirror draws for one, at its row's end
-      const folded = [...v.contentDOM.querySelectorAll('.cm-foldPlaceholder')].map((el: Element) => v.state.doc.lineAt(v.posAtDOM(el)).number - 1);
-      return { text: v.state.doc.toString() as string, sel: v.hasFocus ? { anchor, head } : null, ...(viewed && { view: { folded, zoom: null } }) };
+      const folded = [...v.contentDOM.querySelectorAll('.cm-foldPlaceholder')].map(
+        (el: Element) => v.state.doc.lineAt(v.posAtDOM(el)).number - 1,
+      );
+      return {
+        text: v.state.doc.toString() as string,
+        sel: v.hasFocus ? { anchor, head } : null,
+        ...(viewed && { view: { folded, zoom: null } }),
+      };
     }, viewed(page).on);
   },
 };

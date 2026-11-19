@@ -27,7 +27,18 @@
 //   (`proxy`, `--cache`), restarted where it exits or its sources change.
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, truncateSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  statSync,
+  truncateSync,
+} from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
@@ -339,7 +350,9 @@ function fits(cost: number): boolean {
   const t = tasks();
   if (!t) return true;
   const mine = poolTasks();
-  return Math.max(t.current - mine, roomTasks()) + Math.max(mine - freeing, modelTasks()) + reserved + cost <= t.max * MARGIN;
+  return (
+    Math.max(t.current - mine, roomTasks()) + Math.max(mine - freeing, modelTasks()) + reserved + cost <= t.max * MARGIN
+  );
 }
 /** Whether no client holds anything: then whatever is asked for is tried, the cap or not, rather than waiting for no one. */
 const nothingLeased = (): boolean => ![...conns].some((c) => c.lease);
@@ -399,7 +412,13 @@ async function ensureProxy(cache?: CacheMode, say: (line: string) => void = log)
     const ours = !!h && h.pid === proxyProc?.pid && proxyProc.exitCode === null;
     if (h && ours && h.version === proxyVersion() && h.cache === proxyCache && h.httpDir === httpDir) return;
     if (h) {
-      const why = !ours ? "it isn't the pool's" : h.version !== proxyVersion() ? 'its sources changed' : h.cache !== proxyCache ? `--cache=${proxyCache}, not ${h.cache}` : `its cache is ${h.httpDir}, not ${httpDir}`;
+      const why = !ours
+        ? "it isn't the pool's"
+        : h.version !== proxyVersion()
+          ? 'its sources changed'
+          : h.cache !== proxyCache
+            ? `--cache=${proxyCache}, not ${h.cache}`
+            : `its cache is ${h.httpDir}, not ${httpDir}`;
       say(`restarting the proxy (pid ${h.pid}): ${why}`);
       const was = proxyProc;
       proxyProc = null;
@@ -408,17 +427,24 @@ async function ensureProxy(cache?: CacheMode, say: (line: string) => void = log)
       await stopChild(was, 1000);
     }
     mkdirSync(cacheDir, { recursive: true });
-    const proc = spawnChild(process.execPath, [join(import.meta.dirname, 'proxy.ts'), `--port=${proxyPort}`, `--cache=${proxyCache}`], { log: proxyLog });
+    const proc = spawnChild(
+      process.execPath,
+      [join(import.meta.dirname, 'proxy.ts'), `--port=${proxyPort}`, `--cache=${proxyCache}`],
+      { log: proxyLog },
+    );
     proxyProc = proc;
     proc.once('exit', (code, sig) => {
       if (proxyProc !== proc || stopping) return;
       proxyProc = null;
-      log(`the proxy exited (${sig ?? code})${browsers.size ? ': starting it again, the browsers reach every site through it' : ''}`);
+      log(
+        `the proxy exited (${sig ?? code})${browsers.size ? ': starting it again, the browsers reach every site through it' : ''}`,
+      );
       if (browsers.size) void ensureProxy().catch((e: Error) => log(e.message));
     });
     for (let i = 0; i < 100; i++) {
       const now = await proxyHealth();
-      if (now?.pid === proc.pid) return say(`started the proxy on :${proxyPort}, pid ${proc.pid}, --cache=${proxyCache}, log ${proxyLog}`);
+      if (now?.pid === proc.pid)
+        return say(`started the proxy on :${proxyPort}, pid ${proc.pid}, --cache=${proxyCache}, log ${proxyLog}`);
       // one that exits (offline without a certificate) says why last in its log
       if (proc.exitCode !== null) break;
       await sleep(100);
@@ -441,7 +467,18 @@ const leasedIn = (b: Browser): number => [...b.windows].filter((w) => w.state ==
 /** Starts browser `n`: a fresh profile (a temporary directory, removed at each start), its DevTools port, the pool connected. */
 function startBrowser(n: number): Browser {
   const dir = join(poolDir, `chromium-${n}`);
-  const b: Browser = { n, dir, up: false, ready: Promise.resolve(), windows: new Set(), clipboard: { holder: null, queue: [] }, strays: new Set(), since: Date.now(), emptySince: Date.now(), closing: false };
+  const b: Browser = {
+    n,
+    dir,
+    up: false,
+    ready: Promise.resolve(),
+    windows: new Set(),
+    clipboard: { holder: null, queue: [] },
+    strays: new Set(),
+    since: Date.now(),
+    emptySince: Date.now(),
+    closing: false,
+  };
   browsers.set(n, b);
   b.ready = reserve(COST.browser, async () => {
     // the proxy its flags name, up first
@@ -450,7 +487,11 @@ function startBrowser(n: number): Browser {
     const profile = join(dir, 'profile');
     mkdirSync(profile, { recursive: true });
     const logFile = join(dir, 'chromium.log');
-    const proc = spawnChild(executablePath, ['--headless=new', ...FLAGS, `--user-data-dir=${profile}`, '--remote-debugging-port=0', 'about:blank'], { log: logFile });
+    const proc = spawnChild(
+      executablePath,
+      ['--headless=new', ...FLAGS, `--user-data-dir=${profile}`, '--remote-debugging-port=0', 'about:blank'],
+      { log: logFile },
+    );
     b.proc = proc;
     proc.once('exit', (code, sig) => browserGone(b, `it exited (${sig ?? code})`));
     let port = 0;
@@ -459,7 +500,9 @@ function startBrowser(n: number): Browser {
       await sleep(50);
       if (proc.exitCode !== null) throw new Error(`Chromium ${n} exited (${proc.exitCode}); see ${logFile}`);
       try {
-        [port, path] = (([p, q]) => [Number(p), q!])(readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n'));
+        [port, path] = (([p, q]) => [Number(p), q!])(
+          readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n'),
+        );
       } catch {}
     }
     if (!port) throw new Error(`Chromium ${n} didn't start in 15s; see ${logFile}`);
@@ -515,7 +558,9 @@ async function closeBrowser(b: Browser, why: string): Promise<void> {
  */
 function browserFor(): Browser | null {
   const up = [...browsers.values()].filter((b) => !b.closing);
-  const roomy = up.filter((b) => b.windows.size < WINDOWS).sort((a, b) => leasedIn(a) - leasedIn(b) || a.windows.size - b.windows.size);
+  const roomy = up
+    .filter((b) => b.windows.size < WINDOWS)
+    .sort((a, b) => leasedIn(a) - leasedIn(b) || a.windows.size - b.windows.size);
   const best = roomy[0];
   const free = Array.from({ length: BROWSERS }, (_, n) => n).find((n) => !browsers.has(n));
   const canStart = free !== undefined && (fits(COST.browser + COST.window) || nothingLeased());
@@ -564,34 +609,60 @@ function attemptWindow(conn: Conn, req: { id: number; app: string; key: string; 
       if (!w.destroying) destroyWindow(w, `its client (${whoOf(conn)}) left before it was ready`, true);
       return;
     }
-    log(`${whoOf(conn)} has ${w.app}'s window ${w.id} in Chromium ${w.browser.n}${warm ? ', warm (a hot start)' : ', new'}`);
-    send(conn, { id: req.id, ok: true, cdp: `http://127.0.0.1:${w.browser.port}`, targetId: w.targetId, contextId: w.contextId, browser: w.browser.n, warm, meta: w.meta });
+    log(
+      `${whoOf(conn)} has ${w.app}'s window ${w.id} in Chromium ${w.browser.n}${warm ? ', warm (a hot start)' : ', new'}`,
+    );
+    send(conn, {
+      id: req.id,
+      ok: true,
+      cdp: `http://127.0.0.1:${w.browser.port}`,
+      targetId: w.targetId,
+      contextId: w.contextId,
+      browser: w.browser.n,
+      warm,
+      meta: w.meta,
+    });
   };
   const fail = (e: Error): void => send(conn, { id: req.id, ok: false, error: e.message });
   // the app's warm windows: one of this key taken, the others (another key, or all where `fresh`) destroyed
   for (const w of allWindows()) {
     if (w.state !== 'warm' || w.app !== req.app || w.destroying) continue;
     if (req.fresh || w.key !== req.key) {
-      destroyWindow(w, req.fresh ? 'a fresh window was asked for' : 'its key changed (the app, or the idle script)', false);
+      destroyWindow(
+        w,
+        req.fresh ? 'a fresh window was asked for' : 'its key changed (the app, or the idle script)',
+        false,
+      );
       continue;
     }
     claim(w, conn);
-    void w.browser
-      .cdp!.evaluate(w.targetId!, '1', 3000)
-      .then(
-        () => reply(w, true),
-        (e: Error) => {
-          destroyWindow(w, `it doesn't answer (${e.message})`, true);
-          // a new one instead, first in line
-          waiters.unshift(windowWaiter(conn, req));
-          pump();
-        },
-      );
+    void w.browser.cdp!.evaluate(w.targetId!, '1', 3000).then(
+      () => reply(w, true),
+      (e: Error) => {
+        destroyWindow(w, `it doesn't answer (${e.message})`, true);
+        // a new one instead, first in line
+        waiters.unshift(windowWaiter(conn, req));
+        pump();
+      },
+    );
     return true;
   }
   const b = browserFor();
   if (!b) return false;
-  const w = claim<Win>({ kind: 'window', id: ++ids, app: req.app, key: req.key, browser: b, state: 'leased', since: Date.now(), lastUsed: Date.now(), destroying: false }, conn);
+  const w = claim<Win>(
+    {
+      kind: 'window',
+      id: ++ids,
+      app: req.app,
+      key: req.key,
+      browser: b,
+      state: 'leased',
+      since: Date.now(),
+      lastUsed: Date.now(),
+      destroying: false,
+    },
+    conn,
+  );
   b.windows.add(w);
   void reserve(COST.window, async () => {
     await b.ready;
@@ -602,11 +673,20 @@ function attemptWindow(conn: Conn, req: { id: number; app: string; key: string; 
       void cdp.send('Target.disposeBrowserContext', { browserContextId: contextId }, undefined, 30000).catch(() => {});
       return true;
     };
-    const contextId = (await cdp.send<{ browserContextId: string }>('Target.createBrowserContext', { disposeOnDetach: false })).browserContextId;
+    const contextId = (
+      await cdp.send<{ browserContextId: string }>('Target.createBrowserContext', { disposeOnDetach: false })
+    ).browserContextId;
     if (gone(contextId)) throw new Error('its client went while it was made');
     w.contextId = contextId;
     await cdp.send('Browser.grantPermissions', { permissions: PERMISSIONS, browserContextId: contextId });
-    const targetId = (await cdp.send<{ targetId: string }>('Target.createTarget', { url: 'about:blank', newWindow: true, ...VIEWPORT, browserContextId: contextId })).targetId;
+    const targetId = (
+      await cdp.send<{ targetId: string }>('Target.createTarget', {
+        url: 'about:blank',
+        newWindow: true,
+        ...VIEWPORT,
+        browserContextId: contextId,
+      })
+    ).targetId;
     if (gone(contextId)) throw new Error('its client went while it was made');
     w.targetId = targetId;
   }).then(
@@ -646,17 +726,20 @@ function destroyWindow(w: Win, why: string, _dirty: boolean): void {
   w.conn = undefined;
   if (w.kernel) void stopKernel(w.kernel);
   if (w.contextId && b.up && !b.closing) {
-    const disposed = b.cdp!.send('Target.disposeBrowserContext', { browserContextId: w.contextId }, undefined, 30000).catch(async (e: Error) => {
-      // a browser busy enough to be slow at it (its other windows' runs) is left to them, the context to
-      // the sweep; one that answers nothing is in no state to hold the others, and is restarted
-      const answers = await b.cdp!.send('Browser.getVersion', {}, undefined, 15000).then(
-        () => true,
-        () => false,
-      );
-      if (answers) return log(`Chromium ${b.n} didn't dispose a context (${e.message}), but answers: the sweep disposes it`);
-      log(`Chromium ${b.n} didn't dispose a context (${e.message}) and answers nothing: restarting it`);
-      void closeBrowser(b, "it didn't dispose a context, and answers nothing");
-    });
+    const disposed = b
+      .cdp!.send('Target.disposeBrowserContext', { browserContextId: w.contextId }, undefined, 30000)
+      .catch(async (e: Error) => {
+        // a browser busy enough to be slow at it (its other windows' runs) is left to them, the context to
+        // the sweep; one that answers nothing is in no state to hold the others, and is restarted
+        const answers = await b.cdp!.send('Browser.getVersion', {}, undefined, 15000).then(
+          () => true,
+          () => false,
+        );
+        if (answers)
+          return log(`Chromium ${b.n} didn't dispose a context (${e.message}), but answers: the sweep disposes it`);
+        log(`Chromium ${b.n} didn't dispose a context (${e.message}) and answers nothing: restarting it`);
+        void closeBrowser(b, "it didn't dispose a context, and answers nothing");
+      });
     freed(COST.window, disposed);
   }
   pump();
@@ -685,7 +768,8 @@ async function kernelFor(conn: Conn, restart: boolean): Promise<{ n: number; por
   k.ready = reserve(COST.kernel, async () => {
     k.proc = await startKernel(info, spawnChild, sayTo(conn), !was);
     k.proc.once('exit', (code, sig) => {
-      if (kernels.get(n) === k) log(`SiYuan's kernel ${n} exited (${sig ?? code})${w.destroying ? '' : `, under ${w.app}'s window ${w.id}`}`);
+      if (kernels.get(n) === k)
+        log(`SiYuan's kernel ${n} exited (${sig ?? code})${w.destroying ? '' : `, under ${w.app}'s window ${w.id}`}`);
     });
   });
   try {
@@ -718,7 +802,18 @@ const allOWindows = (): OWin[] => [...instances.values()].flatMap((i) => [...i.w
 
 function startInstance(n: number, say: (line: string) => void, want?: { app: string; installer: string }): Instance {
   const dir = join(stateDir, 'obsidian', String(n));
-  const inst: Instance = { n, dir, up: false, ready: Promise.resolve(), windows: new Map(), clipboard: { holder: null, queue: [] }, since: Date.now(), emptySince: Date.now(), closing: false, ...(want && { wanted: `${want.app} ${want.installer}` }) };
+  const inst: Instance = {
+    n,
+    dir,
+    up: false,
+    ready: Promise.resolve(),
+    windows: new Map(),
+    clipboard: { holder: null, queue: [] },
+    since: Date.now(),
+    emptySince: Date.now(),
+    closing: false,
+    ...(want && { wanted: `${want.app} ${want.installer}` }),
+  };
   instances.set(n, inst);
   inst.ready = reserve(COST.obsidian, async () => {
     mkdirSync(dir, { recursive: true });
@@ -767,10 +862,14 @@ async function stopInstance(inst: Instance, why: string): Promise<void> {
 }
 
 /** A window of an Obsidian instance for the setup (`Lease.obsidian`), or false where there is no room yet. */
-function attemptObsidian(conn: Conn, req: { id: number; setup: string; key: string; fresh: boolean; appVersion?: string; installerVersion?: string }): boolean {
+function attemptObsidian(
+  conn: Conn,
+  req: { id: number; setup: string; key: string; fresh: boolean; appVersion?: string; installerVersion?: string },
+): boolean {
   // the versions asked for (`<app> <installer>`, as an instance says its own): an instance of others
   // (an older release's, started before one came out) takes no window of this request's
-  const want = req.appVersion && req.installerVersion ? { app: req.appVersion, installer: req.installerVersion } : undefined;
+  const want =
+    req.appVersion && req.installerVersion ? { app: req.appVersion, installer: req.installerVersion } : undefined;
   const wanted = want ? `${want.app} ${want.installer}` : undefined;
   const runs = (i: Instance): boolean => {
     if (!wanted) return true;
@@ -793,16 +892,14 @@ function attemptObsidian(conn: Conn, req: { id: number; setup: string; key: stri
       continue;
     }
     claim(w, conn);
-    void w.instance
-      .cdp!.evaluate(w.targetId, '1', 3000)
-      .then(
-        () => reply(w, true),
-        (e: Error) => {
-          destroyOWindow(w, `it doesn't answer (${e.message})`, true);
-          waiters.unshift(obsidianWaiter(conn, req));
-          pump();
-        },
-      );
+    void w.instance.cdp!.evaluate(w.targetId, '1', 3000).then(
+      () => reply(w, true),
+      (e: Error) => {
+        destroyOWindow(w, `it doesn't answer (${e.message})`, true);
+        waiters.unshift(obsidianWaiter(conn, req));
+        pump();
+      },
+    );
     return true;
   }
   // an instance without a window of the setup: the one with the fewest leases, else a new one
@@ -818,9 +915,13 @@ function attemptObsidian(conn: Conn, req: { id: number; setup: string; key: stri
     while (instances.has(n)) n++;
     if (n >= OBSIDIANS) {
       // an instance of other versions no client holds a window of: stopped for one of these
-      const stale = [...instances.values()].find((i) => !i.closing && !runs(i) && ![...i.windows.values()].some((w) => w.state === 'leased'));
-      const named = (v?: string): string => (v ? `${v.split(' ')[0]} (installer ${v.split(' ')[1]})` : 'an unknown version');
-      if (stale) void stopInstance(stale, `it runs Obsidian ${named(stale.version)}, and ${named(wanted)} is asked for`);
+      const stale = [...instances.values()].find(
+        (i) => !i.closing && !runs(i) && ![...i.windows.values()].some((w) => w.state === 'leased'),
+      );
+      const named = (v?: string): string =>
+        v ? `${v.split(' ')[0]} (installer ${v.split(' ')[1]})` : 'an unknown version';
+      if (stale)
+        void stopInstance(stale, `it runs Obsidian ${named(stale.version)}, and ${named(wanted)} is asked for`);
       return false;
     }
     if (!(fits(COST.obsidian + COST.obsidianWindow) || nothingLeased())) {
@@ -829,7 +930,19 @@ function attemptObsidian(conn: Conn, req: { id: number; setup: string; key: stri
     }
     inst = startInstance(n, sayTo(conn), want);
   }
-  const w = claim<OWin>({ kind: 'obsidian', setup: req.setup, key: req.key, instance: inst, state: 'leased', since: Date.now(), lastUsed: Date.now(), destroying: false }, conn);
+  const w = claim<OWin>(
+    {
+      kind: 'obsidian',
+      setup: req.setup,
+      key: req.key,
+      instance: inst,
+      state: 'leased',
+      since: Date.now(),
+      lastUsed: Date.now(),
+      destroying: false,
+    },
+    conn,
+  );
   inst.windows.set(req.setup, w);
   const i = inst;
   i.ready.then(
@@ -842,7 +955,10 @@ function attemptObsidian(conn: Conn, req: { id: number; setup: string; key: stri
   return true;
 }
 
-const obsidianWaiter = (conn: Conn, req: { id: number; setup: string; key: string; fresh: boolean; appVersion?: string; installerVersion?: string }): Waiter => ({
+const obsidianWaiter = (
+  conn: Conn,
+  req: { id: number; setup: string; key: string; fresh: boolean; appVersion?: string; installerVersion?: string },
+): Waiter => ({
   conn,
   what: `a window of ${req.setup} in Obsidian`,
   since: Date.now(),
@@ -870,16 +986,26 @@ function destroyOWindow(w: OWin, why: string, dirty: boolean): void {
     const cdp = inst.cdp!;
     const targets = w.targetId
       ? [w.targetId]
-      : (await cdp.send<{ targetInfos: { targetId: string; type: string }[] }>('Target.getTargets')).targetInfos.filter((t) => t.type === 'page').map((t) => t.targetId);
+      : (await cdp.send<{ targetInfos: { targetId: string; type: string }[] }>('Target.getTargets')).targetInfos
+          .filter((t) => t.type === 'page')
+          .map((t) => t.targetId);
     for (const t of targets) {
-      const path = w.targetId ? vault : await cdp.evaluate<string | undefined>(t, 'window.app?.vault?.adapter?.basePath', 2000).catch(() => undefined);
-      if (path === vault) await cdp.evaluate(t, 'window.close()', 2000).catch(() => cdp.send('Target.closeTarget', { targetId: t }, undefined, 3000));
+      const path = w.targetId
+        ? vault
+        : await cdp
+            .evaluate<string | undefined>(t, 'window.app?.vault?.adapter?.basePath', 2000)
+            .catch(() => undefined);
+      if (path === vault)
+        await cdp
+          .evaluate(t, 'window.close()', 2000)
+          .catch(() => cdp.send('Target.closeTarget', { targetId: t }, undefined, 3000));
     }
     if (dirty) rmSync(vault, { recursive: true, force: true });
   })();
   freed(COST.obsidianWindow, closing);
   closing.catch((e: Error) => {
-    if ([...inst.windows.values()].some((x) => x.state === 'leased')) return log(`Obsidian ${inst.n} didn't close ${w.setup}'s window: ${e.message}`);
+    if ([...inst.windows.values()].some((x) => x.state === 'leased'))
+      return log(`Obsidian ${inst.n} didn't close ${w.setup}'s window: ${e.message}`);
     void stopInstance(inst, `it didn't close ${w.setup}'s window (${e.message})`);
   });
   pump();
@@ -993,7 +1119,9 @@ function release(conn: Conn, clean: boolean, meta?: Record<string, unknown>): vo
     w.state = 'warm';
     w.meta = meta;
     w.lastUsed = Date.now();
-    log(`${whoOf(conn)} released ${w.kind === 'window' ? `${w.app}'s window ${w.id}` : `${w.setup}'s window in Obsidian ${w.instance.n}`} cleanly: kept loaded`);
+    log(
+      `${whoOf(conn)} released ${w.kind === 'window' ? `${w.app}'s window ${w.id}` : `${w.setup}'s window in Obsidian ${w.instance.n}`} cleanly: kept loaded`,
+    );
   } else if (w.kind === 'window') destroyWindow(w, `${whoOf(conn)} released it after errors`, true);
   else destroyOWindow(w, `${whoOf(conn)} released it after errors`, true);
   pump();
@@ -1002,7 +1130,8 @@ function release(conn: Conn, clean: boolean, meta?: Record<string, unknown>): vo
 async function handle(conn: Conn, m: { id: number; op: string; [k: string]: any }): Promise<void> {
   const reply = (r: object = {}): void => send(conn, { id: m.id, ok: true, ...r });
   const refuse = (): void => {
-    if (draining || stopping) throw new Error('the pool is draining (its code changed, or it stops): try again once it is gone');
+    if (draining || stopping)
+      throw new Error('the pool is draining (its code changed, or it stops): try again once it is gone');
   };
   switch (m.op) {
     case 'hello':
@@ -1031,7 +1160,8 @@ async function handle(conn: Conn, m: { id: number; op: string; [k: string]: any 
       const name = String(m.name);
       let l = locks.get(name);
       if (!l) locks.set(name, (l = { holder: null, queue: [] }));
-      if (l.holder && !l.holder.closed && l.holder !== conn && !m.wait) throw new Error(`another run has ${name} (${whoOf(l.holder)})`);
+      if (l.holder && !l.holder.closed && l.holder !== conn && !m.wait)
+        throw new Error(`another run has ${name} (${whoOf(l.holder)})`);
       conn.locks.add(name);
       if (l.holder && l.holder !== conn) sayTo(conn)(`waiting for ${name}, which ${whoOf(l.holder)} has`);
       return takeTurn(l, conn, () => reply());
@@ -1066,7 +1196,21 @@ async function handle(conn: Conn, m: { id: number; op: string; [k: string]: any 
     case 'obsidian': {
       refuse();
       if (conn.lease) throw new Error('this connection holds a lease already: one a connection');
-      const req = { id: m.id, key: String(m.key ?? ''), fresh: !!m.fresh, ...(m.op === 'window' ? { app: String(m.app) } : { setup: String(m.setup), ...(m.appVersion && m.installerVersion && { appVersion: String(m.appVersion), installerVersion: String(m.installerVersion) }) }) };
+      const req = {
+        id: m.id,
+        key: String(m.key ?? ''),
+        fresh: !!m.fresh,
+        ...(m.op === 'window'
+          ? { app: String(m.app) }
+          : {
+              setup: String(m.setup),
+              ...(m.appVersion &&
+                m.installerVersion && {
+                  appVersion: String(m.appVersion),
+                  installerVersion: String(m.installerVersion),
+                }),
+            }),
+      };
       const waiter = m.op === 'window' ? windowWaiter(conn, req as never) : obsidianWaiter(conn, req as never);
       waiters.push(waiter);
       return pump();
@@ -1081,7 +1225,9 @@ async function handle(conn: Conn, m: { id: number; op: string; [k: string]: any 
         conn,
         () => {
           if (w.kind === 'window' && w.contextId && w.browser.up)
-            void w.browser.cdp!.send('Browser.grantPermissions', { permissions: PERMISSIONS, browserContextId: w.contextId }).catch(() => {});
+            void w.browser
+              .cdp!.send('Browser.grantPermissions', { permissions: PERMISSIONS, browserContextId: w.contextId })
+              .catch(() => {});
           reply();
         },
         (why) => send(conn, { id: m.id, ok: false, error: `no clipboard: ${why}` }),
@@ -1109,7 +1255,16 @@ async function handle(conn: Conn, m: { id: number; op: string; [k: string]: any 
 }
 
 function onConnection(sock: Socket): void {
-  const conn: Conn = { id: ++ids, sock, pid: 0, who: 'a client', since: Date.now(), closed: false, locks: new Set(), room: 0 };
+  const conn: Conn = {
+    id: ++ids,
+    sock,
+    pid: 0,
+    who: 'a client',
+    since: Date.now(),
+    closed: false,
+    locks: new Set(),
+    room: 0,
+  };
   conns.add(conn);
   let buf = '';
   sock.setEncoding('utf8');
@@ -1184,12 +1339,20 @@ function tick(): void {
       log(`${whoOf(c)} is gone`);
       c.sock.destroy();
     }
-  for (const w of allWindows()) if (w.state === 'warm' && now - w.lastUsed > IDLE) destroyWindow(w, `no client of ${w.app} took it for ${ago(w.lastUsed)}`, false);
-  for (const w of allOWindows()) if (w.state === 'warm' && now - w.lastUsed > IDLE) destroyOWindow(w, `no client of ${w.setup} took it for ${ago(w.lastUsed)}`, false);
+  for (const w of allWindows())
+    if (w.state === 'warm' && now - w.lastUsed > IDLE)
+      destroyWindow(w, `no client of ${w.app} took it for ${ago(w.lastUsed)}`, false);
+  for (const w of allOWindows())
+    if (w.state === 'warm' && now - w.lastUsed > IDLE)
+      destroyOWindow(w, `no client of ${w.setup} took it for ${ago(w.lastUsed)}`, false);
   if (++ticks % 15 === 0) for (const b of browsers.values()) void sweep(b);
   const waiting = waiters.some((w) => !w.conn.closed);
-  for (const b of browsers.values()) if (b.up && !b.closing && !b.windows.size && !waiting && now - b.emptySince > IDLE) void closeBrowser(b, `no window for ${ago(b.emptySince)}`);
-  for (const i of instances.values()) if (i.up && !i.closing && !i.windows.size && !waiting && now - i.emptySince > IDLE) void stopInstance(i, `no window for ${ago(i.emptySince)}`);
+  for (const b of browsers.values())
+    if (b.up && !b.closing && !b.windows.size && !waiting && now - b.emptySince > IDLE)
+      void closeBrowser(b, `no window for ${ago(b.emptySince)}`);
+  for (const i of instances.values())
+    if (i.up && !i.closing && !i.windows.size && !waiting && now - i.emptySince > IDLE)
+      void stopInstance(i, `no window for ${ago(i.emptySince)}`);
   pump();
   if (draining && ![...conns].some((c) => c.lease || c.room || c.locks.size) && !waiting) {
     void shutdown('drained').then(() => process.exit(0));
@@ -1197,7 +1360,8 @@ function tick(): void {
   }
   const empty = !conns.size && !browsers.size && !instances.size && !kernels.size;
   if (!empty) emptySince = now;
-  else if (now - emptySince > EXIT_AFTER) void shutdown(`nothing to do for ${ago(emptySince)}`).then(() => process.exit(0));
+  else if (now - emptySince > EXIT_AFTER)
+    void shutdown(`nothing to do for ${ago(emptySince)}`).then(() => process.exit(0));
 }
 
 let server: Server | undefined;
@@ -1214,9 +1378,15 @@ async function shutdown(why: string): Promise<string[]> {
   server?.close();
   rmSync(poolSocket, { force: true });
   for (const c of conns) send(c, { event: 'say', line: `the pool stops: ${why}` });
-  await Promise.all([...browsers.values()].map(async (b) => (await closeBrowser(b, why), say(`stopped Chromium ${b.n}`))));
-  await Promise.all([...instances.values()].map(async (i) => (await stopInstance(i, why), say(`stopped Obsidian ${i.n}`))));
-  await Promise.all([...kernels.values()].map(async (k) => (await stopKernel(k), say(`stopped SiYuan's kernel ${k.n}`))));
+  await Promise.all(
+    [...browsers.values()].map(async (b) => (await closeBrowser(b, why), say(`stopped Chromium ${b.n}`))),
+  );
+  await Promise.all(
+    [...instances.values()].map(async (i) => (await stopInstance(i, why), say(`stopped Obsidian ${i.n}`))),
+  );
+  await Promise.all(
+    [...kernels.values()].map(async (k) => (await stopKernel(k), say(`stopped SiYuan's kernel ${k.n}`))),
+  );
   const proxied = !!(await proxyHealth());
   await Promise.all([...children].map((p) => stopChild(p, 2000)));
   // a proxy not the pool's (the design before's)
@@ -1267,7 +1437,11 @@ function cleanUpOldDesign(say: (line: string) => void): void {
     for (const n of readdirSync(base)) {
       const file = join(base, n, 'server.pid');
       try {
-        kill(Number(readFileSync(file, 'utf8')), app === 'siyuan' ? /SiYuan/ : /obsidian|electron/i, `${app === 'siyuan' ? "SiYuan's kernel" : 'Obsidian'} ${n}`);
+        kill(
+          Number(readFileSync(file, 'utf8')),
+          app === 'siyuan' ? /SiYuan/ : /obsidian|electron/i,
+          `${app === 'siyuan' ? "SiYuan's kernel" : 'Obsidian'} ${n}`,
+        );
       } catch {}
       rmSync(file, { force: true });
       for (const f of ['kernel.lock', 'port', 'version', 'pool.lock']) rmSync(join(base, n, f), { force: true });
@@ -1294,7 +1468,16 @@ function status(): object {
       up: b.up ? ago(b.since) : 'starting',
       clipboard: holder(b.clipboard.holder),
       clipboardQueue: b.clipboard.queue.length,
-      windows: [...b.windows].map((w) => ({ id: w.id, app: w.app, state: w.state, holder: holder(w.conn), since: ago(w.since), idle: w.state === 'warm' ? ago(w.lastUsed) : null, context: w.contextId?.slice(0, 8), kernel: w.kernel?.n })),
+      windows: [...b.windows].map((w) => ({
+        id: w.id,
+        app: w.app,
+        state: w.state,
+        holder: holder(w.conn),
+        since: ago(w.since),
+        idle: w.state === 'warm' ? ago(w.lastUsed) : null,
+        context: w.contextId?.slice(0, 8),
+        kernel: w.kernel?.n,
+      })),
     })),
     obsidians: [...instances.values()].map((i) => ({
       n: i.n,
@@ -1303,34 +1486,87 @@ function status(): object {
       version: i.version,
       up: i.up ? ago(i.since) : 'starting',
       clipboard: holder(i.clipboard.holder),
-      windows: [...i.windows.values()].map((w) => ({ setup: w.setup, state: w.state, holder: holder(w.conn), since: ago(w.since), idle: w.state === 'warm' ? ago(w.lastUsed) : null })),
+      windows: [...i.windows.values()].map((w) => ({
+        setup: w.setup,
+        state: w.state,
+        holder: holder(w.conn),
+        since: ago(w.since),
+        idle: w.state === 'warm' ? ago(w.lastUsed) : null,
+      })),
     })),
-    kernels: [...kernels.values()].map((k) => ({ n: k.n, pid: k.proc?.pid, port: k.port, window: `${k.win.app} ${k.win.id}` })),
+    kernels: [...kernels.values()].map((k) => ({
+      n: k.n,
+      pid: k.proc?.pid,
+      port: k.port,
+      window: `${k.win.app} ${k.win.id}`,
+    })),
     proxy: proxyProc && proxyProc.exitCode === null ? { pid: proxyProc.pid, port: proxyPort, cache: proxyCache } : null,
-    locks: [...locks].map(([name, l]) => ({ name, holder: holder(l.holder), waiting: l.queue.map((q) => whoOf(q.conn)) })),
-    clients: [...conns].map((c) => ({ who: c.who, pid: c.pid, alive: c.pid ? alive(c.pid) : null, since: ago(c.since), holds: c.lease ? (c.lease.kind === 'window' ? `${c.lease.app}'s window ${c.lease.id}` : `${c.lease.setup} in Obsidian ${c.lease.instance.n}`) : c.room ? `room for ${c.roomFor} (${c.room} tasks)` : null, locks: [...c.locks] })),
-    waiting: waiters.filter((w) => !w.conn.closed).map((w) => ({ who: whoOf(w.conn), for: w.what, since: ago(w.since) })),
+    locks: [...locks].map(([name, l]) => ({
+      name,
+      holder: holder(l.holder),
+      waiting: l.queue.map((q) => whoOf(q.conn)),
+    })),
+    clients: [...conns].map((c) => ({
+      who: c.who,
+      pid: c.pid,
+      alive: c.pid ? alive(c.pid) : null,
+      since: ago(c.since),
+      holds: c.lease
+        ? c.lease.kind === 'window'
+          ? `${c.lease.app}'s window ${c.lease.id}`
+          : `${c.lease.setup} in Obsidian ${c.lease.instance.n}`
+        : c.room
+          ? `room for ${c.roomFor} (${c.room} tasks)`
+          : null,
+      locks: [...c.locks],
+    })),
+    waiting: waiters
+      .filter((w) => !w.conn.closed)
+      .map((w) => ({ who: whoOf(w.conn), for: w.what, since: ago(w.since) })),
   };
 }
 
 function printStatus(s: any): void {
   const out: string[] = [];
-  out.push(`pool pid ${s.pid}, code ${s.version}, up ${s.up}${s.draining ? ', DRAINING' : ''}; tasks ${s.tasks ? `${s.tasks.current}/${s.tasks.max}${s.tasks.refused ? `, ${s.tasks.refused} refused` : ''}` : 'uncapped'}`);
-  out.push(`limits: ${s.limits.browsers} browsers × ${s.limits.windows} windows, ${s.limits.obsidians} Obsidians, idle ${s.limits.idleMinutes} min`);
-  out.push(s.proxy ? `proxy pid ${s.proxy.pid} on :${s.proxy.port}, --cache=${s.proxy.cache}` : 'proxy: not running (started with the first browser)');
+  out.push(
+    `pool pid ${s.pid}, code ${s.version}, up ${s.up}${s.draining ? ', DRAINING' : ''}; tasks ${s.tasks ? `${s.tasks.current}/${s.tasks.max}${s.tasks.refused ? `, ${s.tasks.refused} refused` : ''}` : 'uncapped'}`,
+  );
+  out.push(
+    `limits: ${s.limits.browsers} browsers × ${s.limits.windows} windows, ${s.limits.obsidians} Obsidians, idle ${s.limits.idleMinutes} min`,
+  );
+  out.push(
+    s.proxy
+      ? `proxy pid ${s.proxy.pid} on :${s.proxy.port}, --cache=${s.proxy.cache}`
+      : 'proxy: not running (started with the first browser)',
+  );
   for (const b of s.browsers) {
-    out.push(`Chromium ${b.n} (pid ${b.pid ?? '-'}, port ${b.port ?? '-'}, up ${b.up})${b.clipboard ? `, clipboard: ${b.clipboard}${b.clipboardQueue ? ` (+${b.clipboardQueue} waiting)` : ''}` : ''}`);
-    for (const w of b.windows) out.push(`  window ${String(w.id).padEnd(4)} ${w.app.padEnd(24)} ${w.state === 'warm' ? `warm, idle ${w.idle}` : `leased by ${w.holder}`}  (since ${w.since}, context ${w.context ?? '-'}${w.kernel !== undefined ? `, kernel ${w.kernel}` : ''})`);
+    out.push(
+      `Chromium ${b.n} (pid ${b.pid ?? '-'}, port ${b.port ?? '-'}, up ${b.up})${b.clipboard ? `, clipboard: ${b.clipboard}${b.clipboardQueue ? ` (+${b.clipboardQueue} waiting)` : ''}` : ''}`,
+    );
+    for (const w of b.windows)
+      out.push(
+        `  window ${String(w.id).padEnd(4)} ${w.app.padEnd(24)} ${w.state === 'warm' ? `warm, idle ${w.idle}` : `leased by ${w.holder}`}  (since ${w.since}, context ${w.context ?? '-'}${w.kernel !== undefined ? `, kernel ${w.kernel}` : ''})`,
+      );
   }
   for (const i of s.obsidians) {
-    out.push(`Obsidian ${i.n} ${i.version ? `${i.version.split(' ')[0]} (installer ${i.version.split(' ')[1]})` : ''} (pid ${i.pid ?? '-'}, port ${i.port ?? '-'}, up ${i.up})${i.clipboard ? `, clipboard: ${i.clipboard}` : ''}`);
-    for (const w of i.windows) out.push(`  ${w.setup.padEnd(28)} ${w.state === 'warm' ? `warm, idle ${w.idle}` : `leased by ${w.holder}`}  (since ${w.since})`);
+    out.push(
+      `Obsidian ${i.n} ${i.version ? `${i.version.split(' ')[0]} (installer ${i.version.split(' ')[1]})` : ''} (pid ${i.pid ?? '-'}, port ${i.port ?? '-'}, up ${i.up})${i.clipboard ? `, clipboard: ${i.clipboard}` : ''}`,
+    );
+    for (const w of i.windows)
+      out.push(
+        `  ${w.setup.padEnd(28)} ${w.state === 'warm' ? `warm, idle ${w.idle}` : `leased by ${w.holder}`}  (since ${w.since})`,
+      );
   }
-  for (const k of s.kernels) out.push(`SiYuan kernel ${k.n} (pid ${k.pid ?? 'starting'}, port ${k.port}) for window ${k.window}`);
-  for (const l of s.locks) out.push(`lock ${l.name}: ${l.holder ?? 'free'}${l.waiting.length ? `; waiting: ${l.waiting.join(', ')}` : ''}`);
+  for (const k of s.kernels)
+    out.push(`SiYuan kernel ${k.n} (pid ${k.pid ?? 'starting'}, port ${k.port}) for window ${k.window}`);
+  for (const l of s.locks)
+    out.push(`lock ${l.name}: ${l.holder ?? 'free'}${l.waiting.length ? `; waiting: ${l.waiting.join(', ')}` : ''}`);
   for (const w of s.waiting) out.push(`waiting: ${w.who} for ${w.for}, ${w.since}`);
   out.push(`clients: ${s.clients.length}`);
-  for (const c of s.clients) out.push(`  ${c.who} (pid ${c.pid}${c.alive === false ? ', GONE' : ''}), ${c.since}${c.holds ? `: ${c.holds}` : ''}${c.locks.length ? ` [${c.locks.join(', ')}]` : ''}`);
+  for (const c of s.clients)
+    out.push(
+      `  ${c.who} (pid ${c.pid}${c.alive === false ? ', GONE' : ''}), ${c.since}${c.holds ? `: ${c.holds}` : ''}${c.locks.length ? ` [${c.locks.join(', ')}]` : ''}`,
+    );
   console.log(out.join('\n'));
 }
 
@@ -1361,12 +1597,15 @@ async function serve(): Promise<void> {
   startedAt = Date.now();
   // a socket left by a pool that died; and the browsers' profiles it left
   rmSync(poolSocket, { force: true });
-  for (const d of readdirSync(poolDir)) if (/^chromium-\d+$/.test(d)) rmSync(join(poolDir, d), { recursive: true, force: true });
+  for (const d of readdirSync(poolDir))
+    if (/^chromium-\d+$/.test(d)) rmSync(join(poolDir, d), { recursive: true, force: true });
   cleanUpOldDesign(log);
-  if (!setpriv) log('setpriv not found: the pool\'s children outlive it if it is killed (util-linux has it)');
+  if (!setpriv) log("setpriv not found: the pool's children outlive it if it is killed (util-linux has it)");
   server = createServer(onConnection);
   await new Promise<void>((resolve, reject) => server!.listen(poolSocket, resolve).once('error', reject));
-  log(`the pool runs: pid ${process.pid}, code ${VERSION}, ${poolSocket}; ${BROWSERS} browsers × ${WINDOWS} windows, ${OBSIDIANS} Obsidians, idle ${IDLE / 60_000} min`);
+  log(
+    `the pool runs: pid ${process.pid}, code ${VERSION}, ${poolSocket}; ${BROWSERS} browsers × ${WINDOWS} windows, ${OBSIDIANS} Obsidians, idle ${IDLE / 60_000} min`,
+  );
   const stop = (why: string, code: number) => (): void => void shutdown(why).finally(() => process.exit(code));
   process.on('SIGTERM', stop('SIGTERM', 0));
   process.on('SIGINT', stop('SIGINT', 0));
@@ -1427,7 +1666,9 @@ if (import.meta.main) {
   } else if (cmd === 'stop') {
     await stopPool(console.log);
   } else {
-    console.error(`${cmd ? `unknown command: ${cmd}\n` : ''}usage: node sxs/pool.ts status [--json] | stop | serve | --help`);
+    console.error(
+      `${cmd ? `unknown command: ${cmd}\n` : ''}usage: node sxs/pool.ts status [--json] | stop | serve | --help`,
+    );
     process.exit(2);
   }
 }

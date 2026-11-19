@@ -29,7 +29,8 @@ export function checkSyntax(syntax: MdTree): void {
       assert.equal(p.fromColumn, col, `line ${line.index}: piece columns run on`);
       assert.ok(p.to >= p.from && p.to <= line.to, `line ${line.index}: piece in the line`);
       const natural = advanceColumns(text, line.from, p.to, 0);
-      if (p.partialTab) assert.ok(p.toColumn > natural && text.charCodeAt(p.to) === 9, `line ${line.index}: a partial tab`);
+      if (p.partialTab)
+        assert.ok(p.toColumn > natural && text.charCodeAt(p.to) === 9, `line ${line.index}: a partial tab`);
       else assert.equal(p.toColumn, natural, `line ${line.index}: piece column matches its text`);
       assert.ok(line.containers.includes(p.container), `line ${line.index}: a piece's container is the line's`);
       pos = p.to;
@@ -39,14 +40,23 @@ export function checkSyntax(syntax: MdTree): void {
     assert.equal(line.container.block, line.containers[line.containers.length - 1]?.block ?? root);
     if (line.leaf) {
       assert.ok(line.leaf.line <= line.index && line.index <= line.leaf.lastLine, `line ${line.index} in its leaf`);
-      assert.ok(line.container.block.children.includes(line.leaf.block), `line ${line.index}: its leaf is in its innermost container`);
+      assert.ok(
+        line.container.block.children.includes(line.leaf.block),
+        `line ${line.index}: its leaf is in its innermost container`,
+      );
     }
     // the line's markup and text: in its content, in order, apart, no mark in the text
     const { marks, textFrom, textTo } = syntax.markup(line.index);
-    assert.ok(line.contentFrom <= textFrom && textFrom <= textTo && textTo <= line.to, `line ${line.index}: its text in its content`);
+    assert.ok(
+      line.contentFrom <= textFrom && textFrom <= textTo && textTo <= line.to,
+      `line ${line.index}: its text in its content`,
+    );
     let at: number = line.contentFrom;
     for (const m of marks) {
-      assert.ok(at <= m.from && m.from <= m.to && m.to <= line.to, `line ${line.index}: ${m.kind} in order, in the line`);
+      assert.ok(
+        at <= m.from && m.from <= m.to && m.to <= line.to,
+        `line ${line.index}: ${m.kind} in order, in the line`,
+      );
       assert.ok(m.to <= textFrom || m.from >= textTo, `line ${line.index}: ${m.kind} outside the text`);
       at = m.to;
     }
@@ -54,15 +64,24 @@ export function checkSyntax(syntax: MdTree): void {
   // every block's content is declared: `blocks` for a container, and only for one
   const containers = new Set<MdBlock>([root, ...lines.flatMap((l) => l.containers.map((c) => c.block))]);
   const top = syntax.rootAt;
-  for (const { block: b } of top.preorder()) assert.equal(syntax.flavor.content(b.type) === 'blocks', containers.has(b), `${b.type}: its content, ${syntax.flavor.content(b.type)}`);
+  for (const { block: b } of top.preorder())
+    assert.equal(
+      syntax.flavor.content(b.type) === 'blocks',
+      containers.has(b),
+      `${b.type}: its content, ${syntax.flavor.content(b.type)}`,
+    );
   for (const at of top.preorder()) {
     const b = at.block;
     let prevEnd = b.type === 'document' ? -1 : at.line - 1;
     at.children().forEach((c, k) => {
       const sharesLine = k === 0 && c.line === at.line;
-      assert.ok(c.line > prevEnd || sharesLine || b.type === 'table' || b.type === 'table_row', `${c.block.type} after its previous sibling`);
+      assert.ok(
+        c.line > prevEnd || sharesLine || b.type === 'table' || b.type === 'table_row',
+        `${c.block.type} after its previous sibling`,
+      );
       assert.ok(c.block.lines >= 1, `${c.block.type} has lines`);
-      if (b.type !== 'document') assert.ok(c.lastLine <= at.lastLine || b.type === 'blockquote', `${c.block.type} within ${b.type}`);
+      if (b.type !== 'document')
+        assert.ok(c.lastLine <= at.lastLine || b.type === 'blockquote', `${c.block.type} within ${b.type}`);
       prevEnd = c.lastLine;
     });
     checkInlines(syntax, at);
@@ -82,7 +101,10 @@ function checkInlines(syntax: MdTree, at: MdBlockAt): void {
     const s: string | undefined = text[at];
     if (c === '\n') assert.ok(s === '\n' || s === '\r', `${b.type}: a line break stands for a line ending`);
     else {
-      assert.ok(c === s || (c === '�' && s === '\0'), `${b.type}: text ${JSON.stringify(c)} is source ${JSON.stringify(s)}`);
+      assert.ok(
+        c === s || (c === '�' && s === '\0'),
+        `${b.type}: text ${JSON.stringify(c)} is source ${JSON.stringify(s)}`,
+      );
       assert.equal(t.textAt(at), i, `${b.type}: the mapping goes back`);
     }
     prev = at;
@@ -110,15 +132,55 @@ function checkNode(n: MdInline, length: number): void {
 
 const arbText = fc.oneof(
   fc.string({ unit: 'binary', maxLength: 60 }),
-  fc.string({ unit: fc.constantFrom('\n', '\r', '\t', ' ', '>', '-', '*', '_', '`', '[', ']', '(', ')', '!', '<', '&', '#', '|', ':', '^', '$', '%', '=', '~', '\\', 'a', '1', '.', '\0', '\uD800'), maxLength: 80 }),
+  fc.string({
+    unit: fc.constantFrom(
+      '\n',
+      '\r',
+      '\t',
+      ' ',
+      '>',
+      '-',
+      '*',
+      '_',
+      '`',
+      '[',
+      ']',
+      '(',
+      ')',
+      '!',
+      '<',
+      '&',
+      '#',
+      '|',
+      ':',
+      '^',
+      '$',
+      '%',
+      '=',
+      '~',
+      '\\',
+      'a',
+      '1',
+      '.',
+      '\0',
+      '\uD800',
+    ),
+    maxLength: 80,
+  }),
 );
 
 for (const [name, flavor] of Object.entries(FLAVORS)) {
   test(`${name}: lossless on block-heavy documents`, () => {
-    fc.assert(fc.property(arbDoc(BLOCKS, { frontmatter: name === 'obsidian' }), (md) => checkSyntax(MdTree.parse(md, flavor))), { numRuns: RUNS });
+    fc.assert(
+      fc.property(arbDoc(BLOCKS, { frontmatter: name === 'obsidian' }), (md) => checkSyntax(MdTree.parse(md, flavor))),
+      { numRuns: RUNS },
+    );
   });
   test(`${name}: lossless on inline-heavy documents`, () => {
-    fc.assert(fc.property(arbDoc(INLINES), (md) => checkSyntax(MdTree.parse(md, flavor))), { numRuns: RUNS });
+    fc.assert(
+      fc.property(arbDoc(INLINES), (md) => checkSyntax(MdTree.parse(md, flavor))),
+      { numRuns: RUNS },
+    );
   });
   test(`${name}: any string parses, renders and is lossless`, () => {
     fc.assert(
@@ -135,7 +197,10 @@ for (const [name, flavor] of Object.entries(FLAVORS)) {
 test('the markup and text of a line', () => {
   const at = (flavor: keyof typeof FLAVORS, text: string, line: number): string => {
     const { marks, textFrom, textTo } = MdTree.parse(text, FLAVORS[flavor]).markup(line);
-    return [...marks.map((m) => `${m.kind}:${JSON.stringify(text.slice(m.from, m.to))}`), JSON.stringify(text.slice(textFrom, textTo))].join(' ');
+    return [
+      ...marks.map((m) => `${m.kind}:${JSON.stringify(text.slice(m.from, m.to))}`),
+      JSON.stringify(text.slice(textFrom, textTo)),
+    ].join(' ');
   };
   assert.equal(at('commonmark', '## Title ##  \n', 0), 'open:"##" close:"##" "Title"');
   assert.equal(at('commonmark', '#  Title  \n', 0), 'open:"#" "Title  "');
@@ -167,17 +232,21 @@ test('blocks opened and closed by delimiter lines', () => {
   assert.deepEqual(delimited('obsidian', '$$\nx\n$$\n%%\nc\n%%\n~~~\n'), [true, true, true]);
   assert.deepEqual(delimited('commonmark', '$$\nx\n$$\n'), [false]);
   // (and the characters their delimiters are made of)
-  const chars = (flavor: keyof typeof FLAVORS): string => [...'`~$%#>-*'].filter((c) => FLAVORS[flavor]!.delimiterChar(c)).join('');
+  const chars = (flavor: keyof typeof FLAVORS): string =>
+    [...'`~$%#>-*'].filter((c) => FLAVORS[flavor]!.delimiterChar(c)).join('');
   assert.equal(chars('commonmark'), '`~');
   assert.equal(chars('gfm'), '`~');
   assert.equal(chars('obsidian'), '`~$%');
 });
 
-test('a line\'s prefix for a line after it: a quote\'s `>` kept, a marker and a footnote\'s label as spaces, tabs kept; the line itself repeated, a tab the prefix split kept', () => {
+test("a line's prefix for a line after it: a quote's `>` kept, a marker and a footnote's label as spaces, tabs kept; the line itself repeated, a tab the prefix split kept", () => {
   const after = (flavor: keyof typeof FLAVORS, text: string): [string, string] => {
     const tree = MdTree.parse(text, FLAVORS[flavor]);
     const open = tree.markup(0).marks.find((m) => m.kind === 'open');
-    return [tree.continuationPrefix(0, tree.line(0).containers), tree.continuedLine(0, open ? open.to : tree.line(0).to)];
+    return [
+      tree.continuationPrefix(0, tree.line(0).containers),
+      tree.continuedLine(0, open ? open.to : tree.line(0).to),
+    ];
   };
   assert.deepEqual(after('gfm', '> ```js\n'), ['> ', '> ```']);
   assert.deepEqual(after('gfm', '>\t```\n'), ['> ', '>\t```']);

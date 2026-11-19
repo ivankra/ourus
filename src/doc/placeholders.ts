@@ -26,7 +26,10 @@ export function validPlaceholder(tree: MdTree, pos: number): boolean {
     // (a line that starts its block, an empty node's: Markdown holds an empty line inside a text in none;
     // but a paragraph's last, the empty line Shift-Enter leaves at a text's end, until it settles)
     // (a paragraph with text above the line, an empty one's lines all empty no text)
-    const heldLast = (leaf: NonNullable<typeof line.leaf>): boolean => leaf.block.type === 'paragraph' && leaf.lastLine === line.index && !blank(text.slice(tree.line(leaf.line).contentFrom, tree.line(leaf.line).to));
+    const heldLast = (leaf: NonNullable<typeof line.leaf>): boolean =>
+      leaf.block.type === 'paragraph' &&
+      leaf.lastLine === line.index &&
+      !blank(text.slice(tree.line(leaf.line).contentFrom, tree.line(leaf.line).to));
     if (line.leaf && line.leaf.line !== line.index && !heldLast(line.leaf)) return false;
     const content = text.slice(line.contentFrom, line.to);
     if (blank(content)) return true;

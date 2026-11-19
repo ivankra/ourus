@@ -8,7 +8,11 @@
 
 import type { ProxyRequest, ProxyResponse, ProxyRules } from '../proxy.ts';
 
-const ok = (): ProxyResponse => ({ status: 200, headers: [['content-type', 'application/json']], body: Buffer.from('{}') });
+const ok = (): ProxyResponse => ({
+  status: 200,
+  headers: [['content-type', 'application/json']],
+  body: Buffer.from('{}'),
+});
 
 export const rules: ProxyRules = {
   hosts: ['.tana.inc'],

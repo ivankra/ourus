@@ -12,7 +12,6 @@ import type { InsertionPoint } from './types.ts';
 import { headingLevel, selectionInText, shiftHeadingLevels } from './util.ts';
 import { OurusSuccess, OurusRejected } from './types.ts';
 
-
 /**
  * The command's nodes (`ctx.nodes`, else the selection's), with their subtrees, moved to `to`: the
  * ids and the place checked; at the run's own place, nothing; refused where Markdown can't hold the
@@ -29,15 +28,24 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Our
   const place = placeOf(doc, to);
   if (place instanceof OurusRejected) return place;
   const { parent, after } = place;
-  if (after && ids.has(after.id)) return new OurusRejected('invalid-insertion-point', 'the place is anchored on a node moved');
+  if (after && ids.has(after.id))
+    return new OurusRejected('invalid-insertion-point', 'the place is anchored on a node moved');
   for (let p: OurusNode | null = parent; p; p = p.parent) if (ids.has(p.id)) return new OurusRejected('into-itself');
   const placed = run.map((n) => n.id);
-  if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null)) return new OurusSuccess({ view: ctx.view, changes: [], placed });
+  if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null))
+    return new OurusSuccess({ view: ctx.view, changes: [], placed });
 
   // a quote the run leaves holding one paragraph is that paragraph (`quotes: text`); an item's first
   // block, on its marker's line, it would be the item's text, which a move doesn't make yet
   const left = first.parent!;
-  if (left.kind === 'quote' && dissolves(doc, left, ids) && left.parent?.kind === 'item' && left.index === 0 && !doc.textOf(left.parent)) return new OurusRejected('not-expressible', "the quote it leaves would be its item's text");
+  if (
+    left.kind === 'quote' &&
+    dissolves(doc, left, ids) &&
+    left.parent?.kind === 'item' &&
+    left.index === 0 &&
+    !doc.textOf(left.parent)
+  )
+    return new OurusRejected('not-expressible', "the quote it leaves would be its item's text");
 
   // what the run becomes there
   const next = nextSibling(parent, after, ids);
@@ -87,7 +95,8 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Our
  */
 function nextSibling(parent: OurusNode, after: OurusNode | null, ids: ReadonlySet<number>): OurusNode | null {
   const count = parent.persistentNode.children.length;
-  for (let k = after && after.parent?.id === parent.id && !ids.has(after.id) ? after.index + 1 : 0; k < count; k++) if (!ids.has(parent.child(k).id)) return parent.child(k);
+  for (let k = after && after.parent?.id === parent.id && !ids.has(after.id) ? after.index + 1 : 0; k < count; k++)
+    if (!ids.has(parent.child(k).id)) return parent.child(k);
   return null;
 }
 
@@ -98,14 +107,21 @@ function nextSibling(parent: OurusNode, after: OurusNode | null, ids: ReadonlySe
  * take in what follows it there, re-levelled to its new siblings. What a pickup leaves out of its
  * places too.
  */
-export function moveRefused(ctx: CommandContext, run: readonly OurusNode[], parent: OurusNode, after: OurusNode | null): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
+export function moveRefused(
+  ctx: CommandContext,
+  run: readonly OurusNode[],
+  parent: OurusNode,
+  after: OurusNode | null,
+): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
   const first = run[0]!;
   const kind = first.kind;
   const unheld = unholdable(ctx.doc, kind, parent, after);
   if (unheld) return { reason: 'not-expressible', why: unheld };
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
-  if (kind === 'heading' && (parent.kind === 'item' || block)) return { reason: 'not-expressible', why: `a heading can't be under ${block ? `a ${parent.kind}` : 'an item'}` };
-  if (block && kind === 'quote') return { reason: 'not-expressible', why: `a quote can't be in a ${parent.kind}'s list` };
+  if (kind === 'heading' && (parent.kind === 'item' || block))
+    return { reason: 'not-expressible', why: `a heading can't be under ${block ? `a ${parent.kind}` : 'an item'}` };
+  if (block && kind === 'quote')
+    return { reason: 'not-expressible', why: `a quote can't be in a ${parent.kind}'s list` };
   const ids = new Set(run.map((n) => n.id));
   const next = nextSibling(parent, after, ids);
   const last = run[run.length - 1]!;
@@ -119,39 +135,68 @@ export function moveRefused(ctx: CommandContext, run: readonly OurusNode[], pare
       const text = ctx.doc.textOf(n);
       return text instanceof OurusAtom && text.type === 'thematic_break' && trimMd(text.text)[0] === bullet;
     };
-    if (bullet && run.some(rule)) return { reason: 'not-expressible', why: "the item's bullet and its rule would read as one rule" };
+    if (bullet && run.some(rule))
+      return { reason: 'not-expressible', why: "the item's bullet and its rule would read as one rule" };
   }
   // (the texts a `---` of which could be at column 0: not an item's, which stays one, nor a quote's)
   const atColumn0 = run.filter((n) => n.kind !== 'quote' && !(n.kind === 'item' && becomes !== 'paragraph'));
   // (the narrowest content column the last item can have, lined up with the item it goes after, or as
   // wide as its own marker, where it keeps its kind: indented code shallower than it is no line of it)
   const width = (n: OurusNode): number => n.block!.attrs.contentColumn! - n.block!.attrs.markerColumn!;
-  const itemColumn = last.kind === 'item' && after?.kind === 'item' && parent.kind === 'root' ? after.block!.attrs.markerColumn! + Math.min(width(last), width(after)) : undefined;
-  const joins = joinsAround(ctx.doc, atColumn0.map((n) => ctx.doc.textOf(n)), items, parent, after, next, { itemColumn, moved: run });
+  const itemColumn =
+    last.kind === 'item' && after?.kind === 'item' && parent.kind === 'root'
+      ? after.block!.attrs.markerColumn! + Math.min(width(last), width(after))
+      : undefined;
+  const joins = joinsAround(
+    ctx.doc,
+    atColumn0.map((n) => ctx.doc.textOf(n)),
+    items,
+    parent,
+    after,
+    next,
+    { itemColumn, moved: run },
+  );
   if (joins) return { reason: 'not-expressible', why: joins };
-  if (next && unclosed(ctx.doc, last) && last.kind !== 'item') return { reason: 'not-expressible', why: `what follows would be in the moved ${ctx.doc.textOf(last)!.type === 'fenced_code' ? 'code' : 'block'}, which nothing closes` };
+  if (next && unclosed(ctx.doc, last) && last.kind !== 'item')
+    return {
+      reason: 'not-expressible',
+      why: `what follows would be in the moved ${ctx.doc.textOf(last)!.type === 'fenced_code' ? 'code' : 'block'}, which nothing closes`,
+    };
   // (an item becoming a paragraph: its text one, or an atom's lines with nothing under them)
   if (!block && parent.kind !== 'item' && becomes === 'paragraph') {
     for (const n of run) {
       const text = ctx.doc.textOf(n);
       if (text instanceof OurusAtom && !n.children.length) continue;
-      if (!(text instanceof OurusProse) || text.heading) return { reason: 'not-expressible', why: `an item can't be a paragraph after a ${after!.kind} there` };
-      if (text.task) return { reason: 'not-expressible', why: "a task can't be a paragraph: its checkbox would be text" };
+      if (!(text instanceof OurusProse) || text.heading)
+        return { reason: 'not-expressible', why: `an item can't be a paragraph after a ${after!.kind} there` };
+      if (text.task)
+        return { reason: 'not-expressible', why: "a task can't be a paragraph: its checkbox would be text" };
     }
   }
   if (kind !== 'heading' || parent.kind === 'item' || block) return null;
   const level = (n: OurusNode): number => headingLevel(ctx, n);
   const delta = headingTarget(ctx, parent, after, next, level(first)) - level(first);
-  return takesIn(ctx, next, level(run[run.length - 1]!) + delta) ? { reason: 'would-reparent', why: 'the heading would take in what follows it' } : null;
+  return takesIn(ctx, next, level(run[run.length - 1]!) + delta)
+    ? { reason: 'would-reparent', why: 'the heading would take in what follows it' }
+    : null;
 }
 
 /** The place `to` names in `doc`: its parent and the node it goes after; else why not. */
-export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: OurusNode; readonly after: OurusNode | null } | OurusRejected {
+export function placeOf(
+  doc: OurusDoc,
+  to: InsertionPoint,
+): { readonly parent: OurusNode; readonly after: OurusNode | null } | OurusRejected {
   const parent = to.parent === 'root' ? doc.rootNode : doc.node(to.parent);
-  if (!parent || (to.parent !== 'root' && parent.kind === 'root')) return new OurusRejected('no-such-node', `no node ${to.parent}`);
+  if (!parent || (to.parent !== 'root' && parent.kind === 'root'))
+    return new OurusRejected('no-such-node', `no node ${to.parent}`);
   const after = to.after === null ? null : (doc.node(to.after) ?? null);
-  if (to.after !== null && (!after || after.kind === 'root')) return new OurusRejected('no-such-node', `no node ${to.after}`);
-  if (after && after.parent?.id !== parent.id) return new OurusRejected('invalid-insertion-point', `node ${after.id} isn't a child of ${to.parent === 'root' ? 'the root' : `node ${parent.id}`}`);
+  if (to.after !== null && (!after || after.kind === 'root'))
+    return new OurusRejected('no-such-node', `no node ${to.after}`);
+  if (after && after.parent?.id !== parent.id)
+    return new OurusRejected(
+      'invalid-insertion-point',
+      `node ${after.id} isn't a child of ${to.parent === 'root' ? 'the root' : `node ${parent.id}`}`,
+    );
   return { parent, after };
 }
 
@@ -160,10 +205,22 @@ export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: O
  * beside it, after or else before; else one inside a heading parent; in a quote or the document, its
  * own, `level`; its own wherever it is where a heading owns nothing (`headings: block`).
  */
-export function headingTarget(ctx: CommandContext, parent: OurusNode, after: OurusNode | null, next: OurusNode | null, level: number): number {
+export function headingTarget(
+  ctx: CommandContext,
+  parent: OurusNode,
+  after: OurusNode | null,
+  next: OurusNode | null,
+  level: number,
+): number {
   if (ctx.config.headings === 'block') return level;
   const of = (n: OurusNode): number => headingLevel(ctx, n);
-  return after?.kind === 'heading' ? of(after) : next?.kind === 'heading' ? of(next) : parent.kind === 'heading' ? of(parent) + 1 : level;
+  return after?.kind === 'heading'
+    ? of(after)
+    : next?.kind === 'heading'
+      ? of(next)
+      : parent.kind === 'heading'
+        ? of(parent) + 1
+        : level;
 }
 
 /** Whether a heading of `level` last at a place would take `next`, what follows it there, into its section (none under `headings: block`). */
@@ -179,15 +236,22 @@ export function takesIn(ctx: CommandContext, next: OurusNode | null, level: numb
  * with no closing one: its lines would be the block's). What a pickup leaves out of its places, and a
  * drop there refuses.
  */
-export function unholdable(doc: OurusDoc, kind: OurusNode['kind'], parent: OurusNode, after: OurusNode | null): string | null {
+export function unholdable(
+  doc: OurusDoc,
+  kind: OurusNode['kind'],
+  parent: OurusNode,
+  after: OurusNode | null,
+): string | null {
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   if (block && !doc.adoptsLists(parent)) return `a ${parent.kind} holds no nodes`;
   // (a heading that owns nothing, `headings: block`: no node under it, any after it)
   if (parent.kind === 'heading' && doc.config.headings === 'block') return 'a heading that owns nothing holds no node';
-  if (after?.kind === 'heading' && kind !== 'heading' && doc.config.headings === 'section') return `after a heading, a ${kind} would be in its section`;
+  if (after?.kind === 'heading' && kind !== 'heading' && doc.config.headings === 'section')
+    return `after a heading, a ${kind} would be in its section`;
   const above = after?.lastDescendant;
   // (an item's own fence ends with the item: what follows it is no line of it)
-  if (above?.parent === parent && above.kind !== 'item' && unclosed(doc, above)) return `the ${kind} would be in the ${doc.textOf(above)!.type === 'fenced_code' ? 'code' : 'block'} above it, which nothing closes`;
+  if (above?.parent === parent && above.kind !== 'item' && unclosed(doc, above))
+    return `the ${kind} would be in the ${doc.textOf(above)!.type === 'fenced_code' ? 'code' : 'block'} above it, which nothing closes`;
   return null;
 }
 
@@ -197,18 +261,43 @@ export function unholdable(doc: OurusDoc, kind: OurusNode['kind'], parent: Ourus
  * lines; at the top level, in a flavor with front matter, a `---` line of theirs closing a `---` the
  * document starts with, or theirs first, the document's later one closing it (`texts`: their texts).
  */
-export function joinsAround(doc: OurusDoc, texts: readonly (OurusText | null)[], lastItem: boolean, parent: OurusNode, after: OurusNode | null, next: OurusNode | null, opts: { readonly itemColumn?: number | undefined; readonly moved?: readonly OurusNode[] } = {}): string | null {
-  if (lastItem && next && (doc.textOf(next) as OurusAtom | null)?.type === 'indented_code' && !(opts.itemColumn !== undefined && leadingColumns(doc.text.slice(doc.mdTree.starts[next.startLine]!, doc.mdTree.ends[next.startLine]!)) < opts.itemColumn)) return 'the indented code below would be the item\'s';
+export function joinsAround(
+  doc: OurusDoc,
+  texts: readonly (OurusText | null)[],
+  lastItem: boolean,
+  parent: OurusNode,
+  after: OurusNode | null,
+  next: OurusNode | null,
+  opts: { readonly itemColumn?: number | undefined; readonly moved?: readonly OurusNode[] } = {},
+): string | null {
+  if (
+    lastItem &&
+    next &&
+    (doc.textOf(next) as OurusAtom | null)?.type === 'indented_code' &&
+    !(
+      opts.itemColumn !== undefined &&
+      leadingColumns(doc.text.slice(doc.mdTree.starts[next.startLine]!, doc.mdTree.ends[next.startLine]!)) <
+        opts.itemColumn
+    )
+  )
+    return "the indented code below would be the item's";
   if (parent.kind !== 'root' || !doc.mdTree.flavor.blockStarts.some((b) => b.name === 'frontmatter')) return null;
   const fence = /^---[ \t]*$/;
-  const lines = (from: number, to: number): string[] => Array.from({ length: to - from }, (_, k) => doc.text.slice(doc.mdTree.starts[from + k]!, doc.mdTree.ends[from + k]!));
+  const lines = (from: number, to: number): string[] =>
+    Array.from({ length: to - from }, (_, k) =>
+      doc.text.slice(doc.mdTree.starts[from + k]!, doc.mdTree.ends[from + k]!),
+    );
   // (the document's lines but the moved nodes', which go with them: a rule moved first is no second `---` of its own)
   const moved = (i: number): boolean => !!opts.moved?.some((n) => n.startLine <= i && i <= n.endLine);
   const staying = (): string[] => lines(0, doc.lineCount).filter((_, i) => !moved(i));
   const theirs = texts.flatMap((t) => (t ? t.text.split('\n') : []));
   const opened = after !== null && doc.lineCount > 0 && fence.test(lines(0, 1)[0]!);
   const first = after === null && (parent.children[0]?.startLine ?? 0) === 0 && fence.test(theirs[0] ?? '');
-  if ((opened && theirs.some((l) => fence.test(l))) || (first && (theirs.slice(1).some((l) => fence.test(l)) || staying().some((l) => fence.test(l))))) return 'a `---` line would close front matter the document would start with';
+  if (
+    (opened && theirs.some((l) => fence.test(l))) ||
+    (first && (theirs.slice(1).some((l) => fence.test(l)) || staying().some((l) => fence.test(l))))
+  )
+    return 'a `---` line would close front matter the document would start with';
   return null;
 }
 
@@ -234,10 +323,24 @@ function unclosed(doc: OurusDoc, node: OurusNode): boolean {
  * the nodes `out` taken out: an item, for a paragraph or an atom under an item or in a paragraph's
  * list; a paragraph, for an item right after a block that adopts lists; else null, its own kind.
  */
-export function becomesAt(doc: OurusDoc, kind: OurusNode['kind'], parent: OurusNode, after: OurusNode | null, out: ReadonlySet<number>): 'item' | 'paragraph' | null {
+export function becomesAt(
+  doc: OurusDoc,
+  kind: OurusNode['kind'],
+  parent: OurusNode,
+  after: OurusNode | null,
+  out: ReadonlySet<number>,
+): 'item' | 'paragraph' | null {
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   if ((parent.kind === 'item' || block) && (kind === 'paragraph' || kind === 'atom')) return 'item';
-  if (kind === 'item' && !block && parent.kind !== 'item' && after && (doc.adoptsLists(after) || (dissolves(doc, after, out) && doc.config.listParent !== 'container' && parent.ownsLists))) return 'paragraph';
+  if (
+    kind === 'item' &&
+    !block &&
+    parent.kind !== 'item' &&
+    after &&
+    (doc.adoptsLists(after) ||
+      (dissolves(doc, after, out) && doc.config.listParent !== 'container' && parent.ownsLists))
+  )
+    return 'paragraph';
   return null;
 }
 
@@ -257,14 +360,22 @@ function dissolves(doc: OurusDoc, quote: OurusNode, out: ReadonlySet<number>): b
  * but for the lists a block above them adopts (guarantee 4), and a quote left holding one paragraph,
  * which under `quotes: text` is that paragraph: what is wrong, or null.
  */
-export function resultCheck(before: OurusDoc, after: OurusDoc, roots: readonly number[], moved: ReadonlySet<number>, to: InsertionPoint): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
-  const parentOf = (n: OurusNode): number | 'root' | null => (!n.parent ? null : n.parent.kind === 'root' ? 'root' : n.parent.id);
+export function resultCheck(
+  before: OurusDoc,
+  after: OurusDoc,
+  roots: readonly number[],
+  moved: ReadonlySet<number>,
+  to: InsertionPoint,
+): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
+  const parentOf = (n: OurusNode): number | 'root' | null =>
+    !n.parent ? null : n.parent.kind === 'root' ? 'root' : n.parent.id;
   // the quotes gone, each the paragraph it was left holding
   const dissolved = new Map<number, OurusNode>();
   const quotes = (n: OurusNode): void => {
     for (const c of n.children) {
       const left = c.children.filter((k) => !moved.has(k.id));
-      if (c.kind === 'quote' && !after.node(c.id) && left.length === 1 && left[0]!.kind === 'paragraph') dissolved.set(c.id, left[0]!);
+      if (c.kind === 'quote' && !after.node(c.id) && left.length === 1 && left[0]!.kind === 'paragraph')
+        dissolved.set(c.id, left[0]!);
       quotes(c);
     }
   };
@@ -272,12 +383,14 @@ export function resultCheck(before: OurusDoc, after: OurusDoc, roots: readonly n
   const standing = (id: number | 'root'): number | 'root' => (id === 'root' ? id : (dissolved.get(id)?.id ?? id));
   for (const [k, id] of roots.entries()) {
     const n = after.node(id);
-    if (!n || parentOf(n) !== standing(to.parent)) return { reason: 'not-expressible', why: `node ${id} isn't under the parent asked` };
+    if (!n || parentOf(n) !== standing(to.parent))
+      return { reason: 'not-expressible', why: `node ${id} isn't under the parent asked` };
     // after the node asked, or after the block that adopted it once the run left (guarantee 4)
     const prev = k === 0 ? (to.after === null ? null : standing(to.after)) : roots[k - 1]!;
     let anchor = prev === null || prev === 'root' ? null : (after.node(prev) ?? null);
     while (anchor?.parent && anchor.parent.id !== n.parent!.id) anchor = anchor.parent;
-    if ((n.prev?.id ?? null) !== (anchor?.id ?? prev)) return { reason: 'not-expressible', why: `node ${id} isn't at the place asked` };
+    if ((n.prev?.id ?? null) !== (anchor?.id ?? prev))
+      return { reason: 'not-expressible', why: `node ${id} isn't at the place asked` };
   }
   const walk = (n: OurusNode): string | null => {
     for (const c of n.children) {
@@ -289,7 +402,11 @@ export function resultCheck(before: OurusDoc, after: OurusDoc, roots: readonly n
         const is = parentOf(now);
         // a list the block above it adopts (guarantee 4); a moved block's list where it can own none,
         // which follows it (Quote78)
-        const adopted = now.kind === 'item' && !!now.parent && (now.parent.kind === 'paragraph' || now.parent.kind === 'atom') && after.adoptsLists(now.parent);
+        const adopted =
+          now.kind === 'item' &&
+          !!now.parent &&
+          (now.parent.kind === 'paragraph' || now.parent.kind === 'atom') &&
+          after.adoptsLists(now.parent);
         const follows = !!c.parent && moved.has(c.parent.id) && is === parentOf(after.node(c.parent.id)!);
         if (is !== (quote ? parentOf(quote) : was) && !adopted && !follows) return `node ${c.id} has another parent`;
       }

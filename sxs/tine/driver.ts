@@ -70,12 +70,22 @@ function toTine(text: string): { text: string; from: number; to: number } {
  */
 function fromTine(raw: string, number: number | null): { text: string; from: number; to: number; cut?: number } {
   // (a numbered block's property, and a collapsed one's, which its fold reports: `read`'s view)
-  const task = swapPrefix(raw.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, '').replace(/\n?collapsed:: true[ \t]*(?=\n|$)/, ''), FROM_TINE);
+  const task = swapPrefix(
+    raw
+      .replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, '')
+      .replace(/\n?collapsed:: true[ \t]*(?=\n|$)/, ''),
+    FROM_TINE,
+  );
   // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
   const pre = number !== null ? `${number}. ` : '';
   const literal = /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(task.text);
   const text = literal ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length) : task.text;
-  return { text: pre + text, from: task.from, to: task.to + pre.length, ...(literal && { cut: task.to + pre.length + literal[0].length }) };
+  return {
+    text: pre + text,
+    from: task.from,
+    to: task.to + pre.length,
+    ...(literal && { cut: task.to + pre.length + literal[0].length }),
+  };
 }
 
 /**
@@ -146,7 +156,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'deleteSubtree'],
   // a heading's `#`s, a task's `TODO` and a code block's fences are text in a block, edited a
@@ -210,9 +225,16 @@ export const driver: Driver = {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page.waitForSelector('.ls-block', { timeout: 120000 });
     // the proxy's patches name the store and the backend's pages: a bundle they don't match leaves them out
-    const named = await page.evaluate(() => Array.isArray((globalThis as any).__sxsDoc) && Array.isArray((globalThis as any).__sxsPages) && typeof (globalThis as any).__sxsFacets === 'function');
-    if (!named) throw new Error("Tine's bundle didn't take the proxy's patches (tine/proxy.ts): its store or pages aren't named");
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
+    const named = await page.evaluate(
+      () =>
+        Array.isArray((globalThis as any).__sxsDoc) &&
+        Array.isArray((globalThis as any).__sxsPages) &&
+        typeof (globalThis as any).__sxsFacets === 'function',
+    );
+    if (!named)
+      throw new Error("Tine's bundle didn't take the proxy's patches (tine/proxy.ts): its store or pages aren't named");
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     await idle();
     // undo only on the page being edited: each test has a page of its own, so undo can't reach into an
     // earlier test (the default, global, undid the last test's edit and went back to its page)
@@ -225,22 +247,34 @@ export const driver: Driver = {
       await idle();
       await page.keyboard.press('Enter');
       await idle();
-      const toast = await page.evaluate(() => [...document.querySelectorAll('[class*=toast]')].map((e) => (e as HTMLElement).innerText).join(' | '));
+      const toast = await page.evaluate(() =>
+        [...document.querySelectorAll('[class*=toast]')].map((e) => (e as HTMLElement).innerText).join(' | '),
+      );
       if (/page only/i.test(toast)) break;
       if (i === 1) throw new Error(`Tine's undo didn't go page-only (${toast || 'no toast'})`);
     }
     // ready once a key does what it should: Tab indents
-    await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+    await this.load(page, {
+      blocks: [
+        { depth: 0, text: 'a' },
+        { depth: 0, text: 'b' },
+      ],
+      sel: { block: 1, anchor: 1, head: 1 },
+    });
     await idle();
     await page.keyboard.press('Tab');
     await idle();
-    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1) throw new Error("Tine's keys didn't come up: Tab doesn't indent");
+    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1)
+      throw new Error("Tine's keys didn't come up: Tab doesn't indent");
     // the app says no version in a browser: its bundle's name and the guide's export date stand in
     return page.evaluate(async () => {
       const bundle = [...document.scripts].map((s) => /app-([\w-]+)\.js/.exec(s.src)?.[1]).find(Boolean);
       const exported = await fetch('snapshot.json')
         .then((r) => r.json())
-        .then((j) => String(j.exported_at ?? '').slice(0, 10), () => '');
+        .then(
+          (j) => String(j.exported_at ?? '').slice(0, 10),
+          () => '',
+        );
       return [exported && `guide of ${exported}`, bundle && `app-${bundle}`].filter(Boolean).join(', ') || undefined;
     });
   },
@@ -251,7 +285,13 @@ export const driver: Driver = {
     const swapped = o.sel && blocks[o.sel.block]!;
     // (blocks selected whole: the first opened at its start, to select from with the keys below)
     const selected = o.selected?.length ? o.selected : null;
-    const sel = o.sel ? { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(o.sel.head, swapped!.from, swapped!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+    const sel = o.sel
+      ? {
+          block: o.sel.block,
+          anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to),
+          head: shiftOffset(o.sel.head, swapped!.from, swapped!.to),
+        }
+      : selected && { block: selected[0]!, anchor: 0, head: 0 };
     const current = (pageState(page).current = `sxs-${run}-${String(++pages).padStart(5, '0')}`);
     await page.evaluate(
       ({ name, blocks, folded }) => {
@@ -261,21 +301,45 @@ export const driver: Driver = {
         // Tine's own reading of its text, so a numbered block is ordered to it, a `TODO` a task, a `# ` a heading
         const facets = (raw: string) => {
           const f = (globalThis as any).__sxsFacets(raw, 'md');
-          return { marker: f.marker ?? undefined, priority: f.priority ?? undefined, heading_level: f.headingLevel ?? undefined, scheduled: f.scheduled ?? undefined, deadline: f.deadline ?? undefined, tags: f.tags, properties: f.properties };
+          return {
+            marker: f.marker ?? undefined,
+            priority: f.priority ?? undefined,
+            heading_level: f.headingLevel ?? undefined,
+            scheduled: f.scheduled ?? undefined,
+            deadline: f.deadline ?? undefined,
+            tags: f.tags,
+            properties: f.properties,
+          };
         };
         blocks.forEach((b, k) => {
-          const dto = { id: `${name}-${k}`, raw: b.text, collapsed: folded.includes(k), children: [], ...facets(b.text) };
+          const dto = {
+            id: `${name}-${k}`,
+            raw: b.text,
+            collapsed: folded.includes(k),
+            children: [],
+            ...facets(b.text),
+          };
           stack.length = b.depth;
           (b.depth === 0 ? roots : stack[b.depth - 1].children).push(dto);
           stack[b.depth] = dto;
         });
-        (globalThis as any).__sxsPages.push({ name, kind: 'page', title: name, pre_block: null, format: 'md', read_only: false, guide: false, blocks: roots });
+        (globalThis as any).__sxsPages.push({
+          name,
+          kind: 'page',
+          title: name,
+          pre_block: null,
+          format: 'md',
+          read_only: false,
+          guide: false,
+          blocks: roots,
+        });
         (document.activeElement as HTMLElement | null)?.blur();
       },
       { name: current, blocks: blocks.map(({ depth, text }) => ({ depth, text })), folded: o.view?.folded ?? [] },
     );
     pageState(page).viewed = !!o.view;
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000 }));
     // opened as a user would: the search, its name, Enter (the app has no route to a page)
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
@@ -285,21 +349,45 @@ export const driver: Driver = {
     await idle();
     await page.keyboard.press('Enter');
     await idle();
-    const opened = await page.evaluate((name) => !!(globalThis as any).__sxsDoc[0].pages.find((p: any) => p.name === name) && !!document.querySelector(`.ls-block[data-block-id="${name}-0"]`), current);
+    const opened = await page.evaluate(
+      (name) =>
+        !!(globalThis as any).__sxsDoc[0].pages.find((p: any) => p.name === name) &&
+        !!document.querySelector(`.ls-block[data-block-id="${name}-0"]`),
+      current,
+    );
     if (!opened) throw new Error(`the test's page didn't open (${current})`);
     if (!sel) return;
-    await page.locator(`.ls-block[data-block-id="${current}-${sel.block}"] > .block-main .block-content`).first().click();
+    await page
+      .locator(`.ls-block[data-block-id="${current}-${sel.block}"] > .block-main .block-content`)
+      .first()
+      .click();
     await idle();
     // the caret where the test has it, until it stays: a block opened for editing may set its own a
     // moment later (a code block puts it at the start)
     // (the offsets in the editor that has the block: a code block's, of its code, once it is that; the
     // block's text's before, as a code block opens in the block's editor first and turns to its own)
-    const place = ({ id, anchor, head, shift }: { id: string; anchor: number; head: number; shift: number }): string => {
+    const place = ({
+      id,
+      anchor,
+      head,
+      shift,
+    }: {
+      id: string;
+      anchor: number;
+      head: number;
+      shift: number;
+    }): string => {
       const ta = document.activeElement as HTMLTextAreaElement | null;
-      if (ta?.tagName !== 'TEXTAREA' || ta.closest('.ls-block')?.getAttribute('data-block-id') !== id) return 'not editing';
+      if (ta?.tagName !== 'TEXTAREA' || ta.closest('.ls-block')?.getAttribute('data-block-id') !== id)
+        return 'not editing';
       const by = ta.classList.contains('code-edit') ? shift : 0;
-      const [start, end, dir] = [Math.min(anchor, head) - by, Math.max(anchor, head) - by, head < anchor ? 'backward' : 'forward'];
-      if (ta.selectionStart === start && ta.selectionEnd === end && (start === end || ta.selectionDirection === dir)) return 'placed';
+      const [start, end, dir] = [
+        Math.min(anchor, head) - by,
+        Math.max(anchor, head) - by,
+        head < anchor ? 'backward' : 'forward',
+      ];
+      if (ta.selectionStart === start && ta.selectionEnd === end && (start === end || ta.selectionDirection === dir))
+        return 'placed';
       ta.setSelectionRange(start, end, dir as 'forward' | 'backward');
       return 'set';
     };
@@ -317,49 +405,73 @@ export const driver: Driver = {
     // Shift+Down the next on screen, till the last is (`read` reports the topmost)
     if (selected) {
       const last = selected[selected.length - 1]!;
-      const reached = async (): Promise<number> => (await idle(), Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? [])));
+      const reached = async (): Promise<number> => (
+        await idle(), Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []))
+      );
       for (let i = 0; i < 3 && (await reached()) < 0; i++) await page.keyboard.press('Escape');
-      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++)
+        await page.keyboard.press('Shift+ArrowDown');
     }
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate(({ name, viewed }) => {
-      const [doc] = (globalThis as any).__sxsDoc;
-      const p = doc.pages.find((q: any) => q.name === name);
-      const flat: { depth: number; text: string; id: string; number: number | null }[] = [];
-      // a numbered block's place in its run of numbered siblings, from 1, as Tine counts it
-      const numbered = (raw: string): boolean => /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(raw ?? '');
-      const walk = (ids: string[], d: number) => {
-        let n = 0;
-        ids.forEach((id) => {
-          n = numbered(doc.byId[id].raw) ? n + 1 : 0;
-          flat.push({ depth: d, text: doc.byId[id].raw, id, number: n || null });
-          walk(doc.byId[id].children, d + 1);
-        });
-      };
-      walk(p?.roots ?? [], 0);
-      const ta = document.activeElement as HTMLTextAreaElement | null;
-      const editing = ta?.tagName === 'TEXTAREA' ? ta.closest('.ls-block')?.getAttribute('data-block-id') : null;
-      const i = editing ? flat.findIndex((b) => b.id === editing) : -1;
-      const back = ta?.selectionDirection === 'backward';
-      // the blocks selected whole, the topmost: a block's children are selected with it
-      const lit = new Set([...document.querySelectorAll('.block-main.selected')].map((e) => flat.findIndex((b) => b.id === e.closest('.ls-block')?.getAttribute('data-block-id'))).filter((k) => k >= 0));
-      const under = (k: number): boolean => {
-        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
-        return false;
-      };
-      const selected = [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
-      return {
-        blocks: flat.map(({ depth, text }) => ({ depth, text })),
-        numbers: flat.map(({ number }) => number),
-        sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null,
-        code: i >= 0 && ta!.classList.contains('code-edit'),
-        selected,
-        // the view: the collapsed blocks with children (no zoom here)
-        view: viewed ? { folded: flat.flatMap((b, k) => (doc.byId[b.id].collapsed && doc.byId[b.id].children.length ? [k] : [])), zoom: null } : undefined,
-      };
-    }, { name: pageState(page).current, viewed: pageState(page).viewed });
+    const raw = await page.evaluate(
+      ({ name, viewed }) => {
+        const [doc] = (globalThis as any).__sxsDoc;
+        const p = doc.pages.find((q: any) => q.name === name);
+        const flat: { depth: number; text: string; id: string; number: number | null }[] = [];
+        // a numbered block's place in its run of numbered siblings, from 1, as Tine counts it
+        const numbered = (raw: string): boolean =>
+          /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(raw ?? '');
+        const walk = (ids: string[], d: number) => {
+          let n = 0;
+          ids.forEach((id) => {
+            n = numbered(doc.byId[id].raw) ? n + 1 : 0;
+            flat.push({ depth: d, text: doc.byId[id].raw, id, number: n || null });
+            walk(doc.byId[id].children, d + 1);
+          });
+        };
+        walk(p?.roots ?? [], 0);
+        const ta = document.activeElement as HTMLTextAreaElement | null;
+        const editing = ta?.tagName === 'TEXTAREA' ? ta.closest('.ls-block')?.getAttribute('data-block-id') : null;
+        const i = editing ? flat.findIndex((b) => b.id === editing) : -1;
+        const back = ta?.selectionDirection === 'backward';
+        // the blocks selected whole, the topmost: a block's children are selected with it
+        const lit = new Set(
+          [...document.querySelectorAll('.block-main.selected')]
+            .map((e) => flat.findIndex((b) => b.id === e.closest('.ls-block')?.getAttribute('data-block-id')))
+            .filter((k) => k >= 0),
+        );
+        const under = (k: number): boolean => {
+          for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--)
+            if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
+          return false;
+        };
+        const selected = [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
+        return {
+          blocks: flat.map(({ depth, text }) => ({ depth, text })),
+          numbers: flat.map(({ number }) => number),
+          sel:
+            i >= 0
+              ? {
+                  block: i,
+                  anchor: back ? ta!.selectionEnd : ta!.selectionStart,
+                  head: back ? ta!.selectionStart : ta!.selectionEnd,
+                }
+              : null,
+          code: i >= 0 && ta!.classList.contains('code-edit'),
+          selected,
+          // the view: the collapsed blocks with children (no zoom here)
+          view: viewed
+            ? {
+                folded: flat.flatMap((b, k) => (doc.byId[b.id].collapsed && doc.byId[b.id].children.length ? [k] : [])),
+                zoom: null,
+              }
+            : undefined,
+        };
+      },
+      { name: pageState(page).current, viewed: pageState(page).viewed },
+    );
     // in a code block's editor, the offsets are the code's
     if (raw.sel && raw.code) {
       const start = codeOf(raw.blocks[raw.sel.block]!.text)?.start ?? 0;
@@ -370,11 +482,15 @@ export const driver: Driver = {
     let sel = raw.sel;
     if (sel) {
       const { from, to, cut } = swaps[sel.block]!;
-      const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
+      const at = (p: number): number =>
+        shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
       sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
     // the block's later lines keep the escapes Markdown source has at their start; a block's text needs none
-    return { ...unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
+    return {
+      ...unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }),
+      ...(raw.view && { view: raw.view }),
+    };
   },
 
   drops: ['moveSubtree'],
@@ -406,7 +522,9 @@ export const driver: Driver = {
         if (to.after !== null) [target, position] = [to.after, 'after'];
         else {
           const moving = new Set(rows.map((k) => ids[k]));
-          const first = (to.parent === 'root' ? p.roots : doc.byId[ids[to.parent]!].children).find((id: string) => !moving.has(id));
+          const first = (to.parent === 'root' ? p.roots : doc.byId[ids[to.parent]!].children).find(
+            (id: string) => !moving.has(id),
+          );
           if (first) [target, position] = [ids.indexOf(first), 'before'];
           else if (to.parent !== 'root') [target, position] = [to.parent, 'child'];
           else return null;
@@ -415,7 +533,10 @@ export const driver: Driver = {
         const row = el(target)!.querySelector(':scope > .block-main')!.getBoundingClientRect();
         return {
           from: { x: b.left + b.width / 2, y: b.top + b.height / 2 },
-          to: { x: block.left + (position === 'child' ? 70 : 20), y: row.top + row.height * (position === 'before' ? 0.25 : 0.75) },
+          to: {
+            x: block.left + (position === 'child' ? 70 : 20),
+            y: row.top + row.height * (position === 'before' ? 0.25 : 0.75),
+          },
         };
       },
       { name: pageState(page).current, press, rows: drop.rows, to: drop.to },

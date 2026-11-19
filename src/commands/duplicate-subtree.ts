@@ -50,8 +50,16 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
     n.children.forEach(findTails);
   };
   nodes.forEach(findTails);
-  const held = nodes.some((n) => MarkSet.within(ctx.doc.marks.placeholders, ctx.doc.rangeOf(n).from, ctx.doc.rangeOf(n).to + 1).some((pos) => ![...tails.keys()].some((t) => ctx.doc.posOf(t, ctx.doc.textOf(t)!.text.length, -1) === pos)));
-  const fresh = nodes.length === 1 && nodes[0]!.kind === 'item' && !nodes[0]!.children.length && (ctx.doc.textOf(nodes[0]!) as OurusProse | null)?.empty === true;
+  const held = nodes.some((n) =>
+    MarkSet.within(ctx.doc.marks.placeholders, ctx.doc.rangeOf(n).from, ctx.doc.rangeOf(n).to + 1).some(
+      (pos) => ![...tails.keys()].some((t) => ctx.doc.posOf(t, ctx.doc.textOf(t)!.text.length, -1) === pos),
+    ),
+  );
+  const fresh =
+    nodes.length === 1 &&
+    nodes[0]!.kind === 'item' &&
+    !nodes[0]!.children.length &&
+    (ctx.doc.textOf(nodes[0]!) as OurusProse | null)?.empty === true;
   if (held && !fresh) return null;
   const draft = ctx.draft();
   const ids = new Map<PersistentNode, NodeId>();
@@ -75,7 +83,8 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
       return kids.length ? lastOf(kids[kids.length - 1]!) : id;
     };
     const gap = original.lastDescendant.gap;
-    const next = !!original.next && original.next.kind === 'item' && ctx.doc.listOf(original.next)?.block === list.block;
+    const next =
+      !!original.next && original.next.kind === 'item' && ctx.doc.listOf(original.next)?.block === list.block;
     // (but an original or a copy ending in a block of lines nothing closes: blank lines after it would
     // be its lines, which `done()` keeps from it)
     const open = (id: NodeId): boolean => {
@@ -84,17 +93,22 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
     };
     const at = original.lastDescendant;
     const ending = ctx.doc.textOf(at);
-    if (!(ending instanceof OurusAtom && !ending.closed && ending.frame.some((p) => p.part === 'open'))) draft.gap(original.lastDescendant, Math.max(gap, 1));
+    if (!(ending instanceof OurusAtom && !ending.closed && ending.frame.some((p) => p.part === 'open')))
+      draft.gap(original.lastDescendant, Math.max(gap, 1));
     copies.forEach((id, k) => {
       const last = lastOf(id);
-      if (!open(last)) draft.gap(last, k < copies.length - 1 || next ? Math.max(1, k === copies.length - 1 ? gap : 1) : gap);
+      if (!open(last))
+        draft.gap(last, k < copies.length - 1 || next ? Math.max(1, k === copies.length - 1 ? gap : 1) : gap);
     });
   }
   // each end in the copy of the node it is in
   const end = (pos: number): AnchorSpec | null => {
     const located = ctx.view.locate(pos);
     // (past the final line break: the last node's gap, as the nodes acted on are found)
-    const at = located.zone === 'none' && pos === ctx.doc.text.length ? ({ zone: 'gap', owner: ctx.doc.rootNode.lastDescendant } as const) : located;
+    const at =
+      located.zone === 'none' && pos === ctx.doc.text.length
+        ? ({ zone: 'gap', owner: ctx.doc.rootNode.lastDescendant } as const)
+        : located;
     if (at.zone === 'gap' || at.zone === 'blockIdLine') {
       const owner = at.zone === 'gap' ? at.owner : at.node;
       const id = ids.get(owner.persistentNode);
@@ -112,7 +126,8 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
   // a subtree selection: the copies, in its shape (`reshaped`, from a caret in the first copy with
   // text: a first root with none of its own, `- - a` or a quote without a title, has its child's)
   const shape = ctx.nodes ? null : shapeOf(ctx.view, ctx.selection);
-  const texted = (n: OurusNode): OurusNode | undefined => (ctx.doc.textOf(n) ? n : n.children.map(texted).find(Boolean));
+  const texted = (n: OurusNode): OurusNode | undefined =>
+    ctx.doc.textOf(n) ? n : n.children.map(texted).find(Boolean);
   const first = shape?.kind === 'subtrees' ? nodes.map(texted).find(Boolean) : undefined;
   const copied = first ? ({ ref: ids.get(first.persistentNode)!, offset: 0 } as const) : null;
   let head = copied ?? end(ctx.selection.head);
@@ -134,5 +149,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
   };
   nodes.forEach(visit);
   const applied = withFolds(ctx.apply(draft.select(anchor, head)), folds);
-  return copied || shape?.kind === 'line' ? reshaped(applied, shape, (id) => ids.get(ctx.doc.node(id)!.persistentNode)) : applied;
+  return copied || shape?.kind === 'line'
+    ? reshaped(applied, shape, (id) => ids.get(ctx.doc.node(id)!.persistentNode))
+    : applied;
 }

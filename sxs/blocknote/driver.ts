@@ -19,7 +19,16 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver, Drop } from '../lib/driver.ts';
-import { asMarkdownReads, liftOwned, runsAsMarkdown, Unsupported, type Block, type Outline, type Run, type Sel } from '../lib/block.ts';
+import {
+  asMarkdownReads,
+  liftOwned,
+  runsAsMarkdown,
+  Unsupported,
+  type Block,
+  type Outline,
+  type Run,
+  type Sel,
+} from '../lib/block.ts';
 import { gesture, type Point } from '../lib/drag.ts';
 
 /** BlockNote's keys for the spec's motions; the `select…` motions add Shift. */
@@ -52,25 +61,40 @@ interface BnBlock {
 function toBlockNote(text: string, free = false): { block: Omit<BnBlock, 'children'>; prefix: number; cut?: number } {
   const heading = /^(#{1,6}) /.exec(text);
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
-  if (free && heading) return { block: { type: 'heading', props: { level: heading[1]!.length }, content: text.slice(heading[0].length) }, prefix: heading[0].length };
-  if (free && fence) return { block: { type: 'codeBlock', props: { language: fence[1] || 'text' }, content: fence[2] }, prefix: 4 + fence[1]!.length };
+  if (free && heading)
+    return {
+      block: { type: 'heading', props: { level: heading[1]!.length }, content: text.slice(heading[0].length) },
+      prefix: heading[0].length,
+    };
+  if (free && fence)
+    return {
+      block: { type: 'codeBlock', props: { language: fence[1] || 'text' }, content: fence[2] },
+      prefix: 4 + fence[1]!.length,
+    };
   if (free && text.startsWith('> ')) return { block: { type: 'quote', content: text.slice(2) }, prefix: 2 };
   const task = free ? null : /^\[([ xX])\] /.exec(text);
-  if (task) return { block: { type: 'checkListItem', props: { checked: task[1] !== ' ' }, content: text.slice(4) }, prefix: 4 };
+  if (task)
+    return { block: { type: 'checkListItem', props: { checked: task[1] !== ' ' }, content: text.slice(4) }, prefix: 4 };
   // a numbered block, numbered as its run of them is (`nest` gives the run its first number)
   const numbered = free ? null : /^(\d{1,9})\. /.exec(text);
   const prefix = numbered?.[0].length ?? 0;
   const type = free ? 'paragraph' : numbered ? 'numberedListItem' : 'bulletListItem';
   // a number that is text (after a numbered block's own number too): the escape's backslash off
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text.slice(prefix));
-  if (literal) return { block: { type, content: literal[1] + text.slice(prefix + literal[0].length) }, prefix, cut: prefix + literal[1]!.length };
+  if (literal)
+    return {
+      block: { type, content: literal[1] + text.slice(prefix + literal[0].length) },
+      prefix,
+      cut: prefix + literal[1]!.length,
+    };
   // and a `#` that is text (a heading is a block of its own type, a paragraph's text plain: Enter9)
   if (/^\\#/.test(text.slice(prefix))) return { block: { type, content: text.slice(prefix + 1) }, prefix, cut: prefix };
   return { block: { type, content: text.slice(prefix) }, prefix };
 }
 
 /** A canonical offset in a block's text as one in BlockNote's, the prefix and an escape (`cut`) taken off. */
-const appOffset = (offset: number, at: { prefix: number; cut?: number }): number => Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
+const appOffset = (offset: number, at: { prefix: number; cut?: number }): number =>
+  Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
 
 /**
  * Starts BlockNote can't hold, measured (each was a start the load check found held otherwise): a
@@ -80,7 +104,8 @@ function holds(o: Outline): string | undefined {
   // (blocks are selected as text from one's start to another's end: one block alone, no children, is
   // its text selected, which BlockNote reads as text)
   const one = o.selected?.length === 1 ? o.selected[0]! : -1;
-  if (one >= 0 && !(o.blocks[one + 1] && o.blocks[one + 1]!.depth > o.blocks[one]!.depth)) return 'one block selected alone: BlockNote selects it as its text';
+  if (one >= 0 && !(o.blocks[one + 1] && o.blocks[one + 1]!.depth > o.blocks[one]!.depth))
+    return 'one block selected alone: BlockNote selects it as its text';
   // a list item is a list item's text: BlockNote's headings, code blocks and quotes are blocks of their own
   for (const b of o.blocks) {
     if (b.free) continue;
@@ -94,7 +119,8 @@ function holds(o: Outline): string | undefined {
   for (const b of o.blocks) {
     last.length = b.depth + 1;
     const n = !b.free && /^(\d{1,9})\. /.exec(b.text);
-    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1) return 'numbered list right after another (BlockNote numbers them as one)';
+    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1)
+      return 'numbered list right after another (BlockNote numbers them as one)';
     last[b.depth] = n ? Number(n[1]) : null;
   }
   if (!o.sel) return undefined;
@@ -128,7 +154,13 @@ function nest(blocks: readonly Block[]): BnBlock[] {
     const siblings = b.depth === 0 ? roots : stack[b.depth - 1]!.children;
     // a run of numbered blocks counts on from its first's number, the one it was written with
     const n = /^(\d{1,9})\. /.exec(b.text);
-    if (bn.type === 'numberedListItem' && siblings[siblings.length - 1]?.type !== 'numberedListItem' && n && n[1] !== '1') bn.props = { start: Number(n[1]) };
+    if (
+      bn.type === 'numberedListItem' &&
+      siblings[siblings.length - 1]?.type !== 'numberedListItem' &&
+      n &&
+      n[1] !== '1'
+    )
+      bn.props = { start: Number(n[1]) };
     siblings.push(bn);
     stack[b.depth] = bn;
   }
@@ -144,7 +176,8 @@ function find(): boolean {
   const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
   let f = key ? (el as any)[key] : null;
   w.__sxsBn = null;
-  for (let i = 0; f && i < 80 && !w.__sxsBn; i++, f = f.return) if (typeof f.memoizedProps?.editor?.replaceBlocks === 'function') w.__sxsBn = f.memoizedProps.editor;
+  for (let i = 0; f && i < 80 && !w.__sxsBn; i++, f = f.return)
+    if (typeof f.memoizedProps?.editor?.replaceBlocks === 'function') w.__sxsBn = f.memoizedProps.editor;
   w.__sxsView = (document.querySelector('.ProseMirror') as any)?.editor?.editorView;
   return !!(w.__sxsBn && w.__sxsView);
 }
@@ -185,10 +218,20 @@ function readPage(): { blocks: PageBlock[]; sel: Sel | null; selected: number[] 
   // its content as runs of text, each with its formatting (a link's text its own runs)
   const runsOf = (b: any): Run[] =>
     (Array.isArray(b.content) ? b.content : []).flatMap((c: any) => {
-      const run = (x: any, href?: string): Run => ({ text: x.text, bold: !!x.styles?.bold, italic: !!x.styles?.italic, strike: !!x.styles?.strike, code: !!x.styles?.code, ...(href !== undefined && { href }) });
+      const run = (x: any, href?: string): Run => ({
+        text: x.text,
+        bold: !!x.styles?.bold,
+        italic: !!x.styles?.italic,
+        strike: !!x.styles?.strike,
+        code: !!x.styles?.code,
+        ...(href !== undefined && { href }),
+      });
       return c.type === 'text' ? [run(c)] : c.type === 'link' ? c.content.map((x: any) => run(x, c.href)) : [];
     });
-  const textOf = (b: any): string => runsOf(b).map((r) => r.text).join('');
+  const textOf = (b: any): string =>
+    runsOf(b)
+      .map((r) => r.text)
+      .join('');
   const walk = (bs: any[], depth: number): void => {
     // a run of numbered blocks is numbered from its first's `start`
     let number = 0;
@@ -202,9 +245,17 @@ function readPage(): { blocks: PageBlock[]; sel: Sel | null; selected: number[] 
         prefix = `${number}. `;
       }
       // a number that is text, escaped in the canonical text
-      if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^\d{1,9}[.)]/.test(t)) cut = /^\d+/.exec(t)![0].length;
+      if (
+        (b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') &&
+        /^\d{1,9}[.)]/.test(t)
+      )
+        cut = /^\d+/.exec(t)![0].length;
       // (and a `#` that is text, which the canonical text would read as a heading's: `\# x`)
-      else if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^#{1,6}(?=[ \t]|$)/.test(t)) cut = 0;
+      else if (
+        (b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') &&
+        /^#{1,6}(?=[ \t]|$)/.test(t)
+      )
+        cut = 0;
       if (b.type === 'checkListItem') prefix = b.props.checked ? '[x] ' : '[ ] ';
       else if (b.type === 'heading') prefix = `${'#'.repeat(b.props.level)} `;
       else if (b.type === 'codeBlock') {
@@ -215,10 +266,20 @@ function readPage(): { blocks: PageBlock[]; sel: Sel | null; selected: number[] 
       } else if (b.type === 'quote') prefix = '> ';
       // a divider is a thematic break, as the projection has one
       else if (b.type === 'divider') prefix = '---';
-      else if (b.type !== 'bulletListItem' && b.type !== 'numberedListItem' && b.type !== 'paragraph') prefix = `<${b.type}> `;
+      else if (b.type !== 'bulletListItem' && b.type !== 'numberedListItem' && b.type !== 'paragraph')
+        prefix = `<${b.type}> `;
       // outside every list: a paragraph, a heading, code, a quote, a divider, any block but a list item
       const free = !['bulletListItem', 'numberedListItem', 'checkListItem', 'toggleListItem'].includes(b.type);
-      flat.push({ depth, prefix, suffix, runs: b.type === 'codeBlock' ? null : runsOf(b), plain: t, ...(cut !== undefined && { cut }), id: b.id, free });
+      flat.push({
+        depth,
+        prefix,
+        suffix,
+        runs: b.type === 'codeBlock' ? null : runsOf(b),
+        plain: t,
+        ...(cut !== undefined && { cut }),
+        id: b.id,
+        free,
+      });
       walk(b.children, depth + 1);
     });
   };
@@ -261,7 +322,13 @@ function readPage(): { blocks: PageBlock[]; sel: Sel | null; selected: number[] 
 }
 
 /** In the page: the outline loaded, the history made empty, the caret placed (block, offsets past its prefix). */
-function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anchor: number; head: number; to?: number } | null }): string {
+function loadPage({
+  blocks,
+  at,
+}: {
+  blocks: BnBlock[];
+  at: { block: number; anchor: number; head: number; to?: number } | null;
+}): string {
   const w = window as any;
   const bn = w.__sxsBn;
   const view = w.__sxsView;
@@ -275,7 +342,8 @@ function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anch
   // each block's content's start, inside its container, and end
   const contents: { start: number; end: number }[] = [];
   view.state.doc.descendants((node: any, pos: number) => {
-    if (node.type.name === 'blockContainer') contents.push({ start: pos + 2, end: pos + 2 + node.firstChild.content.size });
+    if (node.type.name === 'blockContainer')
+      contents.push({ start: pos + 2, end: pos + 2 + node.firstChild.content.size });
     return true;
   });
   const content = contents[at.block]?.start;
@@ -299,7 +367,17 @@ function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anch
  * ones skipped) if it is that parent's, else past the end of the parent's last block before there,
  * childless and with text, else below the document if the parent is its top level.
  */
-function dropAt({ press, rows, below, parent }: { press: number; rows: readonly number[]; below: number | null; parent: number | 'root' }): { hover: Point; to: Point } | string {
+function dropAt({
+  press,
+  rows,
+  below,
+  parent,
+}: {
+  press: number;
+  rows: readonly number[];
+  below: number | null;
+  parent: number | 'root';
+}): { hover: Point; to: Point } | string {
   const outers = [...document.querySelectorAll<HTMLElement>('.bn-block-outer')];
   const up = (i: number): number | null => {
     const p = outers[i]!.parentElement!.closest('.bn-block-outer');
@@ -327,7 +405,8 @@ function dropAt({ press, rows, below, parent }: { press: number; rows: readonly 
     const last = outers[0]!.parentElement!.getBoundingClientRect();
     return { hover, to: { x: outers[0]!.getBoundingClientRect().left + 2, y: last.bottom + 12 } };
   }
-  if (!childless) return 'after a block with children, last: BlockNote drops there before the block, or in its children';
+  if (!childless)
+    return 'after a block with children, last: BlockNote drops there before the block, or in its children';
   if (!(text(prev).textContent ?? '')) return 'after an empty block, last: BlockNote drops there before it';
   const r = inline(prev);
   return { hover, to: { x: text(prev).getBoundingClientRect().right - 4, y: r.bottom - 4 } };
@@ -353,7 +432,10 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
     const handle = document.querySelector('.bn-side-menu [draggable=true]');
     if (!handle || !Object.keys(handle).some((k) => k.startsWith('__reactProps$'))) return null;
     const h = handle.getBoundingClientRect();
-    const b = document.querySelectorAll('.bn-block-outer')[press]!.querySelector('.bn-block-content')!.getBoundingClientRect();
+    const b = document
+      .querySelectorAll('.bn-block-outer')
+      [press]!.querySelector('.bn-block-content')!
+      .getBoundingClientRect();
     const y = h.top + h.height / 2;
     return y >= b.top && y <= b.bottom ? { x: h.left + h.width / 2, y } : null;
   };
@@ -373,12 +455,20 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
             const menu = document.querySelector('.bn-side-menu');
             const handle = menu?.querySelector('[draggable=true]');
             const blocks = [...document.querySelectorAll('.bn-block-outer')];
-            const at = menu ? blocks.findIndex((b) => { const r = b.querySelector('.bn-block-content')!.getBoundingClientRect(); const m = menu.getBoundingClientRect(); return m.top + m.height / 2 >= r.top && m.top + m.height / 2 <= r.bottom; }) : -1;
+            const at = menu
+              ? blocks.findIndex((b) => {
+                  const r = b.querySelector('.bn-block-content')!.getBoundingClientRect();
+                  const m = menu.getBoundingClientRect();
+                  return m.top + m.height / 2 >= r.top && m.top + m.height / 2 <= r.bottom;
+                })
+              : -1;
             const sel = getSelection();
-            return `focused ${document.hasFocus()}, visibility ${document.visibilityState}; menu ${menu ? `at block ${at}, handle ${handle ? (Object.keys(handle).some((k) => k.startsWith('__reactProps$')) ? 'live' : 'not React\'s') : 'none'}` : 'none'}; pressed block ${press} of ${blocks.length}; selection ${sel?.isCollapsed ? 'collapsed' : 'over text'}, focus ${document.activeElement?.className ?? document.activeElement?.tagName}`;
+            return `focused ${document.hasFocus()}, visibility ${document.visibilityState}; menu ${menu ? `at block ${at}, handle ${handle ? (Object.keys(handle).some((k) => k.startsWith('__reactProps$')) ? 'live' : "not React's") : 'none'}` : 'none'}; pressed block ${press} of ${blocks.length}; selection ${sel?.isCollapsed ? 'collapsed' : 'over text'}, focus ${document.activeElement?.className ?? document.activeElement?.tagName}`;
           }, press)
           .catch(() => '?');
-        throw new Error(`${e.message.split('\n')[0]}: the side menu didn't come at the pressed block (${seen}; hover at ${Math.round(at.hover.x)},${Math.round(at.hover.y)})`);
+        throw new Error(
+          `${e.message.split('\n')[0]}: the side menu didn't come at the pressed block (${seen}; hover at ${Math.round(at.hover.x)},${Math.round(at.hover.y)})`,
+        );
       });
     if (!from) {
       await page.mouse.move(1, 1);
@@ -389,7 +479,14 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
       await page.mouse.move(at.hover.x, at.hover.y, { steps: 3 });
       // (and from the third try, the move the menu listens for sent in the page too, at the element under
       // the pointer: a full run of every app, cold or warm, still had MoveSubtree5's menu not come, 2026-11-18)
-      if (attempt >= 2) await page.evaluate(({ x, y }) => (document.elementFromPoint(x, y) ?? document.body).dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true, cancelable: true, view: window })), at.hover);
+      if (attempt >= 2)
+        await page.evaluate(
+          ({ x, y }) =>
+            (document.elementFromPoint(x, y) ?? document.body).dispatchEvent(
+              new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true, cancelable: true, view: window }),
+            ),
+          at.hover,
+        );
     }
   }
   for (let attempt = 0; ; attempt++) {
@@ -483,7 +580,12 @@ export const driver: Driver = {
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',
-    ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
+    ...Object.fromEntries(
+      Object.entries(MOTIONS).flatMap(([m, k]) => [
+        [`cursor${m}`, k],
+        [`select${m}`, `Shift+${k}`],
+      ]),
+    ),
   },
   // a code block is a block of its own, its fences no text: code lines that would make a fence are
   // only text there
@@ -501,14 +603,22 @@ export const driver: Driver = {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page.waitForSelector('.bn-container .ProseMirror', { timeout: 120000 });
     await page.waitForFunction(find, null, { timeout: 30000 });
-    const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000 }));
+    const idle = () =>
+      page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000 }));
     await idle();
     // ready once a key does what it should: Tab nests a block
-    await this.load(page, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+    await this.load(page, {
+      blocks: [
+        { depth: 0, text: 'a' },
+        { depth: 0, text: 'b' },
+      ],
+      sel: { block: 1, anchor: 1, head: 1 },
+    });
     await idle();
     await page.keyboard.press('Tab');
     await idle();
-    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1) throw new Error("BlockNote's keys didn't come up: Tab doesn't nest a block");
+    if (((await this.read(page)) as Outline).blocks[1]?.depth !== 1)
+      throw new Error("BlockNote's keys didn't come up: Tab doesn't nest a block");
     // the site says no version: it is built from BlockNote's main branch, and its Next.js build id stands in
     const build = await page.evaluate(() => /"buildId":"([^"]+)"/.exec(document.documentElement.innerHTML)?.[1]);
     return build ? `site build ${build}` : undefined;
@@ -524,10 +634,16 @@ export const driver: Driver = {
     // subtree, which the drag takes as those blocks
     const selected = !o.sel && o.selected?.length ? o.selected : null;
     let last = selected?.at(-1);
-    if (last !== undefined) for (const d = o.blocks[last]!.depth; last + 1 < o.blocks.length && o.blocks[last + 1]!.depth > d; ) last++;
+    if (last !== undefined)
+      for (const d = o.blocks[last]!.depth; last + 1 < o.blocks.length && o.blocks[last + 1]!.depth > d; ) last++;
     const placed = await page.evaluate(loadPage, {
       blocks: nest(liftOwned(o.blocks)),
-      at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : selected ? { block: selected[0]!, anchor: 0, head: 0, to: last! } : null,
+      at:
+        o.sel && at
+          ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) }
+          : selected
+            ? { block: selected[0]!, anchor: 0, head: 0, to: last! }
+            : null,
     });
     if (placed !== 'placed' && placed !== 'no caret') throw new Error(`the caret has no place: ${placed}`);
   },
@@ -540,15 +656,27 @@ export const driver: Driver = {
       const md = b.runs ? runsAsMarkdown(b.runs) : { text: b.plain, at: (p: number) => p };
       const cut = b.cut !== undefined ? md.at(b.cut) : -1;
       const body = cut >= 0 ? `${md.text.slice(0, cut)}\\${md.text.slice(cut)}` : md.text;
-      return { text: b.prefix + body + b.suffix, at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0) };
+      return {
+        text: b.prefix + body + b.suffix,
+        at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0),
+      };
     });
-    const sel = r.sel && { block: r.sel.block, anchor: texts[r.sel.block]!.at(r.sel.anchor), head: texts[r.sel.block]!.at(r.sel.head) };
+    const sel = r.sel && {
+      block: r.sel.block,
+      anchor: texts[r.sel.block]!.at(r.sel.anchor),
+      head: texts[r.sel.block]!.at(r.sel.head),
+    };
     // (any block may hold children, a paragraph too: what a free block holds read as its Markdown
     // reads, beside it, then owned as the app's `listParent` says)
-    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) }));
+    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({
+      depth,
+      text: texts[i]!.text,
+      ...(free && { free: true as const }),
+    }));
     const outline = asMarkdownReads(blocks, driver.behaves?.listParent);
     // (the topmost of the selected, in the outline's nesting)
-    const under = (i: number): boolean => r.selected.some((j) => j < i && outline.slice(j + 1, i + 1).every((b) => b.depth > outline[j]!.depth));
+    const under = (i: number): boolean =>
+      r.selected.some((j) => j < i && outline.slice(j + 1, i + 1).every((b) => b.depth > outline[j]!.depth));
     const selected = r.selected.filter((i) => !under(i));
     return { blocks: outline, sel, ...(selected.length && { selected }) };
   },
