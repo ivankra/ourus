@@ -836,11 +836,10 @@ function main(): void {
               const to = state.selection.main;
               const r = settlePlaceholders(state.field(ourus).withSelection({ anchor: to.anchor, head: to.head }));
               if (!r) return;
-              // the spec joins this edit to the step before it (undo.md's Undo3); CodeMirror's history
-              // joins nothing to an event once the selection has moved after it, which is what
-              // triggers this, so here leaving is an undo step of its own. History keeps the selection
-              // before a step, so the caret goes back onto the placeholder first, outside history, and
-              // undo returns there
+              // leaving is an undo step of its own: CodeMirror's history joins nothing to an event
+              // once the selection has moved after it, which is what triggers this. History keeps the
+              // selection before a step, so the caret goes back onto the placeholder first, outside
+              // history, and undo returns there
               u.view.dispatch({ selection: left, annotations: Transaction.addToHistory.of(false) });
               u.view.dispatch({
                 changes: r.changes,

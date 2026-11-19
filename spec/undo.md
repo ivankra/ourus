@@ -1,9 +1,8 @@
 # Undo and redo
 
 Actions: `undo`, `redo`, the host's. Each action that changed the text is one step of history, and a
-step restores the text and the caret; the edit that settles a placeholder the caret left joins the
-step before it, the one that left the empty node (Undo3). The host keeps the document, placeholders
-included, in its history, so undo and redo bring placeholders back with the rest
+step restores the text and the caret; how a host's history groups the edit that settles a placeholder
+the caret left is the host's. The host keeps the document, placeholders included, in its history, so undo and redo bring placeholders back with the rest
 ([placeholders.md](placeholders.md)). The core runner plays the host's part.
 
 ## Undo1
@@ -71,56 +70,6 @@ b
 a
 
 b
-```
-
-## Undo3
-
-Leaving an empty child writes the blank line that keeps it, and that edit joins the step before it:
-the first undo takes back the indent, the blank line with it, as SiYuan, BlockNote, bare Obsidian,
-its Outliner and SilverBullet do. Left again, the empty item stays, after an item that holds it.
-
-```yaml
-tags: common
-```
-
-```markdown
-- a┃
-```
-
-> enter
-
-```markdown
-- a
-- ┃
-```
-
-> indent
-
-```markdown
-- a
-  - ┃◌
-```
-
-> cursorDocStart cursorLineBoundaryForward
-
-```markdown
-- a┃
-
-  - 
-```
-
-> undo
-
-```markdown
-- a
-- ┃
-```
-
-> cursorDocStart cursorLineBoundaryForward
-
-```markdown
-- a┃
-- 
 ```
 
 ## Undo4

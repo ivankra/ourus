@@ -30,9 +30,7 @@ Only the editor makes a placeholder, and the document keeps it (each editor view
   user's: the text's padding (`-  b`), its children and later lines moved right with it, where text
   follows it on its line (`heldSpace: repair`, the default), or gives it up (`- b`, `heldSpace: trim`);
   either way the text escaped where it would start a block there (`-  \``` x`, `- \``` x`). A node no text
-  can hold, an empty paragraph, goes. Either way it is one
-  edit, verified, part of the undo step before it, which made the empty node: one undo takes both
-  back ([Undo3](undo.md#undo3)).
+  can hold, an empty paragraph, goes. Either way it is one edit, verified.
 - **Where it can't be written again** (a layout the writer has no rule for), leaving never fails: the
   placeholder is dropped and the text stays as it is, read as the saved file will read it, which may be
   another outline (a held space in code is a space of the code). The host gets no
