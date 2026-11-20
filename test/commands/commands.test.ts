@@ -358,6 +358,34 @@ test('a drop at its own place changes nothing, and one elsewhere says what it pl
   assert.equal(r.view.selection.head, 2);
 });
 
+// (spec/move-subtree.md draws no caret after a drop, the host's to place: these are ourus's own)
+test('a drop keeps the selection: a caret with the text it is in, a selection of the moved nodes on them', () => {
+  const doc = OurusDoc.parse('- one\n  - two\n- three\n');
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
+  const drop = (selection: { anchor: number; head: number }, nodes?: number[]) =>
+    executeCommand(OurusView.of(doc, { selection }), {
+      type: 'moveSubtree',
+      ...(nodes && { nodes }),
+      to: { parent: 'root', after: null },
+    });
+  // the caret in `three` at `thr┃ee`, moved with it
+  const inIt = drop({ anchor: 19, head: 19 }, [id('three')]);
+  assert.ok(inIt instanceof OurusSuccess);
+  assert.equal(inIt instanceof OurusSuccess && inIt.view.doc.text, '- three\n- one\n  - two\n');
+  assert.deepEqual(inIt instanceof OurusSuccess && inIt.view.selection, { anchor: 5, head: 5 });
+  // the selection's nodes, `three` selected whole: selected whole where they land
+  const view = OurusView.of(doc);
+  const selected = view.selectionOf([doc.node(id('three'))!]);
+  const whole = drop(selected!);
+  assert.ok(whole instanceof OurusSuccess);
+  if (!(whole instanceof OurusSuccess)) return;
+  assert.equal(whole.view.doc.text, '- three\n- one\n  - two\n');
+  assert.deepEqual(
+    whole.view.selectedSubtrees(whole.view.selection)?.map((n) => n.id),
+    [id('three')],
+  );
+});
+
 test('a place named by ids survives an edit elsewhere', () => {
   const doc = OurusDoc.parse('- a\n- b\n- c\n');
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;

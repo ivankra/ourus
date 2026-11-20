@@ -4561,7 +4561,7 @@ tags: rare
 
 ```markdown
 - a
-  * ---┃①
+  * ---①
 ```
 
 ## Regression180
@@ -9982,7 +9982,7 @@ tags: rare
 
 ````markdown
 - ```
-- c┃③
+- c③
 - b
 ````
 
@@ -10009,7 +10009,7 @@ listParent: container
 
 ```markdown
 100. a
-101. b┃③
+101. b③
 
     code
 ```
@@ -10043,7 +10043,7 @@ listParent: container
 - ```③
   ---
   ```
-- a┃
+- a
 ````
 
 ## Regression383
@@ -10067,7 +10067,7 @@ listParent: container
 
 ```markdown
 ---③
-# h┃
+# h
 ```
 
 ## Regression384

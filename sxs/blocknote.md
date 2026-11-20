@@ -5,7 +5,7 @@ version: "unknown"
 url: "https://www.blocknotejs.org/examples/basic/minimal"
 model: "block"
 command: "node sxs/run.ts blocknote"
-elapsed_s: 298
+elapsed_s: 592
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 269 | [18](#caret-18) | [27](#whitespace-27) | [75](#disagree-75) |  |  | **389** |
-| adapted | 337 | [13](#adapted-caret-13) | [25](#adapted-whitespace-25) | [130](#adapted-disagree-130) |  |  | **505** |
-| **total** | **606 (34%)** | **31 (1.7%)** | **52 (2.9%)** | **205 (11%)** | **0 (0%)** | **[872](#skipped-872) (49%)** | **1793** |
+| original | 275 | [14](#caret-14) | [28](#whitespace-28) | [74](#disagree-74) |  |  | **391** |
+| adapted | 337 | [9](#adapted-caret-9) | [25](#adapted-whitespace-25) | [131](#adapted-disagree-131) |  |  | **502** |
+| **total** | **612 (34%)** | **23 (1.3%)** | **53 (3%)** | **205 (11%)** | **0 (0%)** | **[865](#skipped-865) (48%)** | **1785** |
 
 Per-file:
 
@@ -32,16 +32,16 @@ Per-file:
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 17 | **17** |  |  |
 | [delete.md](../spec/delete.md) | 24 |  | 1 | 5 |  | 28 | **58** | 25 | 5 |
 | [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 61 |  | 6 | 9 |  | 28 | **104** | 24 | 52 |
 | [fences.md](../spec/fences.md) | 4 |  | 3 | 1 |  | 62 | **70** |  | 8 |
-| [fold.md](../spec/fold.md) |  |  |  |  |  | 22 | **22** |  |  |
+| [fold.md](../spec/fold.md) |  |  |  |  |  | 21 | **21** |  |  |
 | [gaps.md](../spec/gaps.md) | 14 |  | 1 | 1 |  | 5 | **21** | 9 | 7 |
 | [indent.md](../spec/indent.md) | 24 | 3 | 1 | 14 |  | 16 | **58** | 28 | 14 |
 | [lists.md](../spec/lists.md) | 12 |  |  | 1 |  | 3 | **16** | 6 | 7 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 30 |  |  | 5 |  | 11 | **46** | 22 | 13 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 29 |  |  | 5 |  | 14 | **48** | 21 | 13 |
-| [move-subtree.md](../spec/move-subtree.md) | 1 | 8 |  | 1 |  | 14 | **24** | 6 | 4 |
+| [move-subtree.md](../spec/move-subtree.md) | 10 |  |  | 1 |  | 12 | **23** | 7 | 4 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 40 |  | 4 | 11 |  | 12 | **67** | 29 | 26 |
 | [outdent.md](../spec/outdent.md) | 9 | 3 |  | 12 |  | 20 | **44** | 18 | 6 |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
@@ -54,18 +54,18 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 17 |  | 6 | 1 |  | 6 | **30** | 15 | 9 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) | 11 |  | 1 | 5 |  | 128 | **145** |  | 17 |
-| [regressions.md](../spec/regressions.md) | 77 | 4 | 14 | 47 |  | 265 | **407** | 43 | 99 |
-| [scenarios.md](../spec/scenarios.md) | 14 |  | 1 | 13 |  | 6 | **34** | 17 | 11 |
+| [regressions.md](../spec/regressions.md) | 74 | 4 | 15 | 48 |  | 262 | **403** | 44 | 97 |
+| [scenarios.md](../spec/scenarios.md) | 15 |  | 1 | 12 |  | 6 | **34** | 17 | 11 |
 | [select.md](../spec/select.md) | 7 | 8 |  |  |  | 8 | **23** | 9 | 6 |
 | [shift-enter.md](../spec/shift-enter.md) | 26 |  | 3 | 2 |  | 10 | **41** | 19 | 12 |
 | [subtree-selection.md](../spec/subtree-selection.md) | 3 | 2 | 1 | 4 |  | 9 | **19** | 7 | 3 |
 | [tasks.md](../spec/tasks.md) | 12 |  | 2 | 3 |  | 13 | **30** |  | 17 |
 | [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
-| [undo.md](../spec/undo.md) | 3 |  |  | 1 |  | 1 | **5** | 3 | 1 |
+| [undo.md](../spec/undo.md) | 2 |  |  | 1 |  | 1 | **4** | 3 |  |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **606 (34%)** | **31 (1.7%)** | **52 (2.9%)** | **205 (11%)** | **0 (0%)** | **899 (50%)** | **1793** | **389 (22%)** | **505 (28%)** |
+| **total** | **612 (34%)** | **23 (1.3%)** | **53 (3%)** | **205 (11%)** | **0 (0%)** | **892 (50%)** | **1785** | **391 (22%)** | **502 (28%)** |
 
-## Disagree (75)
+## Disagree (74)
 
 ### [Backspace19b](../spec/backspace.md#backspace19b)
 
@@ -2452,15 +2452,28 @@ p2
 </td></tr>
 </table>
 
-> paste
-
 <table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 - Project
-  - ┃
+  -  x┃
+- Inbox
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Project
+  -  ┃
 - Inbox
 ```
 
@@ -2468,7 +2481,22 @@ p2
 
 ```buffer
 - Project
-  - line one
+  - ┃
+- Inbox
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Project
+  -  line one
     line two
   ¶ p2┃
 - Inbox
@@ -2792,77 +2820,6 @@ y
   - email
 - Home
   - plants
-```
-
-</td></tr>
-</table>
-
-### [Scenario8b](../spec/scenarios.md#scenario8b)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Inbox
-- Work
-  - email┃
-- Home
-  - plants
-```
-
-</td></tr>
-</table>
-
-> moveSubtree ③
-
-<table>
-<tr><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Home
-  - plants┃
-- Inbox
-- Work
-  - email
-```
-
-</td><td>
-
-```buffer
-- Home
-  - plants
-- Inbox
-- Work
-  - email┃
-```
-
-</td></tr>
-</table>
-
-> "s"
-
-<table>
-<tr><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Home
-  - plantss┃
-- Inbox
-- Work
-  - email
-```
-
-</td><td>
-
-```buffer
-- Home
-  - plants
-- Inbox
-- Work
-  - emails┃
 ```
 
 </td></tr>
@@ -3485,7 +3442,7 @@ y
 </td></tr>
 </table>
 
-## Whitespace (27)
+## Whitespace (28)
 
 ### [Backspace14](../spec/backspace.md#backspace14)
 
@@ -4072,8 +4029,8 @@ b
 <tr valign="top"><td>
 
 ```buffer
-¶ ┃para
-¶ 
+¶ para
+¶ ┃
 ```
 
 </td><td>
@@ -4244,6 +4201,81 @@ b
 ```buffer
 ¶ ┃p
 ¶ qr
+```
+
+</td></tr>
+</table>
+
+### [Regression75](../spec/regressions.md#regression75)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+Call Sam
+Email Alex
+```
+
+</td></tr>
+</table>
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Project
+  -  x┃
+- Inbox
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Project
+  -  ┃
+- Inbox
+```
+
+</td><td>
+
+```buffer
+- Project
+  - ┃
+- Inbox
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Project
+  -  Call Sam
+    Email Alex┃
+- Inbox
+```
+
+</td><td>
+
+```buffer
+- Project
+  - Call Sam
+    Email Alex┃
+- Inbox
 ```
 
 </td></tr>
@@ -4673,7 +4705,7 @@ b
 </td></tr>
 </table>
 
-## Caret (18)
+## Caret (14)
 
 ### [CursorUp2](../spec/cursor.md#cursorup2)
 
@@ -4765,171 +4797,6 @@ b
 </td></tr>
 </table>
 
-### [MoveSubtree2](../spec/move-subtree.md#movesubtree2)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two┃
-- three
-```
-
-</td><td>
-
-```buffer
-- three┃
-- one
-  - two
-```
-
-</td><td>
-
-```buffer
-- three
-- one
-  - two┃
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree4](../spec/move-subtree.md#movesubtree4)
-
-> moveSubtree ②
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a⟦selected⟧
-- b⟦selected⟧
-- c
-```
-
-</td><td>
-
-```buffer
-- c
-- ┃a
-- b
-```
-
-</td><td>
-
-```buffer
-- c
-- a⟦selected⟧
-- b⟦selected⟧
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a⟦selected⟧
-- b⟦selected⟧
-- c
-```
-
-</td><td>
-
-```buffer
-- c┃
-- a
-- b
-```
-
-</td><td>
-
-```buffer
-- c
-- a⟦selected⟧
-- b⟦selected⟧
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a⟦selected⟧
-- b⟦selected⟧
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- c┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a⟦selected⟧
-- c⟦selected⟧
-- b⟦selected⟧
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree19](../spec/move-subtree.md#movesubtree19)
-
-> moveSubtree
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-2. b⟦selected⟧
-3. c⟦selected⟧
-```
-
-</td><td>
-
-```buffer
-1. b
-2. c┃
-3. a
-```
-
-</td><td>
-
-```buffer
-1. b⟦selected⟧
-2. c⟦selected⟧
-3. a
-```
-
-</td></tr>
-</table>
-
 ### [Outdent5](../spec/outdent.md#outdent5)
 
 > outdent
@@ -4952,6 +4819,67 @@ b
 
 ```buffer
 ¶ # A┃
+```
+
+</td></tr>
+</table>
+
+### [Regression113](../spec/regressions.md#regression113)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+> selectDocStart
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a⟦selected⟧
+¶ ⟦selected⟧
+```
+
+</td><td>
+
+```buffer
+¶ a⟦selected⟧
+¶ 
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
 ```
 
 </td></tr>
@@ -5714,7 +5642,7 @@ b
 </td></tr>
 </table>
 
-## Adapted: disagree (130)
+## Adapted: disagree (131)
 
 ### [Backspace3](../spec/backspace.md#backspace3)
 
@@ -7387,7 +7315,7 @@ Adapted: blank lines
 
 ```buffer
 1. a
-- x┃
+- x
 2. b
 ```
 
@@ -7411,7 +7339,7 @@ Original:
 
 ```buffer
 1. a
-- x┃①
+- x①
 
 2. b
 ```
@@ -10796,19 +10724,37 @@ Original:
 
 ### [QuoteText19](../spec/quotes.md#quotetext19)
 
-> enter
-
 Adapted: quote
 
 <table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ > x┃
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 ¶ > ┃
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ¶ > 
@@ -10826,8 +10772,14 @@ Adapted: quote
 
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>enter</th></tr>
 <tr valign="top"><td>
+
+```buffer
+> x┃
+```
+
+</td><td>
 
 ```buffer
 > ┃◌
@@ -12892,6 +12844,93 @@ Original:
 </td></tr>
 </table>
 
+### [Regression306](../spec/regressions.md#regression306)
+
+Adapted: under enterOnEmptyItem: unwrap
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  x┃
+- item
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ┃
+- item
+```
+
+</td><td>
+
+```buffer
+- ┃
+- item
+```
+
+</td></tr>
+</table>
+
+> enter "x"
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  
+- x┃
+- item
+```
+
+</td><td>
+
+```buffer
+¶ x┃
+- item
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>enter "x"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  x┃
+  - item
+```
+
+</td><td>
+
+```buffer
+-  ┃◌
+  - item
+```
+
+</td><td>
+
+```buffer
+x┃
+
+  - item
+```
+
+</td></tr>
+</table>
+
 ### [Regression309](../spec/regressions.md#regression309)
 
 > outdent
@@ -13399,12 +13438,24 @@ Original:
 
 ### [Regression374](../spec/regressions.md#regression374)
 
-> outdent
-
 Adapted: table
 
 <table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃ a | b |
+  |---|---|
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -13412,7 +13463,14 @@ Adapted: table
   |---|---|
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 -  a | b |
@@ -13431,8 +13489,15 @@ Adapted: table
 
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>outdent</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- x┃ a | b |
+  |---|---|
+```
+
+</td><td>
 
 ```buffer
 - ┃◌ a | b |
@@ -14938,12 +15003,24 @@ Original:
 
 ### [Backspace30](../spec/backspace.md#backspace30)
 
-> deleteContentBackward
-
 Adapted: under backspaceAtItemStart: unwrap
 
 <table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -14951,7 +15028,14 @@ Adapted: under backspaceAtItemStart: unwrap
   - ┃
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a
@@ -14971,8 +15055,15 @@ Adapted: under backspaceAtItemStart: unwrap
 
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>deleteContentBackward</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+```
+
+</td><td>
 
 ```buffer
 - a
@@ -14993,6 +15084,21 @@ Original:
 ### [Enter28](../spec/enter.md#enter28)
 
 Adapted: under enterOnEmptyItem: unwrap
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+  - c
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15057,8 +15163,16 @@ Adapted: under enterOnEmptyItem: unwrap
 
 Original:
 <table>
-<tr><th>buffer</th><th>enter</th><th>enter</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>enter</th><th>enter</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+  - c
+```
+
+</td><td>
 
 ```buffer
 - a
@@ -16080,12 +16194,27 @@ Original:
 
 ### [Regression330](../spec/regressions.md#regression330)
 
-> deleteSoftLineBackward
-
 Adapted: under backspaceAtItemStart: unwrap
 
 <table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- parent
+  - child one
+  - 
+- x┃   second paragraph of child two
+  - child three
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -16096,7 +16225,14 @@ Adapted: under backspaceAtItemStart: unwrap
   - child three
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - parent
@@ -16121,8 +16257,18 @@ Adapted: under backspaceAtItemStart: unwrap
 
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>deleteSoftLineBackward</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- parent
+  - child one
+  - 
+- x┃   second paragraph of child two
+  - child three
+```
+
+</td><td>
 
 ```buffer
 - parent
@@ -16448,7 +16594,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (13)
+## Adapted: caret (9)
 
 ### [CursorDown5](../spec/cursor.md#cursordown5)
 
@@ -16637,191 +16783,6 @@ Title┃
 -----
 
 ### Sub
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
-
-> moveSubtree ②
-
-Adapted: under listParent: container
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-¶ p
-```
-
-</td><td>
-
-```buffer
-¶ p┃
-- x
-```
-
-</td><td>
-
-```buffer
-¶ p
-- x┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃②
-
-p
-▸
-```
-
-</td><td>
-
-```buffer
-p
-
-- x┃
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree22](../spec/move-subtree.md#movesubtree22)
-
-> moveSubtree ②
-
-Adapted: code block
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-- a
-  ¶ ```
-    x┃
-    ```
-- b
-````
-
-</td><td>
-
-````buffer
-- a
-- b┃
-¶ ```
-  x
-  ```
-````
-
-</td><td>
-
-````buffer
-- a
-- b
-¶ ```
-  x┃
-  ```
-````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-- a
-  ```②
-  x┃
-  ```
-- b
-▸
-````
-
-</td><td>
-
-````buffer
-- a
-- b
-```②
-x┃
-```
-````
-
-</td></tr>
-</table>
-
-### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
-
-> moveSubtree ①
-
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-- b
-- c
-```
-
-</td><td>
-
-```buffer
-- b
-- c┃
-- a
-```
-
-</td><td>
-
-```buffer
-- b
-- c
-- a┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃①
-
-- b
-
-- c
-▸
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-- a┃①
 ```
 
 </td></tr>
@@ -17098,12 +17059,25 @@ text
 
 ### [Regression347](../spec/regressions.md#regression347)
 
-> outdent
-
 Adapted: code block, escape
 
 <table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- item
+  - x┃ ```js
+  ¶ ```
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ````buffer
@@ -17112,7 +17086,14 @@ Adapted: code block, escape
   ¶ ```
 ````
 
-</td><td>
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>blocknote</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ````buffer
 - item
@@ -17133,8 +17114,16 @@ Adapted: code block, escape
 
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>outdent</th></tr>
 <tr valign="top"><td>
+
+````buffer
+- item
+  - x┃ ```js
+  ```
+````
+
+</td><td>
 
 ````buffer
 - item
@@ -17149,59 +17138,6 @@ Original:
 -  \┃```js
    ```
 ````
-
-</td></tr>
-</table>
-
-### [Regression383](../spec/regressions.md#regression383)
-
-> moveSubtree ③
-
-Adapted: thematic break
-
-<table>
-<tr><th>buffer</th><th>blocknote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # h┃
-  ¶ ---
-```
-
-</td><td>
-
-```buffer
-¶ ---┃
-¶ # h
-```
-
-</td><td>
-
-```buffer
-¶ ---
-¶ # h┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-▸
-# h┃
----③
-```
-
-</td><td>
-
-```buffer
----③
-# h┃
-```
 
 </td></tr>
 </table>
@@ -17262,7 +17198,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (899)
+## Skipped (892)
 
 | example | why |
 | --- | --- |
@@ -17458,7 +17394,6 @@ Original:
 | [DuplicateSubtree10](../spec/duplicate-subtree.md#duplicatesubtree10) | action duplicateSubtree |
 | [DuplicateSubtree11](../spec/duplicate-subtree.md#duplicatesubtree11) | action duplicateSubtree |
 | [DuplicateSubtree12](../spec/duplicate-subtree.md#duplicatesubtree12) | action duplicateSubtree |
-| [DuplicateSubtree13](../spec/duplicate-subtree.md#duplicatesubtree13) | action duplicateSubtree |
 | **enter.md** | |
 | [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
@@ -17573,7 +17508,6 @@ Original:
 | [Fold17](../spec/fold.md#fold17) | no folds |
 | [Fold18](../spec/fold.md#fold18) | no folds |
 | [Fold19](../spec/fold.md#fold19) | no folds |
-| [Fold20](../spec/fold.md#fold20) | no folds |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
@@ -17630,8 +17564,6 @@ Original:
 | [MoveUp46](../spec/move-subtree-up.md#moveup46) | one block selected alone: BlockNote selects it as its text |
 | **move-subtree.md** | |
 | [MoveSubtree3](../spec/move-subtree.md#movesubtree3) | drop: as a childless block's first child: BlockNote drops a block beside one, never into it |
-| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
-| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |
 | [MoveSubtree9](../spec/move-subtree.md#movesubtree9) | drop: as a childless block's first child: BlockNote drops a block beside one, never into it |
 | [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
 | [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
@@ -17911,7 +17843,6 @@ Original:
 | [Regression67](../spec/regressions.md#regression67) | no folds |
 | [Regression68](../spec/regressions.md#regression68) | no folds |
 | [Regression69](../spec/regressions.md#regression69) | no folds |
-| [Regression70](../spec/regressions.md#regression70) | action deleteSubtree |
 | [Regression71](../spec/regressions.md#regression71) | action duplicateSubtree |
 | [Regression78](../spec/regressions.md#regression78) | option quotes: atom |
 | [Regression79](../spec/regressions.md#regression79) | action duplicateSubtree |
@@ -17932,7 +17863,6 @@ Original:
 | [Regression109](../spec/regressions.md#regression109) | action duplicateSubtree |
 | [Regression111](../spec/regressions.md#regression111) | quote |
 | [Regression112](../spec/regressions.md#regression112) | quote |
-| [Regression113](../spec/regressions.md#regression113) | one block selected alone: BlockNote selects it as its text |
 | [Regression114](../spec/regressions.md#regression114) | option pastePlainLines: enter |
 | [Regression115](../spec/regressions.md#regression115) | tag markup-fence |
 | [Regression116](../spec/regressions.md#regression116) | tag markup-fence |
@@ -17989,7 +17919,6 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | action duplicateSubtree |
 | [Regression196](../spec/regressions.md#regression196) | action deleteSubtree |
 | [Regression198](../spec/regressions.md#regression198) | quote |
-| [Regression199](../spec/regressions.md#regression199) | quote |
 | [Regression200](../spec/regressions.md#regression200) | no folds |
 | [Regression201](../spec/regressions.md#regression201) | tag markup-fence |
 | [Regression202](../spec/regressions.md#regression202) | no folds |
@@ -18084,7 +18013,6 @@ Original:
 | [Regression315](../spec/regressions.md#regression315) | quote |
 | [Regression319](../spec/regressions.md#regression319) | caret in a marker |
 | [Regression323](../spec/regressions.md#regression323) | caret in a marker |
-| [Regression325](../spec/regressions.md#regression325) | action deleteSubtree |
 | [Regression328](../spec/regressions.md#regression328) | action deleteSubtree |
 | [Regression329](../spec/regressions.md#regression329) | action duplicateSubtree |
 | [Regression333](../spec/regressions.md#regression333) | quote as a list item (a quote is a block of its own) |
@@ -18106,6 +18034,7 @@ Original:
 | [Regression353](../spec/regressions.md#regression353) | tag markup-fence |
 | [Regression354](../spec/regressions.md#regression354) | option indentUnit: tab |
 | [Regression355](../spec/regressions.md#regression355) | quote |
+| [Regression357](../spec/regressions.md#regression357) | cursorCharRight over an escape ourus wrote, which a block's text hasn't |
 | [Regression358](../spec/regressions.md#regression358) | tag markup-fence |
 | [Regression361](../spec/regressions.md#regression361) | option quotes: atom |
 | [Regression363](../spec/regressions.md#regression363) | the app doing what ourus refuses as Markdown can't hold it (not-expressible), at deleteContentBackward |

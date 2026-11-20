@@ -5,7 +5,7 @@ version: "3.8.6"
 url: "http://127.0.0.1:6816/stage/build/desktop/"
 model: "block"
 command: "node sxs/run.ts siyuan"
-elapsed_s: 535
+elapsed_s: 1150
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 271 | [29](#caret-29) | [29](#whitespace-29) | [92](#disagree-92) |  |  | **421** |
-| adapted | 261 | [16](#adapted-caret-16) | [37](#adapted-whitespace-37) | [112](#adapted-disagree-112) |  |  | **426** |
-| **total** | **532 (30%)** | **45 (2.5%)** | **66 (3.7%)** | **204 (11%)** | **0 (0%)** | **[930](#skipped-930) (52%)** | **1793** |
+| original | 276 | [22](#caret-22) | [29](#whitespace-29) | [91](#disagree-91) |  |  | **418** |
+| adapted | 265 | [13](#adapted-caret-13) | [37](#adapted-whitespace-37) | [111](#adapted-disagree-111) |  |  | **426** |
+| **total** | **541 (30%)** | **35 (2%)** | **66 (3.7%)** | **202 (11%)** | **0 (0%)** | **[924](#skipped-924) (52%)** | **1785** |
 
 Per-file:
 
@@ -32,16 +32,16 @@ Per-file:
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 17 | **17** |  |  |
 | [delete.md](../spec/delete.md) | 8 |  | 2 | 21 |  | 27 | **58** | 25 | 6 |
 | [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 2 |  | 1 | 2 |  | 8 | **13** | 5 |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 2 |  |  | 2 |  | 8 | **12** | 4 |  |
 | [enter.md](../spec/enter.md) | 43 | 3 | 11 | 12 |  | 35 | **104** | 28 | 41 |
 | [fences.md](../spec/fences.md) | 2 |  |  |  |  | 68 | **70** |  | 2 |
-| [fold.md](../spec/fold.md) | 9 |  |  | 7 |  | 6 | **22** | 14 | 2 |
+| [fold.md](../spec/fold.md) | 9 |  |  | 7 |  | 5 | **21** | 14 | 2 |
 | [gaps.md](../spec/gaps.md) | 13 |  |  |  |  | 8 | **21** | 8 | 5 |
 | [indent.md](../spec/indent.md) | 20 |  | 5 | 7 |  | 26 | **58** | 23 | 9 |
 | [lists.md](../spec/lists.md) | 9 |  |  |  |  | 7 | **16** | 3 | 6 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 34 |  |  |  |  | 12 | **46** | 19 | 15 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 34 |  |  |  |  | 14 | **48** | 16 | 18 |
-| [move-subtree.md](../spec/move-subtree.md) |  | 8 |  | 4 |  | 12 | **24** | 8 | 4 |
+| [move-subtree.md](../spec/move-subtree.md) | 8 |  |  | 4 |  | 11 | **23** | 8 | 4 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 44 | 1 | 2 | 6 |  | 14 | **67** | 32 | 21 |
 | [outdent.md](../spec/outdent.md) | 19 | 1 | 1 | 2 |  | 21 | **44** | 16 | 7 |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
@@ -53,19 +53,19 @@ Per-file:
 | [paste.md](../spec/paste.md) | 14 | 1 |  | 3 |  | 26 | **44** | 12 | 6 |
 | [placeholders.md](../spec/placeholders.md) | 19 |  | 4 | 1 |  | 6 | **30** | 15 | 9 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
-| [quotes.md](../spec/quotes.md) | 15 |  | 1 | 9 |  | 120 | **145** |  | 25 |
-| [regressions.md](../spec/regressions.md) | 49 | 3 | 9 | 37 |  | 309 | **407** | 33 | 65 |
-| [scenarios.md](../spec/scenarios.md) | 16 | 1 | 1 | 11 |  | 5 | **34** | 21 | 8 |
+| [quotes.md](../spec/quotes.md) | 16 |  | 1 | 9 |  | 119 | **145** |  | 26 |
+| [regressions.md](../spec/regressions.md) | 48 | 2 | 10 | 36 |  | 307 | **403** | 31 | 65 |
+| [scenarios.md](../spec/scenarios.md) | 18 |  | 1 | 10 |  | 5 | **34** | 21 | 8 |
 | [select.md](../spec/select.md) | 10 | 7 |  |  |  | 6 | **23** | 10 | 7 |
 | [shift-enter.md](../spec/shift-enter.md) | 14 |  | 11 | 5 |  | 11 | **41** | 17 | 13 |
 | [subtree-selection.md](../spec/subtree-selection.md) | 4 | 3 |  | 6 |  | 6 | **19** | 10 | 3 |
 | [tasks.md](../spec/tasks.md) | 7 |  | 2 | 7 |  | 14 | **30** |  | 16 |
 | [typing.md](../spec/typing.md) | 1 |  |  | 1 |  | 1 | **3** | 1 | 1 |
-| [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
+| [undo.md](../spec/undo.md) | 3 |  |  |  |  | 1 | **4** | 3 |  |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **532 (30%)** | **45 (2.5%)** | **66 (3.7%)** | **204 (11%)** | **0 (0%)** | **946 (53%)** | **1793** | **421 (23%)** | **426 (24%)** |
+| **total** | **541 (30%)** | **35 (2%)** | **66 (3.7%)** | **202 (11%)** | **0 (0%)** | **941 (53%)** | **1785** | **418 (23%)** | **426 (24%)** |
 
-## Disagree (92)
+## Disagree (91)
 
 ### [Auto1](../spec/auto.md#auto1)
 
@@ -258,10 +258,22 @@ Per-file:
 
 ### [Backspace30](../spec/backspace.md#backspace30)
 
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+```
+
+</td></tr>
+</table>
+
 > deleteContentBackward
 
 <table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -269,7 +281,14 @@ Per-file:
   - ┃
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a
@@ -1710,8 +1729,8 @@ Per-file:
 
 ```buffer
 - c
-- a⟦selected⟧
-- b⟦selected⟧
+- a
+- b
 ```
 
 </td></tr>
@@ -1742,8 +1761,8 @@ Per-file:
 </td><td>
 
 ```buffer
-1. b⟦selected⟧
-2. c⟦selected⟧
+1. b
+2. c
 3. a
 ```
 
@@ -3014,77 +3033,6 @@ Title
 
 ```buffer
 - a┃
-```
-
-</td></tr>
-</table>
-
-### [Scenario8b](../spec/scenarios.md#scenario8b)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Inbox
-- Work
-  - email┃
-- Home
-  - plants
-```
-
-</td></tr>
-</table>
-
-> moveSubtree ③
-
-<table>
-<tr><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Home⟦selected⟧
-  - plants
-- Inbox
-- Work
-  - email
-```
-
-</td><td>
-
-```buffer
-- Home
-  - plants
-- Inbox
-- Work
-  - email┃
-```
-
-</td></tr>
-</table>
-
-> "s"
-
-<table>
-<tr><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- s┃Home
-  - plants
-- Inbox
-- Work
-  - email
-```
-
-</td><td>
-
-```buffer
-- Home
-  - plants
-- Inbox
-- Work
-  - emails┃
 ```
 
 </td></tr>
@@ -4377,37 +4325,6 @@ y
 </td></tr>
 </table>
 
-### [DuplicateSubtree13](../spec/duplicate-subtree.md#duplicatesubtree13)
-
-> duplicateSubtree
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a┃
-¶ 
-```
-
-</td><td>
-
-```buffer
-¶ a
-¶ a⟦selected⟧
-¶ 
-```
-
-</td><td>
-
-```buffer
-¶ a
-¶ a┃
-```
-
-</td></tr>
-</table>
-
 ### [Enter11](../spec/enter.md#enter11)
 
 > enter
@@ -4815,6 +4732,74 @@ b
 </td></tr>
 </table>
 
+### [Regression113](../spec/regressions.md#regression113)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+> selectDocStart
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+¶ 
+```
+
+</td><td>
+
+```buffer
+¶ a⟦selected⟧
+¶ 
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+¶ 
+```
+
+</td><td>
+
+```buffer
+¶ ┃
+```
+
+</td></tr>
+</table>
+
 ### [Regression141](../spec/regressions.md#regression141)
 
 <table>
@@ -5205,7 +5190,7 @@ b
 </td></tr>
 </table>
 
-## Caret (29)
+## Caret (22)
 
 ### [Auto25](../spec/auto.md#auto25)
 
@@ -5466,204 +5451,6 @@ b
 </td></tr>
 </table>
 
-### [MoveSubtree1](../spec/move-subtree.md#movesubtree1)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two
-- three┃
-```
-
-</td><td>
-
-```buffer
-- three⟦selected⟧
-- one
-  - two
-```
-
-</td><td>
-
-```buffer
-- three┃
-- one
-  - two
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree2](../spec/move-subtree.md#movesubtree2)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two┃
-- three
-```
-
-</td><td>
-
-```buffer
-- three⟦selected⟧
-- one
-  - two
-```
-
-</td><td>
-
-```buffer
-- three
-- one
-  - two┃
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree3](../spec/move-subtree.md#movesubtree3)
-
-> moveSubtree ①
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one┃
-- two
-- three
-```
-
-</td><td>
-
-```buffer
-- two
-  - one⟦selected⟧
-- three
-```
-
-</td><td>
-
-```buffer
-- two
-  - one┃
-- three
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a⟦selected⟧
-- b⟦selected⟧
-- c
-```
-
-</td><td>
-
-```buffer
-- c⟦selected⟧
-- a
-- b
-```
-
-</td><td>
-
-```buffer
-- c
-- a⟦selected⟧
-- b⟦selected⟧
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
-
-> moveSubtree ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a⟦selected⟧
-- b⟦selected⟧
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- c⟦selected⟧
-- b
-```
-
-</td><td>
-
-```buffer
-- a⟦selected⟧
-- c⟦selected⟧
-- b⟦selected⟧
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree23](../spec/move-subtree.md#movesubtree23)
-
-> moveSubtree ②
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - a1┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- b
-  - a1⟦selected⟧
-```
-
-</td><td>
-
-```buffer
-- a
-- b
-  - a1┃
-```
-
-</td></tr>
-</table>
-
 ### [TO-S11b](../spec/obsidian-true-outliner.md#to-s11b)
 
 > shiftEnter cursorDocStart
@@ -5909,67 +5696,6 @@ y
   ¶ y┃
   ¶ ## B
     ¶ b text
-```
-
-</td></tr>
-</table>
-
-### [Scenario8c](../spec/scenarios.md#scenario8c)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Inbox
-- Work┃
-  - email
-```
-
-</td></tr>
-</table>
-
-> moveSubtree ②
-
-<table>
-<tr><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Inbox
-  - Work⟦selected⟧
-    - email
-```
-
-</td><td>
-
-```buffer
-- Inbox
-  - Work┃
-    - email
-```
-
-</td></tr>
-</table>
-
-> outdent
-
-<table>
-<tr><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Inbox
-- Work⟦selected⟧
-  - email
-```
-
-</td><td>
-
-```buffer
-- Inbox
-- Work┃
-  - email
 ```
 
 </td></tr>
@@ -6620,7 +6346,7 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (112)
+## Adapted: disagree (111)
 
 ### [Auto3](../spec/auto.md#auto3)
 
@@ -8219,7 +7945,7 @@ Adapted: blank lines
 
 ```buffer
 - a
-  - para┃
+  - para
 ```
 
 </td></tr>
@@ -8242,7 +7968,7 @@ para┃②
 ```buffer
 - a
 
-  - para┃②
+  - para②
 ```
 
 </td></tr>
@@ -8276,7 +8002,7 @@ Adapted: blank lines
 
 ```buffer
 1. a
-- x┃
+- x
 2. b
 ```
 
@@ -8300,7 +8026,7 @@ Original:
 
 ```buffer
 1. a
-- x┃①
+- x①
 
 2. b
 ```
@@ -12344,12 +12070,24 @@ Original:
 
 ### [Regression93](../spec/regressions.md#regression93)
 
-> duplicateSubtree
-
 Adapted: blank lines
 
 <table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -12357,7 +12095,14 @@ Adapted: blank lines
   - ┃
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> duplicateSubtree
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a
@@ -12378,8 +12123,15 @@ Adapted: blank lines
 
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>duplicateSubtree</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+```
+
+</td><td>
 
 ```buffer
 - a
@@ -13057,64 +12809,6 @@ Original:
 > ax
 
 > y┃b
-```
-
-</td></tr>
-</table>
-
-### [Regression357](../spec/regressions.md#regression357)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-y
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ «-» x
-```
-
-</td><td>
-
-```buffer
-¶ \y┃ x
-```
-
-</td><td>
-
-```buffer
-¶ y┃ x
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-\«-» x
-```
-
-</td><td>
-
-```buffer
-y┃ x
 ```
 
 </td></tr>
@@ -14821,6 +14515,21 @@ Adapted: under enterOnEmptyItem: unwrap
 
 ```buffer
 - a
+  - x┃
+  - c
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
   - ┃
   - c
 ```
@@ -14869,8 +14578,16 @@ Adapted: under enterOnEmptyItem: unwrap
 
 Original:
 <table>
-<tr><th>buffer</th><th>enter</th><th>enter</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>enter</th><th>enter</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+  - c
+```
+
+</td><td>
 
 ```buffer
 - a
@@ -16832,7 +16549,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (16)
+## Adapted: caret (13)
 
 ### [Copy4b](../spec/copy.md#copy4b)
 
@@ -17000,123 +16717,6 @@ Original:
 ```buffer
 - a
 - [ ] ┃task
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
-
-> moveSubtree ②
-
-Adapted: under listParent: container
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-¶ p
-```
-
-</td><td>
-
-```buffer
-¶ p
-- x⟦selected⟧
-```
-
-</td><td>
-
-```buffer
-¶ p
-- x┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃②
-
-p
-▸
-```
-
-</td><td>
-
-```buffer
-p
-
-- x┃
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
-
-> moveSubtree ①
-
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-- b
-- c
-```
-
-</td><td>
-
-```buffer
-- b
-- c
-- a⟦selected⟧
-```
-
-</td><td>
-
-```buffer
-- b
-- c
-- a┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃①
-
-- b
-
-- c
-▸
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-- a┃①
 ```
 
 </td></tr>
@@ -17623,59 +17223,6 @@ text
 </td></tr>
 </table>
 
-### [Regression383](../spec/regressions.md#regression383)
-
-> moveSubtree ③
-
-Adapted: thematic break
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # h┃
-  ¶ ---
-```
-
-</td><td>
-
-```buffer
-¶ ---⟦selected⟧
-¶ # h
-```
-
-</td><td>
-
-```buffer
-¶ ---
-¶ # h┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-▸
-# h┃
----③
-```
-
-</td><td>
-
-```buffer
----③
-# h┃
-```
-
-</td></tr>
-</table>
-
 ### [Select12](../spec/select.md#select12)
 
 Adapted: under selectNodeUp: sibling
@@ -17936,7 +17483,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (946)
+## Skipped (941)
 
 | example | why |
 | --- | --- |
@@ -18232,7 +17779,6 @@ Original:
 | [Fold10](../spec/fold.md#fold10) | action fold ① |
 | [Fold11](../spec/fold.md#fold11) | action toggleFold |
 | [Fold13](../spec/fold.md#fold13) | option autoWrap: the app's , not replayable |
-| [Fold20](../spec/fold.md#fold20) | option autoWrap: the app's , not replayable |
 | **gaps.md** | |
 | [Gap7](../spec/gaps.md#gap7) | code span of more backticks than its code needs, which SiYuan writes with fewer |
 | [Gap14](../spec/gaps.md#gap14) | block's text ending in a line break |
@@ -18306,8 +17852,7 @@ Original:
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | unclosed fence, which SiYuan closes |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
 | **move-subtree.md** | |
-| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
-| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | drop: a place before the first item of a list, which is the one dragged: SiYuan drops before an item only before the first of its list |
 | [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
 | [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
 | [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | nothing to compare |
@@ -18524,7 +18069,6 @@ Original:
 | [Quote97](../spec/quotes.md#quote97) | quote |
 | [QuoteText5](../spec/quotes.md#quotetext5) | action deleteSubtree |
 | [QuoteText17](../spec/quotes.md#quotetext17) | quote |
-| [QuoteText19](../spec/quotes.md#quotetext19) | line's trailing whitespace |
 | [QuoteText21](../spec/quotes.md#quotetext21) | option enterInQuote: split |
 | [QuoteText22](../spec/quotes.md#quotetext22) | option enterInQuote: split |
 | [QuoteAtom1](../spec/quotes.md#quoteatom1) | option quotes: atom |
@@ -18602,8 +18146,8 @@ Original:
 | [Regression67](../spec/regressions.md#regression67) | action deleteSubtree |
 | [Regression68](../spec/regressions.md#regression68) | caret on a blank line |
 | [Regression69](../spec/regressions.md#regression69) | the caret in a block a fold hides |
-| [Regression70](../spec/regressions.md#regression70) | action deleteSubtree |
 | [Regression73](../spec/regressions.md#regression73) | no-break space, which SiYuan holds as a space |
+| [Regression75](../spec/regressions.md#regression75) | block's text starting with whitespace |
 | [Regression76](../spec/regressions.md#regression76) | block's text starting with whitespace |
 | [Regression77](../spec/regressions.md#regression77) | block's text starting with whitespace |
 | [Regression78](../spec/regressions.md#regression78) | option quotes: atom |
@@ -18657,6 +18201,7 @@ Original:
 | [Regression151](../spec/regressions.md#regression151) | code span of more backticks than its code needs, which SiYuan writes with fewer |
 | [Regression152](../spec/regressions.md#regression152) | action selectNode |
 | [Regression154](../spec/regressions.md#regression154) | indented code |
+| [Regression157](../spec/regressions.md#regression157) | block's text starting with whitespace |
 | [Regression158](../spec/regressions.md#regression158) | quote |
 | [Regression159](../spec/regressions.md#regression159) | caret in a marker |
 | [Regression160](../spec/regressions.md#regression160) | option pastePlainLines: enter |
@@ -18691,7 +18236,6 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | quote |
 | [Regression196](../spec/regressions.md#regression196) | action deleteSubtree |
 | [Regression198](../spec/regressions.md#regression198) | quote |
-| [Regression199](../spec/regressions.md#regression199) | quote |
 | [Regression200](../spec/regressions.md#regression200) | option quotes: atom |
 | [Regression201](../spec/regressions.md#regression201) | code span of more backticks than its code needs, which SiYuan writes with fewer |
 | [Regression202](../spec/regressions.md#regression202) | option quotes: atom |
@@ -18788,6 +18332,7 @@ Original:
 | [Regression302](../spec/regressions.md#regression302) | action deleteSubtree |
 | [Regression303](../spec/regressions.md#regression303) | quote |
 | [Regression305](../spec/regressions.md#regression305) | option pasteAtTextStart: after |
+| [Regression306](../spec/regressions.md#regression306) | block's text starting with whitespace |
 | [Regression307](../spec/regressions.md#regression307) | quote |
 | [Regression308](../spec/regressions.md#regression308) | line's trailing whitespace |
 | [Regression309](../spec/regressions.md#regression309) | the app holding its start otherwise |
@@ -18798,12 +18343,9 @@ Original:
 | [Regression315](../spec/regressions.md#regression315) | quote |
 | [Regression319](../spec/regressions.md#regression319) | caret in a marker |
 | [Regression323](../spec/regressions.md#regression323) | caret in a marker |
-| [Regression325](../spec/regressions.md#regression325) | action deleteSubtree |
 | [Regression326](../spec/regressions.md#regression326) | block's text starting with whitespace |
-| [Regression327](../spec/regressions.md#regression327) | line's trailing whitespace |
 | [Regression328](../spec/regressions.md#regression328) | action deleteSubtree |
 | [Regression329](../spec/regressions.md#regression329) | block's text starting with whitespace |
-| [Regression330](../spec/regressions.md#regression330) | block's text starting with whitespace |
 | [Regression331](../spec/regressions.md#regression331) | line's leading whitespace |
 | [Regression332](../spec/regressions.md#regression332) | block's text ending in a line break |
 | [Regression333](../spec/regressions.md#regression333) | line's leading whitespace |
@@ -18819,13 +18361,14 @@ Original:
 | [Regression344](../spec/regressions.md#regression344) | quote |
 | [Regression345](../spec/regressions.md#regression345) | a selection of blocks with one unselected between |
 | [Regression346](../spec/regressions.md#regression346) | indented code |
-| [Regression347](../spec/regressions.md#regression347) | block's text starting with whitespace |
+| [Regression347](../spec/regressions.md#regression347) | unclosed fence, which SiYuan closes |
 | [Regression349](../spec/regressions.md#regression349) | block id (`^x`), which the app has none of: its text |
 | [Regression351](../spec/regressions.md#regression351) | quote |
 | [Regression352](../spec/regressions.md#regression352) | code span of more backticks than its code needs, which SiYuan writes with fewer |
 | [Regression353](../spec/regressions.md#regression353) | option pasteAtTextStart: after |
 | [Regression354](../spec/regressions.md#regression354) | option indentUnit: tab |
 | [Regression355](../spec/regressions.md#regression355) | quote |
+| [Regression357](../spec/regressions.md#regression357) | cursorCharRight over an escape ourus wrote, which a block's text hasn't |
 | [Regression358](../spec/regressions.md#regression358) | unclosed fence, which SiYuan closes |
 | [Regression359](../spec/regressions.md#regression359) | code span of more backticks than its code needs, which SiYuan writes with fewer |
 | [Regression361](../spec/regressions.md#regression361) | option quotes: atom |
@@ -18839,8 +18382,7 @@ Original:
 | [Regression371](../spec/regressions.md#regression371) | option quotes: atom |
 | [Regression372](../spec/regressions.md#regression372) | option quotes: container |
 | [Regression373](../spec/regressions.md#regression373) | option quotes: atom |
-| [Regression374](../spec/regressions.md#regression374) | block's text starting with whitespace |
-| [Regression375](../spec/regressions.md#regression375) | block's text ending in a line break |
+| [Regression374](../spec/regressions.md#regression374) | table SiYuan writes otherwise (its columns padded to their widest cell) |
 | [Regression376](../spec/regressions.md#regression376) | heading with more lines |
 | [Regression378](../spec/regressions.md#regression378) | block id (`^x`), which the app has none of: its text |
 | [Regression379](../spec/regressions.md#regression379) | caret after the last line |

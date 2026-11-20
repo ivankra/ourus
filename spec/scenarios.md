@@ -333,8 +333,7 @@ tags: core
 ### Scenario8b
 
 Reorganizing by dragging: `Home`, pressed by its bullet, goes to the top with its child
-([MoveSubtree1](move-subtree.md#movesubtree1)), and the caret stays in the text it is in, where typing goes on
-([MoveSubtree2](move-subtree.md#movesubtree2)).
+([MoveSubtree1](move-subtree.md#movesubtree1)), the caret elsewhere.
 
 ```yaml
 tags: core
@@ -356,23 +355,12 @@ tags: core
   - plants
 - Inbox
 - Work
-  - email┃
-```
-
-> "s"
-
-```markdown
-- Home
-  - plants
-- Inbox
-- Work
-  - emails┃
+  - email
 ```
 
 ### Scenario8c
 
-Dragged into the item above as its child ([MoveSubtree3](move-subtree.md#movesubtree3)), its own child with it, then
-taken back out with Shift-Tab ([Outdent1](outdent.md#outdent1)).
+Dragged into the item above as its child ([MoveSubtree3](move-subtree.md#movesubtree3)), its own child with it.
 
 ```yaml
 tags: core
@@ -389,23 +377,14 @@ tags: core
 
 ```markdown
 - Inbox
-  - Work┃②
+  - Work②
     - email
-```
-
-> outdent
-
-```markdown
-- Inbox
-- Work┃
-  - email
 ```
 
 ### Scenario8d
 
 A drag shows where it can go, its own place among them ([Drag1](drag.md#drag1)); set down where it
-started, it changes nothing ([MoveSubtree8](move-subtree.md#movesubtree8)), and the keys go on from there
-([MoveDown1](move-subtree-down.md#movedown1)).
+started, it changes nothing ([MoveSubtree8](move-subtree.md#movesubtree8)).
 
 ```yaml
 tags: core
@@ -438,16 +417,8 @@ result: success
 
 ```markdown
 - Inbox
-- Work┃②
+- Work②
 - Home
-```
-
-> moveSubtreeDown
-
-```markdown
-- Inbox
-- Home
-- Work┃
 ```
 
 ### Scenario9

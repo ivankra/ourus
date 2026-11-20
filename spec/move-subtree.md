@@ -34,17 +34,21 @@ The rules, in order; the first that applies wins:
    that paragraph, under `quotes: text` (MoveSubtree20). An item among items of another kind keeps
    its form, a list of its own (MoveSubtree21); a block out of an item goes as it is (MoveSubtree22).
    Lists are renumbered (MoveSubtree19), blank lines kept with their nodes, between a loose list's
-   items too (MoveSubtree24), the caret with the text it is in (MoveSubtree1, MoveSubtree2).
+   items too (MoveSubtree24).
 
 Then the result is checked: the moved nodes under the parent asked, at the place asked, every other
 node under the parent it had (but a list a paragraph takes in); else the drop is refused
 (`not-expressible` or `would-reparent`, the detail `result check`), a gap in these rules rather than an
 outcome.
 
+Where the caret or the selection is after a drop is the host's, and a buffer after a drop draws
+neither: apps keep the caret where it was, select what was dropped, put the caret in it or leave
+nothing focused. ourus keeps the selection as it was, a caret with the text it is in.
+
 ## MoveSubtree1
 
-Pressing a node's mark and dropping it at the top: its children come along, and so does the caret
-in it (obsidian-outliner's first case).
+Pressing a node's mark and dropping it at the top: its children come along (obsidian-outliner's
+first case).
 
 ```yaml
 tags: core
@@ -60,32 +64,9 @@ tags: core
 > moveSubtree ③
 
 ```markdown
-- three┃③
+- three③
 - one
   - two
-```
-
-## MoveSubtree2
-
-The caret elsewhere stays in its text.
-
-```yaml
-tags: core
-```
-
-```markdown
-▸
-- one
-  - two┃
-- three③
-```
-
-> moveSubtree ③
-
-```markdown
-- three③
-- one
-  - two┃
 ```
 
 ## MoveSubtree3
@@ -107,13 +88,13 @@ tags: core
 
 ```markdown
 - two②
-  - one┃①
+  - one①
 - three
 ```
 
 ## MoveSubtree4
 
-A press on a selected node takes the selection's nodes, and the selection goes with them.
+A press on a selected node takes the selection's nodes.
 
 ```yaml
 tags: common
@@ -130,13 +111,13 @@ tags: common
 
 ```markdown
 - c
-- a⟦selected⟧
-- b②⟦selected⟧
+- a
+- b②
 ```
 
 ## MoveSubtree5
 
-A press on another node takes it alone, and the selection stays.
+A press on another node takes it alone.
 
 ```yaml
 tags: common
@@ -153,14 +134,13 @@ tags: common
 
 ```markdown
 - c③
-- a⟦selected⟧
-- b⟦selected⟧
+- a
+- b
 ```
 
 ## MoveSubtree6
 
-Dropped inside the selection, a node pressed outside it lands between the selected nodes, and the
-selection, its ends each with its text, covers it then too.
+Dropped inside the selection, a node pressed outside it lands between the selected nodes.
 
 ```yaml
 tags: rare
@@ -176,9 +156,9 @@ tags: rare
 > moveSubtree ③
 
 ```markdown
-- «a
+- a
 - c③
-- b»
+- b
 ```
 
 ## MoveSubtree7
@@ -204,8 +184,8 @@ result: success
 ```
 
 ```markdown
-- a⟦selected⟧
-- b②⟦selected⟧
+- a
+- b②
 - c
 ```
 
@@ -232,7 +212,7 @@ result: success
 
 ```markdown
 - a
-- b┃②
+- b②
 - c
 ```
 
@@ -257,7 +237,7 @@ para┃②
 ```markdown
 - a
 
-  - para┃②
+  - para②
 ```
 
 ## MoveSubtree10
@@ -323,7 +303,7 @@ p
 ```markdown
 p
 
-x┃②
+x②
 ```
 
 ## MoveSubtree13
@@ -369,7 +349,7 @@ tags: common
 ```markdown
 # A
 ## B
-## D┃②
+## D②
 ### E
 # C
 ```
@@ -396,7 +376,7 @@ x
 ```markdown
 # A
 x
-## D┃②
+## D②
 ### E
 # C
 ```
@@ -488,8 +468,8 @@ tags: common
 > moveSubtree
 
 ```markdown
-1. b⟦selected⟧
-2. c⟦selected⟧
+1. b
+2. c
 3. a
 ```
 
@@ -514,7 +494,7 @@ tags: rare
 ```markdown
 > Quote:
 
-one┃②
+one②
 ```
 
 ## MoveSubtree21
@@ -538,7 +518,7 @@ tags: common
 
 ```markdown
 1. a
-- x┃①
+- x①
 
 2. b
 ```
@@ -567,7 +547,7 @@ tags: common
 - a
 - b
 ```②
-x┃
+x
 ```
 ````
 
@@ -591,7 +571,7 @@ tags: common
 ```markdown
 - a
 - b
-  - a1┃②
+  - a1②
 ```
 
 ## MoveSubtree24
@@ -618,5 +598,5 @@ tags: common
 
 - c
 
-- a┃①
+- a①
 ```
