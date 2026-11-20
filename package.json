@@ -1,6 +1,6 @@
 {
   "name": "ourus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Editor-agnostic core for outliner editing of plain-text Markdown",
   "license": "MIT",
   "keywords": [
