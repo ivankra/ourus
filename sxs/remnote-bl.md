@@ -13,57 +13,57 @@ workers: 4
 
 Summary:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 200 | [15](#caret-15) | [13](#whitespace-13) | [27](#disagree-27) |  |  | **255** |
-| adapted | 323 | [17](#adapted-caret-17) | [18](#adapted-whitespace-18) | [156](#adapted-disagree-156) |  |  | **514** |
-| **total** | **523 (29%)** | **32 (1.8%)** | **31 (1.7%)** | **183 (10%)** | **0 (0%)** | **[1007](#skipped-1007) (56%)** | **1785** |
+|  | agree | caret | whitespace | disagree | error | skipped | not run | total |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| original | 200 | [15](#caret-15) | [13](#whitespace-13) | [27](#disagree-27) |  |  |  | **255** |
+| adapted | 323 | [17](#adapted-caret-17) | [18](#adapted-whitespace-18) | [156](#adapted-disagree-156) |  |  |  | **514** |
+| **total** | **523 (29%)** | **32 (1.8%)** | **31 (1.7%)** | **183 (10%)** | **0 (0%)** | **[1008](#skipped-1008) (56%)** | **[1](#not-run-1) (0.056%)** | **1787** |
 
 Per-file:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [auto.md](../spec/auto.md) | 19 |  |  | 6 |  | 17 | **42** |  | 25 |
-| [backspace.md](../spec/backspace.md) | 37 | 2 |  | 3 |  | 54 | **96** | 19 | 23 |
-| [backtick.md](../spec/backtick.md) | 3 |  |  | 2 |  | 28 | **33** |  | 5 |
-| [block-ids.md](../spec/block-ids.md) | 2 |  |  |  |  | 19 | **21** |  | 2 |
-| [copy.md](../spec/copy.md) | 3 | 1 |  |  |  | 17 | **21** |  | 4 |
-| [cursor.md](../spec/cursor.md) | 26 | 1 |  |  |  | 9 | **36** | 12 | 15 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 8 |  |  | 2 |  | 7 | **17** | 3 | 7 |
-| [delete.md](../spec/delete.md) | 21 | 1 |  | 3 |  | 33 | **58** | 18 | 7 |
-| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
-| [enter.md](../spec/enter.md) | 50 |  | 3 | 4 |  | 47 | **104** | 19 | 38 |
-| [fences.md](../spec/fences.md) | 4 |  | 4 | 1 |  | 61 | **70** |  | 9 |
-| [fold.md](../spec/fold.md) | 12 | 2 |  | 2 |  | 5 | **21** | 13 | 3 |
-| [gaps.md](../spec/gaps.md) | 15 |  |  | 1 |  | 5 | **21** | 1 | 15 |
-| [indent.md](../spec/indent.md) | 33 |  | 1 | 1 |  | 23 | **58** | 20 | 15 |
-| [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 22 |  |  | 6 |  | 18 | **46** | 12 | 16 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  | 8 |  | 20 | **48** | 14 | 14 |
-| [move-subtree.md](../spec/move-subtree.md) | 12 |  |  | 3 |  | 8 | **23** | 8 | 7 |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 40 |  | 3 | 5 |  | 19 | **67** | 25 | 23 |
-| [outdent.md](../spec/outdent.md) | 13 |  |  | 1 |  | 30 | **44** | 5 | 9 |
-| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
-| [paste-conv.md](../spec/paste-conv.md) | 2 | 1 |  | 3 |  |  | **6** | 1 | 5 |
-| [paste-html.md](../spec/paste-html.md) | 13 |  |  | 27 |  | 2 | **42** |  | 40 |
-| [paste-list-form.md](../spec/paste-list-form.md) |  | 2 |  | 4 |  |  | **6** |  | 6 |
-| [paste-list.md](../spec/paste-list.md) | 1 | 2 |  | 19 |  | 8 | **30** | 4 | 18 |
-| [paste-plain.md](../spec/paste-plain.md) | 5 | 1 |  | 22 |  | 9 | **37** |  | 28 |
-| [paste.md](../spec/paste.md) | 3 | 3 |  | 17 |  | 21 | **44** | 2 | 21 |
-| [placeholders.md](../spec/placeholders.md) | 18 | 1 | 4 | 1 |  | 6 | **30** | 7 | 17 |
-| [quirks.md](../spec/quirks.md) |  | 1 |  |  |  | 6 | **7** |  | 1 |
-| [quotes.md](../spec/quotes.md) |  |  |  |  |  | 145 | **145** |  |  |
-| [regressions.md](../spec/regressions.md) | 71 | 4 | 11 | 34 |  | 283 | **403** | 22 | 98 |
-| [scenarios.md](../spec/scenarios.md) | 18 | 2 |  | 6 |  | 8 | **34** | 15 | 11 |
-| [select.md](../spec/select.md) | 10 | 4 |  |  |  | 9 | **23** | 12 | 2 |
-| [shift-enter.md](../spec/shift-enter.md) | 27 |  | 5 |  |  | 9 | **41** | 12 | 20 |
-| [subtree-selection.md](../spec/subtree-selection.md) | 6 | 3 |  | 2 |  | 8 | **19** | 7 | 4 |
-| [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 | **30** |  | 2 |
-| [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
-| [undo.md](../spec/undo.md) | 2 | 1 |  |  |  | 1 | **4** | 3 |  |
-| [zoom.md](../spec/zoom.md) | 1 |  |  |  |  | 13 | **14** | 1 |  |
-| **total** | **523 (29%)** | **32 (1.8%)** | **31 (1.7%)** | **183 (10%)** | **0 (0%)** | **1016 (57%)** | **1785** | **255 (14%)** | **514 (29%)** |
+|  | agree | caret | whitespace | disagree | error | skipped | not run | total | original | adapted |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [auto.md](../spec/auto.md) | 19 |  |  | 6 |  | 17 |  | **42** |  | 25 |
+| [backspace.md](../spec/backspace.md) | 37 | 2 |  | 3 |  | 54 |  | **96** | 19 | 23 |
+| [backtick.md](../spec/backtick.md) | 3 |  |  | 2 |  | 28 |  | **33** |  | 5 |
+| [block-ids.md](../spec/block-ids.md) | 2 |  |  |  |  | 19 |  | **21** |  | 2 |
+| [copy.md](../spec/copy.md) | 3 | 1 |  |  |  | 17 |  | **21** |  | 4 |
+| [cursor.md](../spec/cursor.md) | 26 | 1 |  |  |  | 9 |  | **36** | 12 | 15 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 8 |  |  | 2 |  | 7 |  | **17** | 3 | 7 |
+| [delete.md](../spec/delete.md) | 21 | 1 |  | 3 |  | 33 |  | **58** | 18 | 7 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 |  | **8** |  |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 |  | **12** |  |  |
+| [enter.md](../spec/enter.md) | 50 |  | 3 | 4 |  | 47 |  | **104** | 19 | 38 |
+| [fences.md](../spec/fences.md) | 4 |  | 4 | 1 |  | 61 |  | **70** |  | 9 |
+| [fold.md](../spec/fold.md) | 12 | 2 |  | 2 |  | 5 |  | **21** | 13 | 3 |
+| [gaps.md](../spec/gaps.md) | 15 |  |  | 1 |  | 5 |  | **21** | 1 | 15 |
+| [indent.md](../spec/indent.md) | 33 |  | 1 | 1 |  | 24 |  | **59** | 20 | 15 |
+| [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 |  | **16** |  | 4 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 22 |  |  | 6 |  | 18 |  | **46** | 12 | 16 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  | 8 |  | 20 |  | **48** | 14 | 14 |
+| [move-subtree.md](../spec/move-subtree.md) | 12 |  |  | 3 |  | 8 |  | **23** | 8 | 7 |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 40 |  | 3 | 5 |  | 19 |  | **67** | 25 | 23 |
+| [outdent.md](../spec/outdent.md) | 13 |  |  | 1 |  | 30 |  | **44** | 5 | 9 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 |  | **5** |  |  |
+| [paste-conv.md](../spec/paste-conv.md) | 2 | 1 |  | 3 |  |  |  | **6** | 1 | 5 |
+| [paste-html.md](../spec/paste-html.md) | 13 |  |  | 27 |  | 2 |  | **42** |  | 40 |
+| [paste-list-form.md](../spec/paste-list-form.md) |  | 2 |  | 4 |  |  |  | **6** |  | 6 |
+| [paste-list.md](../spec/paste-list.md) | 1 | 2 |  | 19 |  | 8 |  | **30** | 4 | 18 |
+| [paste-plain.md](../spec/paste-plain.md) | 5 | 1 |  | 22 |  | 9 |  | **37** |  | 28 |
+| [paste.md](../spec/paste.md) | 3 | 3 |  | 17 |  | 21 |  | **44** | 2 | 21 |
+| [placeholders.md](../spec/placeholders.md) | 18 | 1 | 4 | 1 |  | 6 |  | **30** | 7 | 17 |
+| [quirks.md](../spec/quirks.md) |  | 1 |  |  |  | 6 |  | **7** |  | 1 |
+| [quotes.md](../spec/quotes.md) |  |  |  |  |  | 145 |  | **145** |  |  |
+| [regressions.md](../spec/regressions.md) | 71 | 4 | 11 | 34 |  | 283 | 1 | **404** | 22 | 98 |
+| [scenarios.md](../spec/scenarios.md) | 18 | 2 |  | 6 |  | 8 |  | **34** | 15 | 11 |
+| [select.md](../spec/select.md) | 10 | 4 |  |  |  | 9 |  | **23** | 12 | 2 |
+| [shift-enter.md](../spec/shift-enter.md) | 27 |  | 5 |  |  | 9 |  | **41** | 12 | 20 |
+| [subtree-selection.md](../spec/subtree-selection.md) | 6 | 3 |  | 2 |  | 8 |  | **19** | 7 | 4 |
+| [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 |  | **30** |  | 2 |
+| [typing.md](../spec/typing.md) |  |  |  |  |  | 3 |  | **3** |  |  |
+| [undo.md](../spec/undo.md) | 2 | 1 |  |  |  | 1 |  | **4** | 3 |  |
+| [zoom.md](../spec/zoom.md) | 1 |  |  |  |  | 13 |  | **14** | 1 |  |
+| **total** | **523 (29%)** | **32 (1.8%)** | **31 (1.7%)** | **183 (10%)** | **0 (0%)** | **1017 (57%)** | **1 (0.056%)** | **1787** | **255 (14%)** | **514 (29%)** |
 
 ## Disagree (27)
 
@@ -15981,7 +15981,7 @@ next
 </td></tr>
 </table>
 
-## Skipped (1016)
+## Skipped (1017)
 
 | example | why |
 | --- | --- |
@@ -16340,6 +16340,7 @@ next
 | [Indent40](../spec/indent.md#indent40) | option indentUnit: 2 |
 | [Indent41](../spec/indent.md#indent41) | option indentUnit: tab |
 | [Indent42](../spec/indent.md#indent42) | option indentUnit: tab |
+| [Indent53](../spec/indent.md#indent53) | option indentFallback: tab |
 | [Indent45b](../spec/indent.md#indent45b) | indented code |
 | [Indent47](../spec/indent.md#indent47) | option mixedDepths: each |
 | [Indent48](../spec/indent.md#indent48) | option mixedDepths: each |
@@ -17039,3 +17040,10 @@ next
 | [Zoom12](../spec/zoom.md#zoom12) | caret on a blank line |
 | [Zoom13](../spec/zoom.md#zoom13) | tag markup-fence |
 | [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |
+
+## Not run (1)
+
+| example | why |
+| --- | --- |
+| **regressions.md** | |
+| [Regression399](../spec/regressions.md#regression399) | new, or its start changed since |

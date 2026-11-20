@@ -376,7 +376,8 @@ export class OurusDoc {
 
   /**
    * The spaces Markdown hides before `node`'s text on its first line: an item's padding past the space
-   * after its marker (or a checkbox's blanks past one), a paragraph's indentation. `[from, to)` in the
+   * after its marker (or a checkbox's blanks past one, or before an ATX heading's `#`s), a paragraph's
+   * indentation. `[from, to)` in the
    * text, or null where there are none (a held space isn't one). They are the user's whitespace, not
    * markup: a join gives them back as spaces (a split keeps them so, with `enterSplitSpace: start`).
    */
@@ -384,7 +385,7 @@ export class OurusDoc {
     const text = this.textOf(node);
     if (
       !(text instanceof OurusProse) ||
-      text.type !== 'paragraph' ||
+      !(text.type === 'paragraph' || (text.type === 'heading' && node.kind === 'item')) ||
       (node.kind !== 'item' && node.kind !== 'paragraph')
     )
       return null;
@@ -398,8 +399,9 @@ export class OurusDoc {
     else if (task) from = this.posOf(node, task.from + 4, 1);
     else if (node.kind === 'item') from = atLine(this.mdTree.line(node.startLine), node.block.attrs.markerEnd!) + 1;
     else from = this.mdTree.line(node.textFirstLine).contentFrom;
-    // (up to the text, or a backslash it starts with)
-    const end = this.posOf(node, text.textStart(0), 1);
+    // (up to the text, or a backslash it starts with; an ATX heading's, up to its `#`s)
+    const atx = text.type === 'heading' && text.frame.some((p) => p.part === 'heading' && p.from === 0);
+    const end = this.posOf(node, atx ? 0 : text.textStart(0), 1);
     let to = from;
     while (to < end && this.text[to] === ' ' && !this.marks.hasHeldSpaceAt(to)) to++;
     // (three columns at most: four are no padding, as after a definition a paragraph's lazy line)

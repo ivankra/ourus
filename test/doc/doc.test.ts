@@ -286,3 +286,13 @@ test("a clipboard's Markdown read as a document of its own: the indentation all 
   assert.equal(read('> - ```\n>   code'), '> - ```\n>   code\n>   ```');
   assert.equal(read('---\na: b\n---\nbody', 'obsidian'), '\n---\na: b\n---\nbody');
 });
+
+test("an item's padding before its ATX heading's `#`s is hidden spaces, as before a paragraph's text", () => {
+  const spaces = (text: string): unknown => {
+    const doc = OurusDoc.parse(text, { config: { flavor: 'obsidian' } });
+    return doc.hiddenSpaces(doc.rootNode.children[0]!);
+  };
+  assert.deepEqual(spaces('-  title\n'), { from: 2, to: 3 });
+  assert.deepEqual(spaces('-  # title\n'), { from: 2, to: 3 });
+  assert.equal(spaces('- # title\n'), null);
+});

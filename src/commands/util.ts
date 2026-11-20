@@ -423,9 +423,18 @@ export function selectionInText(
     const text = ctx.doc.textOf(owner);
     if (text) {
       const otherwise = { ref: owner, offset: headingOffset(shifts, owner, textEnd(text)), assoc: -1 } as const;
-      // on a blank line at its text's column (Shift-Enter's): there still, at the column it has now (TO12)
-      const k = ctx.doc.lineAt(head).index - owner.ownLastLine - 1;
-      if (at.zone === 'gap' && !owner.children.length && k >= 0 && k < owner.gap && ctx.doc.atTextColumn(head, owner))
+      // on a blank line at its text's column (Shift-Enter's): there still, at the column it has now
+      // (TO12); before children, only where the line has its spaces, not an empty line at column 0
+      // that a command takes the node's text for (Regression399)
+      const line = ctx.doc.lineAt(head);
+      const k = line.index - owner.ownLastLine - 1;
+      if (
+        at.zone === 'gap' &&
+        k >= 0 &&
+        k < owner.gap &&
+        ctx.doc.atTextColumn(head, owner) &&
+        (!owner.children.length || head > ctx.doc.mdTree.line(line.index).from)
+      )
         draft.select({ blank: owner, line: k, old: anchor }, { blank: owner, line: k, old: head });
       else if (at.zone === 'gap') draft.select({ old: anchor, otherwise }, { old: head, otherwise });
       else draft.setCaret(owner, otherwise.offset, -1);

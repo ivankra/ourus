@@ -934,7 +934,7 @@ class Writer {
     // a blank line of its gap the caret (or the selection's other end) is on, written at its text's
     // column, as a line of its text would start (TO12: Shift-Enter's line, indented with its node)
     for (const a of [this.draft.caret, this.draft.anchor]) {
-      if (!a || !('blank' in a) || a.blank !== node || node.children.length) continue;
+      if (!a || !('blank' in a) || a.blank !== node) continue;
       const i = at.ownLastLine + 1 + a.line;
       if (i >= at.startLine + at.persistentNode.lines) continue;
       const prefix = this.continuation(at, this.tree.line(node.kind === 'item' ? at.startLine : at.textFirstLine));
@@ -1868,6 +1868,12 @@ class Writer {
       // past that prefix, where they would put its start past the content's, and its identity: block-ids.test.ts)
       lazyLead = line.lazy && inside !== undefined;
       lead = lazyLead ? inside! : this.old.slice(line.from, p0) + padding;
+      // (short of the columns its containers reach: a tab a container it leaves took part of, `→> q`
+      // unwrapped in an item, which held the item's columns too: those containers' prefix by columns)
+      const outer = line.prefix.filter((p) => p.to <= p0);
+      const reach = outer[outer.length - 1]?.toColumn ?? 0;
+      if (!lazyLead && /\t/.test(this.old.slice(line.from, line.contentFrom)) && columns(lead) < reach)
+        lead = this.continuationAsWas(origin, { ...line, prefix: outer }) + padding;
       // (a text starting at a tab its container's `>` took a column of, as its space, `>→> q`: its
       // first spaces that tab's rest, written after the `>` and its space)
       const before = line.prefix.find((p) => p.partialTab && p.to === p0);
@@ -2227,9 +2233,19 @@ class Writer {
   headStart(node: PersistentNode, origin: OurusNode, start: number, shifted = true): number {
     const at = this.headStartAsWas(node, origin, start, shifted);
     // (a paragraph spelled past a prefix the shift spells otherwise, a tab for spaces: never past its
-    // text's start, on that line; there, past its line's blanks, as the reader names it too)
+    // text's start, on that line; there, past its line's blanks, as the reader names it too; nor short
+    // of it, its prefix spelled anew where a `>` it leaves was, `→> q` unwrapped in an item)
     const first = node.kind === 'paragraph' ? this.spelled.get(node)?.starts[0] : undefined;
     if (first !== undefined && start <= first && first < at && /^[ \t]*$/.test(this.textAt(start, first))) return first;
+    const was = this.tree.line(origin.startLine);
+    if (
+      first !== undefined &&
+      start <= at &&
+      at < first &&
+      /\t/.test(this.old.slice(was.from, was.contentFrom)) &&
+      /^[ \t]*$/.test(this.textAt(at, first))
+    )
+      return first;
     return at;
   }
 
@@ -2247,7 +2263,12 @@ class Writer {
     else if (origin.persistentNode.block) {
       // a quote's `>`, any other block's own prefix (a footnote's label)
       const block = origin.persistentNode.block;
-      at = line.prefix.find((piece) => piece.container.block === block)?.from ?? line.contentFrom;
+      const k = line.prefix.findIndex((piece) => piece.container.block === block);
+      const piece = line.prefix[k];
+      at = piece?.from ?? line.contentFrom;
+      // (a quote's `>` past the rest of a tab the container before it took part of, `>→> q`: at its `>`)
+      if (piece && block.type === 'blockquote' && this.old[at] === '\t' && line.prefix[k - 1]?.partialTab)
+        at = docPos(at + /^[ \t]*/.exec(this.old.slice(at, piece.to))![0].length);
     }
     // (in an item whose content column narrowed, a child's line copied as it was: its content starts
     // that many columns sooner, the spaces it gives up its text's indentation now)

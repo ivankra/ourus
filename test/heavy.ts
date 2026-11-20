@@ -1,14 +1,12 @@
 // The full run, `npm test`, against a frozen copy of the working tree, so editing can go on while it
-// runs: the format check (`biome format`), the typecheck (`npm run typecheck`: the sources, the tests and the demos) and the fast suite (`npm run test:fast`) first and alone, as its
-// timing tests fail on a busy machine;
-// then the others at once: the view pass, the inverse pairs (and the same corpus played by the last commit's code,
-// so a change's round trips are told from the corpus's), the differential run against the last
-// commit, the generated-notes checks (conserve, sweep, sessions), copy and paste against duplicate
-// (copy-paste), the public API at a note's extremes
-// (extremes) and the open bugs (bugs). The suites run side by side
-// (each its own process; the view pass and the differential run spread their work over the cores
-// themselves). Each report goes to a file in the run's directory; a
-// summary is printed.
+// runs: the format check (`biome format`), the typecheck (`npm run typecheck`: the sources, the tests
+// and the demos), the fast suite (`npm run test:fast`), the view pass, the inverse pairs (and the same
+// corpus played by the last commit's code, so a change's round trips are told from the corpus's), the
+// differential run against the last commit, the generated-notes checks (conserve, sweep, sessions),
+// copy and paste against duplicate (copy-paste), the public API at a note's extremes (extremes) and
+// the open bugs (bugs). The suites run side by side (each its own process; the view pass and the
+// differential run spread their work over the cores themselves). Each report goes to a file in the
+// run's directory; a summary is printed.
 //
 //   node test/heavy.ts            # every suite
 //   node test/heavy.ts view diff  # some: format, types, fast, view, inverse, diff, conserve, sweep, sessions, copy-paste, extremes, bugs
@@ -192,9 +190,5 @@ const report = (line: string): void => {
   console.log(line);
   lines.push(line);
 };
-for (const first of ['format', 'types', 'fast']) if (suites.includes(first)) report(await suite(first));
-for (const line of await Promise.all(
-  suites.filter((name) => name !== 'format' && name !== 'types' && name !== 'fast').map(suite),
-))
-  report(line);
+for (const line of await Promise.all(suites.map(suite))) report(line);
 process.exitCode = lines.some((line) => /: FAIL|^no suite/.test(line)) ? 1 : 0;

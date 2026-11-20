@@ -17,7 +17,7 @@ Summary:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | original | 203 | [18](#caret-18) | [5](#whitespace-5) | [23](#disagree-23) |  |  | **249** |
 | adapted | 387 | [14](#adapted-caret-14) | [21](#adapted-whitespace-21) | [166](#adapted-disagree-166) |  |  | **588** |
-| **total** | **590 (33%)** | **32 (1.8%)** | **26 (1.5%)** | **189 (11%)** | **0 (0%)** | **[944](#skipped-944) (53%)** | **1785** |
+| **total** | **590 (33%)** | **32 (1.8%)** | **26 (1.5%)** | **189 (11%)** | **0 (0%)** | **[946](#skipped-946) (53%)** | **1787** |
 
 Per-file:
 
@@ -37,7 +37,7 @@ Per-file:
 | [fences.md](../spec/fences.md) | 7 |  | 4 | 2 |  | 57 | **70** |  | 13 |
 | [fold.md](../spec/fold.md) | 14 | 1 |  | 1 |  | 5 | **21** | 15 | 1 |
 | [gaps.md](../spec/gaps.md) | 14 |  |  |  |  | 7 | **21** |  | 14 |
-| [indent.md](../spec/indent.md) | 32 |  | 1 | 1 |  | 24 | **58** | 21 | 13 |
+| [indent.md](../spec/indent.md) | 32 |  | 1 | 1 |  | 25 | **59** | 21 | 13 |
 | [lists.md](../spec/lists.md) | 5 |  |  |  |  | 11 | **16** |  | 5 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 27 |  |  | 2 |  | 17 | **46** | 14 | 15 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 26 |  |  | 1 |  | 21 | **48** | 15 | 12 |
@@ -54,7 +54,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 15 | 1 | 1 | 1 |  | 12 | **30** | 5 | 13 |
 | [quirks.md](../spec/quirks.md) | 3 |  |  |  |  | 4 | **7** |  | 3 |
 | [quotes.md](../spec/quotes.md) | 8 |  | 2 | 11 |  | 124 | **145** |  | 21 |
-| [regressions.md](../spec/regressions.md) | 74 | 5 | 14 | 36 |  | 274 | **403** | 23 | 106 |
+| [regressions.md](../spec/regressions.md) | 74 | 5 | 14 | 36 |  | 275 | **404** | 23 | 106 |
 | [scenarios.md](../spec/scenarios.md) | 23 | 1 |  | 3 |  | 7 | **34** | 15 | 12 |
 | [select.md](../spec/select.md) | 12 | 6 |  |  |  | 5 | **23** | 9 | 9 |
 | [shift-enter.md](../spec/shift-enter.md) |  |  |  |  |  | 41 | **41** |  |  |
@@ -63,7 +63,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 3 |  |  |  |  | 1 | **4** | 3 |  |
 | [zoom.md](../spec/zoom.md) | 6 | 1 |  | 1 |  | 6 | **14** | 8 |  |
-| **total** | **590 (33%)** | **32 (1.8%)** | **26 (1.5%)** | **189 (11%)** | **0 (0%)** | **948 (53%)** | **1785** | **249 (14%)** | **588 (33%)** |
+| **total** | **590 (33%)** | **32 (1.8%)** | **26 (1.5%)** | **189 (11%)** | **0 (0%)** | **950 (53%)** | **1787** | **249 (14%)** | **588 (33%)** |
 
 ## Disagree (23)
 
@@ -15694,7 +15694,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (948)
+## Skipped (950)
 
 | example | why |
 | --- | --- |
@@ -16003,6 +16003,7 @@ Original:
 | [Indent40](../spec/indent.md#indent40) | option indentUnit: 2 |
 | [Indent41](../spec/indent.md#indent41) | option indentUnit: tab |
 | [Indent42](../spec/indent.md#indent42) | option indentUnit: tab |
+| [Indent53](../spec/indent.md#indent53) | option indentFallback: tab |
 | [Indent45b](../spec/indent.md#indent45b) | indented code |
 | [Indent48](../spec/indent.md#indent48) | nothing to compare |
 | [Indent50](../spec/indent.md#indent50) | option mixedDepths: refuse |
@@ -16596,6 +16597,7 @@ Original:
 | [Regression394](../spec/regressions.md#regression394) | quote |
 | [Regression396](../spec/regressions.md#regression396) | option indentUnit: tab |
 | [Regression397](../spec/regressions.md#regression397) | action shiftEnter |
+| [Regression399](../spec/regressions.md#regression399) | action shiftEnter |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |

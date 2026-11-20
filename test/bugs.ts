@@ -1255,33 +1255,6 @@ openBug('B331', 'P4', 'Moving tab-led indented code into an empty quote fails to
 // Duplicating or dropping a numbered item across a width change (9 to 10) misplaces the quote under
 // it, and an indent misplaces a child (B210). Three markers sharing a line can read as a rule
 // (B209).
-// B523 [P4]. Backspace unquoting a tab-led quote's line in a numbered item writes the line out of the item
-//
-// Status (2026-11-14): seed 951. `1. num⏎→  > more` (CommonMark, `indentUnit: tab`), Backspace at
-// `more`: written `1. num⏎⏎more`, `root: 1 children, read as 2`; `- a⏎⏎→> over` the same, and the diff
-// suite's `- > a quote⏎⏎→> over two lines` (Backspace, Delete): the tab the item takes part of, the
-// line written without the item's prefix. The last commit's code fails alike. P4.
-openBug('B523', 'P4', "Backspace unquoting a tab-led quote's line in a numbered item writes the line out of the item", {
-  'the case reduced': () => {
-    // kept: cb337c255fe1
-    assertNoWriteFailure(
-      executeOnText(
-        '1. num\n\t  > more\n',
-        { type: 'deleteContentBackward' },
-        { caret: 12, config: { flavor: 'commonmark', indentUnit: 'tab' } },
-      ),
-    );
-  },
-  "an item's second quote, tab-led, unquoted (the diff suite's)": () => {
-    assertNoWriteFailure(
-      executeOnText(
-        '- > a quote\n\n\t> over two lines\n',
-        { type: 'deleteContentBackward' },
-        { caret: 16, config: { flavor: 'gfm', indentUnit: 'tab' } },
-      ),
-    );
-  },
-});
 // B527 [P4]. Alt-Up on an empty item above a tab-led grandchild and its paragraph fails to write
 //
 // Status (2026-11-14): seed 951. `- parent⏎  - child one⏎  - ⏎⏎→- grandchild⏎⏎→second paragraph of

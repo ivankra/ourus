@@ -544,7 +544,10 @@ function adaptText(
       (replayed ? replayed[i] : s.expect.buffer) ?? (views ? withoutCaret(views.steps[i]!.buffer) : undefined);
     const want =
       buffer !== undefined
-        ? { ...readTextDoc(caretAsDrawn(buffer, s.expect.buffer), reading), ...(views && { view: views.steps[i]!.view }) }
+        ? {
+            ...readTextDoc(caretAsDrawn(buffer, s.expect.buffer), reading),
+            ...(views && { view: views.steps[i]!.view }),
+          }
         : null;
     return {
       line: s.line,

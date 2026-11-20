@@ -4808,7 +4808,9 @@ tags: rare
 ## Regression189
 
 Enter at the text start of an item on its parent's marker line, a tab after that marker: the new
-empty item goes there, the marker's tab kept, and the text's item below it, at the content column.
+empty item goes there and the text's item below it, at the content column. The marker's tab is mixed
+indentation: the line, an item on it changed, is written in normal form, one space after each marker,
+whatever the unit.
 
 ```yaml
 tags: rare
@@ -4821,8 +4823,8 @@ tags: rare
 > enter
 
 ```markdown
--→- ┃
-    - ->
+- - ┃
+  - ->
 ```
 
 ## Regression190
@@ -8812,7 +8814,7 @@ quotes: atom
 Under `indentUnit: tab`, Shift-Tab on a padded item sharing its marker line with a quote's list: the
 list's item out of the quote, under the item still, first on its marker line, which the item's
 marker is written over: not a tab the marker can't go over (B389); the line, an item on it changed
-in a note indented with tabs, written in normal form, one space after each marker (seed 401's rule).
+in a note indented with tabs, written in normal form, one space after each marker.
 
 ```yaml
 tags: rare
@@ -10426,4 +10428,47 @@ tags: rare
   - g
 
   s
+```
+
+## Regression399
+
+Shift-Enter mid-text, then Tab and Shift-Tab: the line it opened, which ends the text, the rest a
+paragraph under the item, keeps the caret at the text's column through both, so what is typed there
+stays in the item.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- one
+- foo┃
+  bar
+```
+
+> shiftEnter
+
+```markdown
+- one
+- foo
+  ┃
+  bar
+```
+
+> indent
+
+```markdown
+- one
+  - foo
+    ┃
+    bar
+```
+
+> outdent
+
+```markdown
+- one
+- foo
+  ┃
+  bar
 ```

@@ -63,3 +63,16 @@ test('an option given as undefined is absent; an unknown option or value throws'
   // eslint-disable-next-line no-sparse-arrays
   assert.throws(() => OurusConfig.of({ autoClose: ['```', , '~~~'] as never }), /option "autoClose" takes/);
 });
+
+test('detect takes the fallback where the document says nothing, or splits evenly', async () => {
+  const { OurusDoc } = await import('../src/index.ts');
+  const { indentUnitOf } = await import('../src/writer/lines.ts');
+  const unit = (text: string, indentFallback?: 'tab' | 2 | 4) =>
+    indentUnitOf(OurusDoc.parse(text, { config: { indentFallback } }));
+  assert.equal(unit('- a\n- b\n'), 2);
+  assert.equal(unit('- a\n- b\n', 'tab'), 'tab');
+  assert.equal(unit('- a\n  - x\n- b\n    - y\n', 4), 4);
+  // (the document's own unit, where it says one; a tab where it indents with tabs and nests nothing)
+  assert.equal(unit('- a\n    - x\n', 'tab'), 4);
+  assert.equal(unit('> \t- a\n', 4), 'tab');
+});

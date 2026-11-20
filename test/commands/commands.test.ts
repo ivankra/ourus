@@ -3787,6 +3787,51 @@ test('Enter in a shared marker line `- - - ` of a note indented with tabs: the l
   );
 });
 
+test("Backspace at a quote's text start, the quote led by a tab its item's indentation took part of: unwrapped in the item, at its content column (B523)", () => {
+  assert.equal(
+    appliedText(
+      executeOnText(
+        '1. num\n\t  > more\n',
+        { type: 'deleteContentBackward' },
+        { caret: 12, config: { flavor: 'commonmark', indentUnit: 'tab' } },
+      ),
+    ),
+    '1. num\n\n   more\n',
+  );
+  const text = '- > a quote\n\n\t> over two lines\n';
+  for (const type of ['deleteContentBackward', 'deleteSoftLineBackward'] as const)
+    assert.equal(
+      appliedText(executeOnText(text, { type }, { caret: 16, config: { flavor: 'gfm', indentUnit: 'tab' } })),
+      '- > a quote\n\n  over two lines\n',
+    );
+});
+
+test('a list pasted before a nested quote whose `>` follows a tab the outer `>` took part of: the quote named at its `>`', () => {
+  assert.equal(
+    appliedText(
+      executeOnText(
+        '>\t> q\n',
+        { type: 'paste', clipboard: { 'text/plain': '- x\n- y' } },
+        { caret: 4, config: { flavor: 'commonmark' } },
+      ),
+    ),
+    '> - x\n> - y\n>\n> > q\n',
+  );
+});
+
+test('lines starting with tabs pasted as text into an item emptied to a held space: its later lines after its marker and one space', () => {
+  assert.equal(
+    appliedText(
+      executeOnText(
+        '-  \n  - item\n',
+        { type: 'pastePlain', text: '- a\n\t- b\n\t\t- c\n' },
+        { caret: 3, config: { flavor: 'gfm' }, placeholders: [3] },
+      ),
+    ),
+    '- \\- a\n  \t\\- b\n  \t\t- c\n  \n- item\n',
+  );
+});
+
 test("Enter in an unspaced quote's padded shared marker line, in a note indented with tabs: written (B451)", () => {
   assert.equal(
     appliedText(

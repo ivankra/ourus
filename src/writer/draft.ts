@@ -1286,12 +1286,18 @@ class Done {
       let spaces = false;
       // (and an items' shared marker line among them, `  - - x`, which the writer writes over a line)
       let shared = false;
+      // (a tab after a marker on one, `-→- x`: mixed indentation)
+      let tabbedMarker = false;
       // (the lines an item's marker starts: a paragraph's later lines' spaces are its own, which a
       // list indented with tabs has, `→  cont`)
       for (let i = origin.startLine; i < origin.startLine + origin.persistentNode.lines; i++) {
         const line = this.from.mdTree.line(i);
         if (line.blank || !line.prefix.some((p) => p.kind === 'marker')) continue;
-        if (line.prefix.filter((p) => p.kind === 'marker').length > 1) shared = true;
+        const markers = line.prefix.filter((p) => p.kind === 'marker');
+        if (markers.length > 1) {
+          shared = true;
+          if (markers.some((p) => this.from.text.slice(p.from, p.to).includes('\t'))) tabbedMarker = true;
+        }
         const lead = /^[ \t]*/.exec(this.from.text.slice(line.from, line.to))![0];
         if (lead.includes('\t')) tab = true;
         else if (lead.length) spaces = true;
@@ -1299,8 +1305,12 @@ class Done {
       // (tab-led alone too, where an item on that line changes: the writer can't write its items over
       // the tab; one changed elsewhere in the block is written as it was, its tabs kept; or led by
       // nothing in a note indented with tabs, its items split onto lines of their own by tabs, which a
-      // shift from the shared line can't write: seed 401)
-      return shared && (tab ? spaces || onShared.has(top) : onShared.has(top) && indentUnitOf(this.from) === 'tab');
+      // shift from the shared line can't write: seed 401; or with a tab after a marker on it, where an
+      // item on it changes, whatever the unit: Regression189)
+      return (
+        shared &&
+        (tab ? spaces || onShared.has(top) : onShared.has(top) && (tabbedMarker || indentUnitOf(this.from) === 'tab'))
+      );
     };
     const open = (w: Working): void => {
       // (a container with no text of its own, a quote's, left so: its first line its first child's)
@@ -4353,8 +4363,27 @@ class Done {
         origin,
         this.from.mdTree.line(origin.kind === 'item' ? origin.startLine : origin.textFirstLine),
       );
+      // (an item empty before, given text on its line: after its marker and one space, as the writer
+      // spells it, its later lines as many columns sooner as its padding was wider, a held space's)
+      const was = this.from.textOf(origin);
+      const line = this.from.mdTree.line(origin.startLine);
+      const narrower =
+        w.kind === 'item' &&
+        !this.paddings.has(w.id) &&
+        origin.textFirstLine === origin.startLine &&
+        was instanceof OurusProse &&
+        was.empty &&
+        w.text instanceof OurusProse &&
+        w.text.text.split('\n')[0] !== ''
+          ? Math.max(
+              0,
+              origin.block.attrs.contentColumn! -
+                advanceColumns(this.from.text, line.from, atLine(line, origin.block.attrs.markerEnd!), 0) -
+                1,
+            )
+          : 0;
       // (after a `>` with no space, the writer writes one before a line starting with a blank, a tab's)
-      return advanceColumns(prefix, 0, prefix.length, 0) + (prefix.endsWith('>') ? 1 : 0);
+      return advanceColumns(prefix, 0, prefix.length, 0) + (prefix.endsWith('>') ? 1 : 0) - narrower;
     }
     if (w.kind !== 'item') return this.#containerColumn(w.parent);
     const place = this.lists.get(w.id);
