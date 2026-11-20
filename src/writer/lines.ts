@@ -109,7 +109,7 @@ const tabbed = new WeakMap<OurusDoc, boolean>();
  * its nested items have, each by its indentation past its parent's marker (a tab in it, `tab`; at both
  * its parent's content column and four past its marker, as under `10. `, or at neither, none; else
  * `2` at the content column, `4` four past the marker); with none, a tab where the document indents
- * with tabs outside code (`tabbedOf`), else `2`, and `2` on a tie.
+ * with tabs outside code (`tabbedOf`), else the fallback (`indentFallback`), and the fallback on a tie.
  */
 export function indentUnitOf(doc: OurusDoc): 'tab' | 2 | 4 {
   const set = doc.config.indentUnit;
@@ -129,7 +129,8 @@ export function indentUnitOf(doc: OurusDoc): 'tab' | 2 | 4 {
   visit(doc.rootNode);
   const most = Math.max(votes.tab, votes[2], votes[4]);
   const top = (['tab', 2, 4] as const).filter((u) => votes[u] === most);
-  unit = most === 0 ? (tabbedOf(doc) ? 'tab' : 2) : top.length > 1 ? 2 : top[0]!;
+  const fallback = doc.config.indentFallback;
+  unit = most === 0 ? (tabbedOf(doc) ? 'tab' : fallback) : top.length > 1 ? fallback : top[0]!;
   units.set(doc, unit);
   return unit;
 }

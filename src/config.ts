@@ -135,7 +135,9 @@ export interface OurusConfig {
    * - `detect` (the default): as the document nests already, the unit most of its nested items have,
    *   each by its indentation past its parent's marker: any tab in that, `tab`; else one at both its
    *   parent's content column and four past its marker (under `10. `), or at neither, none; else the
-   *   content column, `2`, or four past the marker, `4`. Code isn't read. With none, or a tie, `2`.
+   *   content column, `2`, or four past the marker, `4`. Code isn't read. With none, `tab` where the
+   *   document indents with tabs outside code, else the fallback (`indentFallback`); with a tie, the
+   *   fallback.
    * - `tab`: a tab past the parent's marker (Obsidian's "Use tabs", on by default there).
    * - `2`: the parent's content column (2 under `- `, 3 under `1. `), as Prettier and GitHub nest.
    * - `4`: four columns past the parent's marker (Obsidian's "Tab size" 4 with tabs off).
@@ -146,6 +148,13 @@ export interface OurusConfig {
    * command moves: with tabs where it is `tab` (or `detect` reads `tab`), else with spaces.
    */
   readonly indentUnit: 'detect' | 'tab' | 2 | 4;
+
+  /**
+   * The unit `detect` takes where the document doesn't say (no nested item, or a tie): `2` (the
+   * default), or a host's own, `tab` or `4` (Obsidian's "Use tabs" and "Tab size"), so a note with
+   * nothing to read indents as the host's other notes do.
+   */
+  readonly indentFallback: 2 | 'tab' | 4;
 
   /**
    * Shift-Tab's later siblings:
@@ -767,6 +776,7 @@ const CONFIG_VALUES: {
   flavor: ['gfm', 'commonmark', 'obsidian'],
   // The outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
   indentUnit: ['detect', 'tab', 2, 4],
+  indentFallback: [2, 'tab', 4],
   outdent: ['direct', 'logical'],
   outdentTopLevel: ['unwrap', 'refuse'],
   bullet: ['-', '*', '+'],

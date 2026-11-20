@@ -32,9 +32,10 @@ subtrees. The rules, in order; the first that applies wins:
    command isn't about stays byte for byte: code payload, hard-break spaces, a tab after a marker,
    CRLF, the numbers of untouched lists (Indent13, Indent14, Indent15, Indent17, Indent19,
    Indent20). An item that nests anew, under a childless item, is indented by the unit
-   (`indentUnit`): as the document nests under `detect`, the default (Indent43, Indent44), or a
-   host's tab, 2 or 4, made up to the parent's content column (Indent39, Indent40, Indent42); an item
-   of its list beside it gives the column first (Indent41).
+   (`indentUnit`): as the document nests under `detect`, the default (Indent43, Indent44), the
+   host's own unit where it says none (`indentFallback`, Indent53), or a host's tab, 2 or 4, made
+   up to the parent's content column (Indent39, Indent40, Indent42); an item of its list beside it
+   gives the column first (Indent41).
 7. **A subtree selection stays on the nodes**, in the shape it was given (Indent46). Over roots at
    two depths they are lined up after the first as one run (`mixedDepths: level`, Indent49); with
    `each`, each run of sibling roots as one, all or nothing (Indent47, Indent48); `refuse`, nothing
@@ -1251,8 +1252,9 @@ para
 
 Where an item nests anew, as the first child of a childless item, no item of its list gives it a
 column: the unit (`indentUnit`) does. `detect`, the default, reads how the document nests already;
-`tab`, `2` and `4` are a host's setting (Obsidian's "Use tabs" and "Tab size"). Whatever the unit, the
-item lands where CommonMark reads it as a child: at least its parent's content column, short of
+where it reads none, the fallback (`indentFallback`: `2`, the default, or a host's own) does.
+`tab`, `2` and `4` are a host's setting (Obsidian's "Use tabs" and "Tab size"). Whatever the unit,
+the item lands where CommonMark reads it as a child: at least its parent's content column, short of
 indented code.
 
 ## Indent39
@@ -1393,6 +1395,28 @@ tags: common
 - a
   - b┃
 ````
+
+## Indent53
+
+With nothing to read (no item nested yet, no tab), `detect` takes the host's own unit
+(`indentFallback`), here Obsidian's tab.
+
+```yaml
+tags: common
+indentFallback: tab
+```
+
+```markdown
+- a
+- b┃
+```
+
+> indent
+
+```markdown
+- a
+→- b┃
+```
 
 ## Indent45
 

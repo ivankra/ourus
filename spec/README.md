@@ -498,7 +498,8 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       reported as a todo, and fails once it passes, so the tag goes then;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `outdentTopLevel` (`unwrap`, the default, or `refuse`), `bullet` (`-`, the default, `*` or `+`), `indentUnit` (`detect`, the
-    default, `tab`, `2` or `4`: how an item nesting anew is indented), `quotes` (`text`, the default, `atom` or
+    default, `tab`, `2` or `4`: how an item nesting anew is indented), `indentFallback` (`2`, the default, `tab` or
+    `4`: the unit `detect` takes where the document says none), `quotes` (`text`, the default, `atom` or
     `container`: a case whose quote of one paragraph is a node, `container`'s, says so), `enterOnEmptyItem` (`sibling`, the
     default, `outdent`, `exit` or `unwrap`), `enterMidItem` (`sibling`, the default, or `child`),
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
